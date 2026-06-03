@@ -1,0 +1,37 @@
+@model IEnumerable<Staff>
+@{ ViewData["Title"] = "Staff"; }
+<div class="page-header">
+    <div><h1>Staff</h1><p>Manage staff accounts.</p></div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create Staff</a>
+</div>
+@if (TempData["SuccessMessage"] != null) { <div class="alert alert-success mb-3">@TempData["SuccessMessage"]</div> }
+@if (TempData["ErrorMessage"] != null) { <div class="alert alert-danger mb-3">@TempData["ErrorMessage"]</div> }
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto flex-grow-1">
+        <input type="text" name="searchString" class="form-control" placeholder="Search by name or username..." value="@ViewData["CurrentFilter"]" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
+    </div>
+</form>
+<div class="card"><div class="card-body p-0"><div class="table-container"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Contact</th><th>Role</th><th class="actions">Actions</th></tr></thead><tbody>
+@foreach (var item in Model) {
+    bool isYou = ViewData["CurrentStaffId"] != null && (int)ViewData["CurrentStaffId"] == item.StaffId;
+    <tr class="@(isYou ? "table-warning" : "")">
+        <td>@item.StaffId</td>
+        <td>@item.StaffName @(isYou ? "<span class='badge bg-warning text-dark'>You</span>" : "")</td>
+        <td>@item.UserName</td>
+        <td>@item.ContactNumber</td>
+        <td><span class="badge @(item.Role == "Admin" ? "bg-primary" : "bg-secondary")">@item.Role</span></td>
+        <td class="actions">
+            <a asp-action="Details" asp-route-id="@item.StaffId" class="btn btn-sm btn-outline-info" title="Details"><i class="bi bi-eye"></i></a>
+            <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+            <a asp-action="ChangePassword" asp-route-id="@item.StaffId" class="btn btn-sm btn-outline-warning" title="Change Password"><i class="bi bi-key"></i></a>
+            <a asp-action="Delete" asp-route-id="@item.StaffId" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+        </td>
+    </tr>
+}
+@if (!Model.Any()) { <tr><td colspan="6" class="text-center py-4 text-muted">No staff found.</td></tr> }
+</tbody></table></div></div></div>
+<partial name="_Pagination" />

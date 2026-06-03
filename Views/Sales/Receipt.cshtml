@@ -1,0 +1,102 @@
+@model SalesTransaction
+@{ ViewData["Title"] = "Receipt"; Layout = null; }
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Receipt - @Model.InvoiceNumber</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #fff; padding: 40px 20px; }
+        .receipt { max-width: 500px; margin: 0 auto; }
+        .receipt-header { text-align: center; margin-bottom: 24px; }
+        .receipt-header h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+        .receipt-header p { margin: 0; color: #6B7280; font-size: 13px; }
+        .receipt-divider { border: none; border-top: 1px dashed #D1D5DB; margin: 16px 0; }
+        .receipt-info { font-size: 13px; margin-bottom: 16px; }
+        .receipt-info div { display: flex; justify-content: space-between; padding: 2px 0; }
+        .receipt-info .label { color: #6B7280; }
+        .receipt-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+        .receipt-table th { text-align: left; padding: 6px 4px; border-bottom: 1px solid #E5E7EB; color: #6B7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .receipt-table td { padding: 6px 4px; border-bottom: 1px solid #F3F4F6; }
+        .receipt-table .text-right { text-align: right; }
+        .receipt-totals { font-size: 13px; margin-top: 8px; }
+        .receipt-totals div { display: flex; justify-content: space-between; padding: 3px 0; }
+        .receipt-totals .total { font-size: 16px; font-weight: 700; border-top: 2px solid #1F2937; padding-top: 8px; margin-top: 4px; }
+        .receipt-footer { text-align: center; font-size: 12px; color: #9CA3AF; margin-top: 24px; }
+        .no-print { text-align: center; margin-bottom: 20px; }
+        @@media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+            .receipt { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> Print Receipt</button>
+        <a asp-action="Details" asp-route-id="@Model.TransactionId" class="btn btn-outline-secondary">Back</a>
+    </div>
+
+    <div class="receipt">
+        <div class="receipt-header">
+            <h2>KAIJENSON MOTOR SHOP</h2>
+            <p>123 Main Street, City Center</p>
+            <p>Tel: (123) 456-7890</p>
+        </div>
+
+        <hr class="receipt-divider" />
+
+        <div class="receipt-info">
+            <div><span class="label">Invoice #</span><span>@Model.InvoiceNumber</span></div>
+            <div><span class="label">Date</span><span>@Model.TransactionDate.ToString("MMM dd, yyyy h:mm tt")</span></div>
+            <div><span class="label">Customer</span><span>@Model.CustomerName</span></div>
+            <div><span class="label">Cashier</span><span>@Model.Staff?.StaffName</span></div>
+        </div>
+
+        <hr class="receipt-divider" />
+
+        <table class="receipt-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="text-right">Qty</th>
+                    <th class="text-right">Price</th>
+                    <th class="text-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.SalesItems)
+                {
+                    <tr>
+                        <td>@item.Product?.ProductName</td>
+                        <td class="text-right">@item.Quantity</td>
+                        <td class="text-right">@item.UnitPrice.ToString("N2")</td>
+                        <td class="text-right">@item.Subtotal.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="receipt-totals">
+            <div><span>Total</span><span>@Model.TotalAmount.ToString("N2")</span></div>
+            <div><span>Amount Paid</span><span>@Model.AmountPaid.ToString("N2")</span></div>
+            <div class="total"><span>Change</span><span>@Model.Change.ToString("N2")</span></div>
+        </div>
+
+        <hr class="receipt-divider" />
+
+        <div class="receipt-footer">
+            <p>Thank you for your purchase!</p>
+            <p>No return or exchange after 7 days.</p>
+        </div>
+    </div>
+</body>
+</html>

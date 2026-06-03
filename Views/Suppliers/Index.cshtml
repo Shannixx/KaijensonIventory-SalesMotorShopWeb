@@ -1,0 +1,83 @@
+@model IEnumerable<KaijensonIventory_SalesMotorShopWeb.Models.Supplier>
+@{ ViewData["Title"] = "Suppliers"; }
+
+<div class="page-header">
+    <div>
+        <h1>Suppliers</h1>
+        <p>Manage suppliers.</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Supplier</a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row g-2 mb-3">
+            <div class="col-auto flex-grow-1">
+                <input type="text" name="searchString" class="form-control" placeholder="Search by company, contact person or number..." value="@ViewData["CurrentFilter"]" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Company Name</th>
+                        <th>Contact Person</th>
+                        <th>Contact No.</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.SupplierId</td>
+                            <td>@item.CompanyName</td>
+                            <td>@item.ContactPerson</td>
+                            <td>@item.ContactNumber</td>
+                            <td class="action-cell">
+                                <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-sm btn-info" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-sm btn-warning" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.SupplierId" class="btn btn-sm btn-danger" title="Delete"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">No suppliers found.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

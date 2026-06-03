@@ -1,0 +1,33 @@
+@model Service
+@{ ViewData["Title"] = "Service Details"; }
+<div class="page-header">
+    <div>
+        <h1>Service Details</h1>
+        <p>View service information.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.ServiceId" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit</a>
+        <a asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Back to List</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.ServiceId</dd>
+
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">@Model.ServiceName</dd>
+
+            <dt class="col-sm-3">Price</dt>
+            <dd class="col-sm-9">@Model.ServicePrice.ToString("N2")</dd>
+
+            <dt class="col-sm-3">Category</dt>
+            <dd class="col-sm-9">@Model.Category?.CategoryName</dd>
+
+            <dt class="col-sm-3">Mechanic</dt>
+            <dd class="col-sm-9">@Model.Mechanic?.MechanicName</dd>
+        </dl>
+    </div>
+</div>

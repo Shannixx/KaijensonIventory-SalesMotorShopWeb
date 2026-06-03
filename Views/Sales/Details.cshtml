@@ -1,0 +1,79 @@
+@model SalesTransaction
+@{ ViewData["Title"] = "Sale Details"; }
+
+<div class="page-header">
+    <div>
+        <h1>Sale Details</h1>
+        <p>@Model.InvoiceNumber</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Receipt" asp-route-id="@Model.TransactionId" class="btn btn-primary" target="_blank"><i class="bi bi-receipt"></i> Receipt</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="small text-muted">Invoice Number</div>
+                <div class="fw-semibold">@Model.InvoiceNumber</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Customer</div>
+                <div class="fw-semibold">@Model.CustomerName</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Date</div>
+                <div class="fw-semibold">@Model.TransactionDate.ToString("MMM dd, yyyy h:mm tt")</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Cashier</div>
+                <div class="fw-semibold">@Model.Staff?.StaffName</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Items</div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Unit Price</th>
+                        <th>Quantity</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.SalesItems)
+                    {
+                        <tr>
+                            <td>@item.Product?.ProductName</td>
+                            <td>@item.UnitPrice.ToString("N2")</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.Subtotal.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="3" class="text-end">Total</td>
+                        <td>@Model.TotalAmount.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="text-end">Amount Paid</td>
+                        <td>@Model.AmountPaid.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="text-end">Change</td>
+                        <td>@Model.Change.ToString("N2")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

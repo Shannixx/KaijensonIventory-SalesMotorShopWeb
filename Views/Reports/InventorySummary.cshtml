@@ -1,0 +1,71 @@
+@model IEnumerable<Product>
+@{ ViewData["Title"] = "Inventory Summary"; }
+
+<div class="page-header">
+    <div>
+        <h1>Inventory Summary</h1>
+        <p>Product inventory report.</p>
+    </div>
+    <div>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Category</label>
+                <select name="categoryId" class="form-select" asp-items="ViewBag.Categories">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div class="col-md-8 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+                <a asp-action="InventorySummary" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr><th>Product Name</th><th>Category</th><th>Supplier</th><th>Price</th><th>Quantity</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.ProductName</td>
+                            <td>@item.Category?.CategoryName</td>
+                            <td>@item.Supplier?.CompanyName</td>
+                            <td>@item.Price.ToString("N2")</td>
+                            <td>@item.QuantityOnHand</td>
+                            <td>
+                                @{
+                                    string badgeClass = item.StockStatus switch
+                                    {
+                                        "Available" => "bg-success",
+                                        "Low Stock" => "bg-warning",
+                                        "Out of Stock" => "bg-danger",
+                                        _ => "bg-secondary"
+                                    };
+                                }
+                                <span class="badge @badgeClass">@item.StockStatus</span>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No products found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

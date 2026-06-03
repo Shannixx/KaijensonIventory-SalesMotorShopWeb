@@ -1,0 +1,47 @@
+@model LoginViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign In";
+}
+
+<div class="auth-card">
+    <div class="auth-logo">
+        <div class="logo-icon"><i class="bi bi-wrench"></i></div>
+        <h2>Kaijenson Motor Shop</h2>
+        <p>Sales &amp; Inventory System</p>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success mb-3">@TempData["SuccessMessage"]</div>
+    }
+
+    <form asp-action="Login" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+
+        <div class="mb-3">
+            <label asp-for="Username" class="form-label"></label>
+            <input asp-for="Username" class="form-control" placeholder="Enter your email" />
+            <span asp-validation-for="Username" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-4">
+            <label asp-for="Password" class="form-label"></label>
+            <div class="password-wrapper">
+                <input asp-for="Password" class="form-control" placeholder="Enter your password" />
+                <button type="button" class="toggle-pwd"><i class="bi bi-eye"></i></button>
+            </div>
+            <span asp-validation-for="Password" class="text-danger small"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Sign In</button>
+    </form>
+
+    <div class="auth-footer">
+        Don't have an account? <a asp-action="Register">Register here</a>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

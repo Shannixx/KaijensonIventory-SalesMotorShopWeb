@@ -1,0 +1,35 @@
+@model KaijensonIventory_SalesMotorShopWeb.Models.Supplier
+@{ ViewData["Title"] = "Supplier Details"; }
+
+<div class="page-header">
+    <div>
+        <h1>Supplier Details</h1>
+        <p>View supplier information.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.SupplierId)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.SupplierId)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.CompanyName)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.CompanyName)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.ContactPerson)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.ContactPerson)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.ContactNumber)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.ContactNumber)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Address)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(m => m.Address)</dd>
+        </dl>
+
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.SupplierId" class="btn btn-warning"><i class="bi bi-pencil"></i> Edit</a>
+            <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
+        </div>
+    </div>
+</div>

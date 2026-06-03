@@ -1,0 +1,158 @@
+@model ServiceTransaction
+@{ ViewData["Title"] = "Edit Service Transaction"; }
+
+<div class="page-header"><div><h1>Edit Service Transaction</h1><p>Update service job details.</p></div></div>
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Edit" id="serviceForm">
+            <input type="hidden" asp-for="ServiceTxnId" />
+            <h5 class="mb-3">Customer Info</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label asp-for="CustomerName" class="form-label"></label>
+                    <input asp-for="CustomerName" class="form-control" />
+                    <span asp-validation-for="CustomerName" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <h5 class="mb-3">Vehicle Details</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label asp-for="Make" class="form-label"></label>
+                    <input asp-for="Make" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Model" class="form-label"></label>
+                    <input asp-for="Model" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Year" class="form-label"></label>
+                    <input asp-for="Year" class="form-control" type="number" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="PlateNumber" class="form-label"></label>
+                    <input asp-for="PlateNumber" class="form-control" />
+                </div>
+            </div>
+
+            <h5 class="mb-3">Service Info</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-md-12">
+                    <label asp-for="ServiceDescription" class="form-label"></label>
+                    <textarea asp-for="ServiceDescription" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="ServiceFee" class="form-label"></label>
+                    <input asp-for="ServiceFee" class="form-control" type="number" step="0.01" />
+                    <span asp-validation-for="ServiceFee" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Date" class="form-label"></label>
+                    <input asp-for="Date" class="form-control" type="date" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Status" class="form-label"></label>
+                    <select asp-for="Status" class="form-select">
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="MechanicId" class="form-label"></label>
+                    <select asp-for="MechanicId" class="form-select" asp-items="ViewBag.Mechanics">
+                        <option value="">-- Select Mechanic --</option>
+                    </select>
+                    <span asp-validation-for="MechanicId" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <h5 class="mb-3">Parts Used</h5>
+
+            @if (Model.PartsUsed.Any())
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var part in Model.PartsUsed)
+                            {
+                                <tr>
+                                    <td>@part.Product?.ProductName</td>
+                                    <td>@part.Quantity</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div id="partsContainer">
+                <div class="row mb-2 fw-bold small text-muted">
+                    <div class="col-md-6">Add More Parts</div>
+                    <div class="col-md-4">Quantity</div>
+                    <div class="col-md-2"></div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="addPartRow()">
+                <i class="bi bi-plus-lg"></i> Add Part
+            </button>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<select id="productTemplate" class="d-none">
+    @foreach (var p in ((SelectList)ViewBag.Products))
+    {
+        <option value="@p.Value">@p.Text</option>
+    }
+</select>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function addPartRow() {
+            var container = document.getElementById('partsContainer');
+            var index = document.querySelectorAll('.part-row').length;
+            var template = document.getElementById('productTemplate');
+            var html = '<div class="row g-2 mb-2 part-row">';
+            html += '<div class="col-md-6"><select name="Items[' + index + '].ProductId" class="form-select" required>';
+            html += '<option value="">-- Select Product --</option>';
+            for (var i = 0; i < template.options.length; i++) {
+                html += '<option value="' + template.options[i].value + '">' + template.options[i].text + '</option>';
+            }
+            html += '</select></div>';
+            html += '<div class="col-md-4"><input type="number" name="Items[' + index + '].Quantity" class="form-control" min="1" required /></div>';
+            html += '<div class="col-md-2"><button type="button" class="btn btn-outline-danger" onclick="removePartRow(this)"><i class="bi bi-x"></i></button></div>';
+            html += '</div>';
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function removePartRow(btn) {
+            btn.closest('.part-row').remove();
+            reindexParts();
+        }
+
+        function reindexParts() {
+            var rows = document.querySelectorAll('.part-row');
+            for (var i = 0; i < rows.length; i++) {
+                var inputs = rows[i].querySelectorAll('select, input');
+                for (var j = 0; j < inputs.length; j++) {
+                    var name = inputs[j].getAttribute('name');
+                    if (name) inputs[j].setAttribute('name', name.replace(/Items\[\d+\]/, 'Items[' + i + ']'));
+                }
+            }
+        }
+    </script>
+}

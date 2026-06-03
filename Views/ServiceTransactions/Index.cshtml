@@ -1,0 +1,113 @@
+@model IEnumerable<ServiceTransaction>
+@{ ViewData["Title"] = "Service Transactions"; }
+
+<div class="page-header">
+    <div>
+        <h1>Service Transactions</h1>
+        <p>Manage service jobs.</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Transaction</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Customer, make, model, plate..." value="@ViewData["CurrentFilter"]" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Status</label>
+                <select name="statusFilter" class="form-select">
+                    <option value="All">All Statuses</option>
+                    <option value="Pending" selected="@((ViewData["StatusFilter"]?.ToString() ?? "All") == "Pending")">Pending</option>
+                    <option value="In Progress" selected="@((ViewData["StatusFilter"]?.ToString() ?? "All") == "In Progress")">In Progress</option>
+                    <option value="Completed" selected="@((ViewData["StatusFilter"]?.ToString() ?? "All") == "Completed")">Completed</option>
+                </select>
+            </div>
+            <div class="col-md-5 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Customer</th>
+                        <th>Vehicle</th>
+                        <th>Service Fee</th>
+                        <th>Status</th>
+                        <th>Mechanic</th>
+                        <th>Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.ServiceTxnId</td>
+                            <td>@item.CustomerName</td>
+                            <td>@item.Make @item.Model@(item.Year.HasValue ? $" ({item.Year})" : "")</td>
+                            <td>@item.ServiceFee.ToString("N2")</td>
+                            <td>
+                                @if (item.Status == "Pending") { <span class="badge bg-warning text-dark">Pending</span> }
+                                else if (item.Status == "In Progress") { <span class="badge bg-info">In Progress</span> }
+                                else { <span class="badge bg-success">Completed</span> }
+                            </td>
+                            <td>@item.Mechanic?.MechanicName</td>
+                            <td>@item.Date.ToString("MMM dd, yyyy")</td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@item.ServiceTxnId" class="btn btn-sm btn-outline-info" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.ServiceTxnId" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.ServiceTxnId" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No service transactions found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@{
+    int page = (int)(ViewData["Page"] ?? 1);
+    int totalPages = (int)(ViewData["TotalPages"] ?? 1);
+    string? filter = ViewData["CurrentFilter"] as string;
+    string? statusFilter = ViewData["StatusFilter"] as string;
+    string query = "";
+    if (!string.IsNullOrEmpty(filter)) query += "&searchString=" + Uri.EscapeDataString(filter);
+    if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All") query += "&statusFilter=" + Uri.EscapeDataString(statusFilter);
+}
+@if (totalPages > 1)
+{
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(page <= 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(page - 1)@query">Previous</a>
+            </li>
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == page ? "active" : "")">
+                    <a class="page-link" href="?page=@i@query">@i</a>
+                </li>
+            }
+            <li class="page-item @(page >= totalPages ? "disabled" : "")">
+                <a class="page-link" href="?page=@(page + 1)@query">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

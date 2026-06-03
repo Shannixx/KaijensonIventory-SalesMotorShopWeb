@@ -1,0 +1,26 @@
+@model StockIn
+@{ ViewData["Title"] = "Stock In Details"; }
+
+<div class="page-header">
+    <div>
+        <h1>Stock In Details</h1>
+        <p>Record #@Model.StockInId</p>
+    </div>
+    <div>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-borderless mb-0">
+            <tr><th style="width:200px;">Stock In ID</th><td>@Model.StockInId</td></tr>
+            <tr><th>Product</th><td>@Model.Product?.ProductName</td></tr>
+            <tr><th>Supplier</th><td>@Model.Supplier?.CompanyName</td></tr>
+            <tr><th>Quantity Received</th><td>@Model.QuantityReceived</td></tr>
+            <tr><th>Delivery Date</th><td>@Model.DeliveryDate.ToString("MMM dd, yyyy")</td></tr>
+            <tr><th>Remarks</th><td>@(Model.Remarks ?? "-")</td></tr>
+            <tr><th>Received By</th><td>@Model.Staff?.StaffName</td></tr>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,157 @@
+@model IEnumerable<Mechanic>
+@{
+    ViewData["Title"] = "Mechanics";
+    string? currentFilter = ViewData["CurrentFilter"] as string;
+}
+<div class="page-header">
+    <div>
+        <h1>Mechanics</h1>
+        <p>Manage mechanics.</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <form method="get" class="d-flex gap-2 align-items-center" id="searchForm">
+            <input type="text" name="searchString" class="form-control" placeholder="Search ID, name, specialization, contact..." value="@currentFilter" style="min-width:280px;" />
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+            <a asp-action="Index" class="btn btn-outline-primary">Clear</a>
+        </form>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Mechanic</a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="p-3 d-flex gap-2 align-items-center border-bottom">
+            <button type="button" class="btn btn-danger btn-sm" id="deleteSelectedBtn" disabled>
+                <i class="bi bi-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="clearAllBtn">
+                <i class="bi bi-x-lg"></i> Clear All
+            </button>
+        </div>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">
+                            <input type="checkbox" id="selectAll" />
+                        </th>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Specialization</th>
+                        <th>Contact</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><input type="checkbox" class="row-checkbox" value="@item.MechanicId" /></td>
+                            <td>@item.MechanicId</td>
+                            <td>@item.MechanicName</td>
+                            <td>@item.Specialization</td>
+                            <td>@item.ContactNumber</td>
+                            <td class="action-cell">
+                                <a asp-action="Details" asp-route-id="@item.MechanicId" class="btn btn-sm btn-outline-primary" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.MechanicId" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.MechanicId" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No mechanics found.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />
+
+@section Scripts {
+    <script>
+        const selectAll = document.getElementById('selectAll');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        const selectedCount = document.getElementById('selectedCount');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+
+        function updateSelectedCount() {
+            const checked = document.querySelectorAll('.row-checkbox:checked').length;
+            selectedCount.textContent = checked;
+            deleteSelectedBtn.disabled = checked === 0;
+        }
+
+        selectAll.addEventListener('change', function () {
+            rowCheckboxes.forEach(cb => cb.checked = this.checked);
+            updateSelectedCount();
+        });
+
+        rowCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function () {
+                if (!this.checked) selectAll.checked = false;
+                const all = document.querySelectorAll('.row-checkbox:checked').length;
+                if (all === rowCheckboxes.length) selectAll.checked = true;
+                updateSelectedCount();
+            });
+        });
+
+        deleteSelectedBtn.addEventListener('click', function () {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            if (checked.length === 0) return;
+            if (!confirm('Delete ' + checked.length + ' selected mechanic(s)?')) return;
+
+            const ids = Array.from(checked).map(cb => parseInt(cb.value));
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            const headers = {};
+            if (token) headers['RequestVerificationToken'] = token.value;
+
+            fetch('@Url.Action("DeleteSelected", "Mechanics")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...headers },
+                body: ids.map(id => 'ids=' + encodeURIComponent(id)).join('&')
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(() => alert('An error occurred.'));
+        });
+
+        clearAllBtn.addEventListener('click', function () {
+            if (!confirm('Are you sure you want to delete ALL mechanics? This cannot be undone.')) return;
+            if (!confirm('This will permanently remove all mechanics. Continue?')) return;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            const headers = {};
+            if (token) headers['RequestVerificationToken'] = token.value;
+
+            fetch('@Url.Action("ClearAll", "Mechanics")', {
+                method: 'POST',
+                headers: headers
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(() => alert('An error occurred.'));
+        });
+    </script>
+}

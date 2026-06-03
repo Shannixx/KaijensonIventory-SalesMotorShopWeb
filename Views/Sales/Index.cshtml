@@ -1,0 +1,76 @@
+@model IEnumerable<SalesTransaction>
+@{ ViewData["Title"] = "Sales"; }
+
+<div class="page-header">
+    <div>
+        <h1>Sales Transactions</h1>
+        <p>Manage sales records.</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Sale</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label small">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Invoice#, customer name, or product..." value="@ViewData["CurrentFilter"]" />
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Amount Paid</th>
+                        <th>Change</th>
+                        <th>Cashier</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.InvoiceNumber</td>
+                            <td>@item.CustomerName</td>
+                            <td>@item.TransactionDate.ToString("MMM dd, yyyy")</td>
+                            <td>@item.TotalAmount.ToString("N2")</td>
+                            <td>@item.AmountPaid.ToString("N2")</td>
+                            <td>@item.Change.ToString("N2")</td>
+                            <td>@item.Staff?.StaffName</td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-info" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Receipt" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-primary" target="_blank" title="Receipt"><i class="bi bi-receipt"></i></a>
+                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Cancel this transaction? Stock will be restored.');">
+                                    <input type="hidden" name="id" value="@item.TransactionId" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No sales found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

@@ -1,0 +1,81 @@
+@model IEnumerable<Product>
+@{ ViewData["Title"] = "Products"; }
+
+<div class="page-header">
+    <div>
+        <h1>Products</h1>
+        <p>Manage inventory.</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Product</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Name or description..." value="@ViewData["CurrentFilter"]" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Category</label>
+                <select name="categoryId" class="form-select" asp-items="ViewBag.Categories">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.ProductId</td>
+                            <td>@item.ProductName</td>
+                            <td>@item.Category?.CategoryName</td>
+                            <td>@item.Price.ToString("N2")</td>
+                            <td>@item.QuantityOnHand</td>
+                            <td>
+                                @if (item.StockStatus == "Out of Stock") { <span class="badge bg-danger">Out of Stock</span> }
+                                else if (item.StockStatus == "Low Stock") { <span class="badge bg-warning text-dark">Low Stock</span> }
+                                else { <span class="badge bg-success">Available</span> }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-info" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No products found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

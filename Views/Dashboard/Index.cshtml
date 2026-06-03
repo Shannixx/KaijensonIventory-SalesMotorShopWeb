@@ -1,0 +1,194 @@
+@model DashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; }
+
+<div class="page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Welcome to Kaijenson Motor Shop.</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon primary"><i class="bi bi-box-seam"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Total Products</p>
+                <h3 class="metric-value">@Model.TotalProducts</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Low Stock Items</p>
+                <h3 class="metric-value">@Model.LowStockCount</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon success"><i class="bi bi-cash-coin"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Today's Sales</p>
+                <h3 class="metric-value">@Model.TodaySalesAmount.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon info"><i class="bi bi-currency-dollar"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Inventory Value</p>
+                <h3 class="metric-value">@Model.TotalInventoryValue.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">Monthly Sales Trend</div>
+            <div class="card-body">
+                <canvas id="salesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">Products by Category</div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">Low Stock Alerts</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.RecentLowStockProducts)
+                            {
+                                <tr><td>@p.ProductName</td><td>@p.QuantityOnHand</td><td>@p.ReorderLevel</td></tr>
+                            }
+                            @if (!Model.RecentLowStockProducts.Any())
+                            {
+                                <tr><td colspan="3" class="text-center py-4 text-muted">No low stock items.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">Recent Sales</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Invoice</th><th>Customer</th><th>Total</th><th>Cashier</th></tr></thead>
+                        <tbody>
+                            @foreach (var s in Model.RecentSales)
+                            {
+                                <tr><td>@s.InvoiceNumber</td><td>@s.CustomerName</td><td>@s.TotalAmount.ToString("N2")</td><td>@s.Staff?.StaffName</td></tr>
+                            }
+                            @if (!Model.RecentSales.Any())
+                            {
+                                <tr><td colspan="4" class="text-center py-4 text-muted">No recent sales.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">Ongoing Services</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Customer</th><th>Status</th><th>Date</th></tr></thead>
+                        <tbody>
+                            @foreach (var sv in Model.OngoingServices)
+                            {
+                                <tr>
+                                    <td>@sv.CustomerName</td>
+                                    <td>
+                                        @{
+                                            string badgeClass = sv.Status switch
+                                            {
+                                                "Pending" => "bg-warning",
+                                                "In Progress" => "bg-info",
+                                                "Completed" => "bg-success",
+                                                "Cancelled" => "bg-danger",
+                                                _ => "bg-secondary"
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@sv.Status</span>
+                                    </td>
+                                    <td>@sv.Date.ToString("MMM dd")</td>
+                                </tr>
+                            }
+                            @if (!Model.OngoingServices.Any())
+                            {
+                                <tr><td colspan="3" class="text-center py-4 text-muted">No ongoing services.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        new Chart(salesCtx, {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.ChartLabels)),
+                datasets: [{
+                    label: 'Sales',
+                    data: @Html.Raw(Json.Serialize(Model.ChartSalesData)),
+                    backgroundColor: 'rgba(253,126,20,0.7)',
+                    borderColor: 'rgba(253,126,20,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { callback: v => '₱' + v.toLocaleString() } } }
+            }
+        });
+
+        const catCtx = document.getElementById('categoryChart').getContext('2d');
+        const catColors = ['rgba(253,126,20,0.8)', 'rgba(16,185,129,0.8)', 'rgba(59,130,246,0.8)', 'rgba(239,68,68,0.8)', 'rgba(245,158,11,0.8)', 'rgba(139,92,246,0.8)', 'rgba(236,72,153,0.8)'];
+        new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.CategoryLabels)),
+                datasets: [{
+                    data: @Html.Raw(Json.Serialize(Model.CategoryCounts)),
+                    backgroundColor: catColors.slice(0, @Model.CategoryLabels.Count),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+            }
+        });
+    </script>
+}

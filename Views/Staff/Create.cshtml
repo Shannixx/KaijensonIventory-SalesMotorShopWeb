@@ -1,0 +1,53 @@
+@model Staff
+@{ ViewData["Title"] = "Create Staff"; }
+<div class="page-header"><div><h1>Create Staff</h1><p>Add a new staff account.</p></div></div>
+<div class="card"><div class="card-body">
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="All" class="text-danger mb-3 small"></div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="StaffName" class="form-label"></label>
+            <input asp-for="StaffName" class="form-control" />
+            <span asp-validation-for="StaffName" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="UserName" class="form-label"></label>
+            <input asp-for="UserName" class="form-control" />
+            <span asp-validation-for="UserName" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label for="Password" class="form-label">Password</label>
+            <input type="password" name="Password" id="Password" class="form-control" />
+            @Html.ValidationMessage("Password", new { @class = "text-danger small" })
+        </div>
+        <div class="col-md-6">
+            <label for="ConfirmPassword" class="form-label">Confirm Password</label>
+            <input type="password" name="ConfirmPassword" id="ConfirmPassword" class="form-control" />
+            @Html.ValidationMessage("ConfirmPassword", new { @class = "text-danger small" })
+        </div>
+        <div class="col-md-6">
+            <label asp-for="ContactNumber" class="form-label"></label>
+            <input asp-for="ContactNumber" class="form-control" />
+            <span asp-validation-for="ContactNumber" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Address" class="form-label"></label>
+            <input asp-for="Address" class="form-control" />
+            <span asp-validation-for="Address" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Role" class="form-label"></label>
+            <select asp-for="Role" class="form-select">
+                <option value="Admin">Admin</option>
+                <option value="Manager" selected>Manager</option>
+            </select>
+            <span asp-validation-for="Role" class="text-danger small"></span>
+        </div>
+    </div>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Create</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+</div></div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

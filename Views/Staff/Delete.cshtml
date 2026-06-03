@@ -1,0 +1,22 @@
+@model Staff
+@{ ViewData["Title"] = "Delete Staff"; }
+<div class="page-header"><div><h1>Delete Staff</h1><p>Are you sure you want to delete this staff account?</p></div></div>
+<div class="card"><div class="card-body">
+<dl class="row mb-4">
+    <dt class="col-sm-3">ID</dt>
+    <dd class="col-sm-9">@Model.StaffId</dd>
+    <dt class="col-sm-3">Name</dt>
+    <dd class="col-sm-9">@Model.StaffName</dd>
+    <dt class="col-sm-3">Username</dt>
+    <dd class="col-sm-9">@Model.UserName</dd>
+    <dt class="col-sm-3">Contact</dt>
+    <dd class="col-sm-9">@Model.ContactNumber</dd>
+    <dt class="col-sm-3">Role</dt>
+    <dd class="col-sm-9">@Model.Role</dd>
+</dl>
+<form asp-action="Delete" method="post">
+    <input type="hidden" name="id" value="@Model.StaffId" />
+    <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+</form>
+</div></div>

@@ -1,0 +1,51 @@
+@{ ViewData["Title"] = "Reports"; }
+
+<div class="page-header">
+    <div>
+        <h1>Reports</h1>
+        <p>Generate system reports.</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-receipt fs-1 d-block mb-3" style="color:var(--primary);"></i>
+                <h5>Sales Summary</h5>
+                <p class="text-muted small">View sales transactions filtered by date range.</p>
+                <a asp-action="SalesSummary" class="btn btn-primary btn-sm w-100">View Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-boxes fs-1 d-block mb-3" style="color:var(--success);"></i>
+                <h5>Inventory Summary</h5>
+                <p class="text-muted small">View product inventory filtered by category.</p>
+                <a asp-action="InventorySummary" class="btn btn-success btn-sm w-100">View Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-tools fs-1 d-block mb-3" style="color:var(--info);"></i>
+                <h5>Service Summary</h5>
+                <p class="text-muted small">View service transactions with filters.</p>
+                <a asp-action="ServiceSummary" class="btn btn-info btn-sm w-100 text-white">View Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-clock-history fs-1 d-block mb-3" style="color:var(--warning);"></i>
+                <h5>Activity Summary</h5>
+                <p class="text-muted small">View system audit trail with filters.</p>
+                <a asp-action="ActivitySummary" class="btn btn-warning btn-sm w-100">View Report</a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,85 @@
+@model IEnumerable<ServiceTransaction>
+@{ ViewData["Title"] = "Service Summary"; }
+
+<div class="page-header">
+    <div>
+        <h1>Service Summary</h1>
+        <p>Service transactions report.</p>
+    </div>
+    <div>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Date From</label>
+                <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date To</label>
+                <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="Pending" selected="@(ViewData["Status"]?.ToString() == "Pending")">Pending</option>
+                    <option value="In Progress" selected="@(ViewData["Status"]?.ToString() == "In Progress")">In Progress</option>
+                    <option value="Completed" selected="@(ViewData["Status"]?.ToString() == "Completed")">Completed</option>
+                    <option value="Cancelled" selected="@(ViewData["Status"]?.ToString() == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel"></i> Filter</button>
+                <a asp-action="ServiceSummary" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr><th>ID</th><th>Customer</th><th>Vehicle</th><th>Fee</th><th>Status</th><th>Mechanic</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.ServiceTxnId</td>
+                            <td>@item.CustomerName</td>
+                            <td>@item.Make @item.Model</td>
+                            <td>@item.ServiceFee.ToString("N2")</td>
+                            <td>
+                                @{
+                                    string badgeClass = item.Status switch
+                                    {
+                                        "Pending" => "bg-warning",
+                                        "In Progress" => "bg-info",
+                                        "Completed" => "bg-success",
+                                        "Cancelled" => "bg-danger",
+                                        _ => "bg-secondary"
+                                    };
+                                }
+                                <span class="badge @badgeClass">@item.Status</span>
+                            </td>
+                            <td>@item.Mechanic?.MechanicName</td>
+                            <td>@item.Date.ToString("MMM dd, yyyy")</td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No services found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

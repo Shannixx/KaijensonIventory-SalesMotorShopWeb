@@ -1,0 +1,68 @@
+@model IEnumerable<Service>
+@{
+    ViewData["Title"] = "Services";
+    string? currentFilter = ViewData["CurrentFilter"] as string;
+}
+<div class="page-header">
+    <div>
+        <h1>Services</h1>
+        <p>Manage service types.</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <form method="get" class="d-flex gap-2 align-items-center" id="searchForm">
+            <input type="text" name="searchString" class="form-control" placeholder="Search by name..." value="@currentFilter" />
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+            <a asp-action="Index" class="btn btn-outline-primary">Clear</a>
+        </form>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Service</a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Category</th>
+                        <th>Mechanic</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.ServiceId</td>
+                            <td>@item.ServiceName</td>
+                            <td>@item.ServicePrice.ToString("N2")</td>
+                            <td>@item.Category?.CategoryName</td>
+                            <td>@item.Mechanic?.MechanicName</td>
+                            <td class="action-cell">
+                                <a asp-action="Details" asp-route-id="@item.ServiceId" class="btn btn-sm btn-outline-primary" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.ServiceId" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.ServiceId" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No services found.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

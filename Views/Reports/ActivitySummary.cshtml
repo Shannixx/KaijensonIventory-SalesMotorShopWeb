@@ -1,0 +1,67 @@
+@model IEnumerable<ActivityLog>
+@{ ViewData["Title"] = "Activity Summary"; }
+
+<div class="page-header">
+    <div>
+        <h1>Activity Summary</h1>
+        <p>System audit trail report.</p>
+    </div>
+    <div>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Date From</label>
+                <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date To</label>
+                <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Module</label>
+                <select name="module" class="form-select" asp-items="ViewBag.Modules">
+                    <option value="">All Modules</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel"></i> Filter</button>
+                <a asp-action="ActivitySummary" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr><th>Timestamp</th><th>Module</th><th>Action</th><th>Staff</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Timestamp.ToString("MMM dd, yyyy HH:mm")</td>
+                            <td><span class="badge bg-info">@item.Module</span></td>
+                            <td>@item.Action</td>
+                            <td>@item.Staff?.StaffName</td>
+                            <td>@item.Description</td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="5" class="text-center py-4 text-muted">No activities found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

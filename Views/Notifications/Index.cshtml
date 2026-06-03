@@ -1,0 +1,102 @@
+@model IEnumerable<Notification>
+@{ ViewData["Title"] = "Notifications"; }
+
+<div class="page-header">
+    <div>
+        <h1>Notifications</h1>
+        <p>View alerts and notifications.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form asp-action="MarkAllRead" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-all"></i> Mark All Read</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Search messages..." value="@ViewData["CurrentFilter"]" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Alert Type</label>
+                <select name="alertType" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="LowStock" selected="@(ViewData["AlertType"]?.ToString() == "LowStock")">Low Stock</option>
+                    <option value="DeadStock" selected="@(ViewData["AlertType"]?.ToString() == "DeadStock")">Dead Stock</option>
+                    <option value="ReorderSuggest" selected="@(ViewData["AlertType"]?.ToString() == "ReorderSuggest")">Reorder Suggest</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Read Status</label>
+                <select name="isRead" class="form-select">
+                    <option value="">All</option>
+                    <option value="true" selected="@(ViewData["IsRead"]?.ToString() == "True")">Read</option>
+                    <option value="false" selected="@(ViewData["IsRead"]?.ToString() == "False")">Unread</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Message</th>
+                        <th>Product</th>
+                        <th>Read</th>
+                        <th>Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr class="@(item.IsRead ? "" : "table-active")">
+                            <td>
+                                @if (item.AlertType == "LowStock") { <span class="badge bg-warning text-dark">Low Stock</span> }
+                                else if (item.AlertType == "DeadStock") { <span class="badge bg-danger">Dead Stock</span> }
+                                else if (item.AlertType == "ReorderSuggest") { <span class="badge bg-info text-dark">Reorder</span> }
+                                else { <span class="badge bg-secondary">@item.AlertType</span> }
+                            </td>
+                            <td>@item.Message</td>
+                            <td>@(item.Product?.ProductName ?? "-")</td>
+                            <td>
+                                @if (item.IsRead) { <i class="bi bi-check-circle-fill text-success"></i> }
+                                else { <i class="bi bi-circle text-muted"></i> }
+                            </td>
+                            <td>@item.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                            <td class="text-end">
+                                @if (!item.IsRead)
+                                {
+                                    <form asp-action="MarkAsRead" asp-route-id="@item.NotificationId" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Mark as Read"><i class="bi bi-check-lg"></i></button>
+                                    </form>
+                                }
+                                <form asp-action="Delete" asp-route-id="@item.NotificationId" method="post" style="display:inline;" onsubmit="return confirm('Delete this notification?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No notifications found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

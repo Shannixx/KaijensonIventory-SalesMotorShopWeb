@@ -1,0 +1,72 @@
+@model ServiceTransaction
+@{ ViewData["Title"] = "Service Transaction Details"; }
+
+<div class="page-header">
+    <div>
+        <h1>Service Transaction Details</h1>
+        <p>Transaction #@Model.ServiceTxnId</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.ServiceTxnId" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <h6 class="text-muted mb-3">Customer & Vehicle</h6>
+                <table class="table table-borderless mb-0">
+                    <tr><th style="width:160px;">Customer Name</th><td>@Model.CustomerName</td></tr>
+                    <tr><th>Make</th><td>@(Model.Make ?? "-")</td></tr>
+                    <tr><th>Model</th><td>@(Model.Model ?? "-")</td></tr>
+                    <tr><th>Year</th><td>@(Model.Year?.ToString() ?? "-")</td></tr>
+                    <tr><th>Plate Number</th><td>@(Model.PlateNumber ?? "-")</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-muted mb-3">Service Info</h6>
+                <table class="table table-borderless mb-0">
+                    <tr><th style="width:160px;">Transaction ID</th><td>@Model.ServiceTxnId</td></tr>
+                    <tr><th>Description</th><td>@(Model.ServiceDescription ?? "-")</td></tr>
+                    <tr><th>Service Fee</th><td>@Model.ServiceFee.ToString("N2")</td></tr>
+                    <tr><th>Status</th><td>
+                        @if (Model.Status == "Pending") { <span class="badge bg-warning text-dark">Pending</span> }
+                        else if (Model.Status == "In Progress") { <span class="badge bg-info">In Progress</span> }
+                        else { <span class="badge bg-success">Completed</span> }
+                    </td></tr>
+                    <tr><th>Date</th><td>@Model.Date.ToString("MMM dd, yyyy")</td></tr>
+                    <tr><th>Mechanic</th><td>@(Model.Mechanic?.MechanicName ?? "-")</td></tr>
+                    <tr><th>Staff</th><td>@(Model.Staff?.StaffName ?? "-")</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.PartsUsed.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <h6 class="text-muted mb-3">Parts Used</h6>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var part in Model.PartsUsed)
+                    {
+                        <tr>
+                            <td>@part.Product?.ProductName</td>
+                            <td>@part.Quantity</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

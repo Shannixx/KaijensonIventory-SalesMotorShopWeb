@@ -1,0 +1,54 @@
+@model SalesTransaction
+@{ ViewData["Title"] = "Cancel Sale"; }
+
+<div class="page-header"><div><h1>Cancel Sale</h1><p>Are you sure you want to cancel this transaction? Stock will be restored.</p></div></div>
+
+<div class="card border-danger">
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="small text-muted">Invoice Number</div>
+                <div class="fw-semibold">@Model.InvoiceNumber</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Customer</div>
+                <div class="fw-semibold">@Model.CustomerName</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Date</div>
+                <div class="fw-semibold">@Model.TransactionDate.ToString("MMM dd, yyyy")</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Total</div>
+                <div class="fw-semibold">@Model.TotalAmount.ToString("N2")</div>
+            </div>
+        </div>
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.SalesItems)
+                {
+                    <tr>
+                        <td>@item.Product?.ProductName</td>
+                        <td>@item.Quantity</td>
+                        <td>@item.Subtotal.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        <form asp-action="Delete" method="post">
+            <input type="hidden" name="id" value="@Model.TransactionId" />
+            <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle"></i> Confirm Cancel</button>
+        </form>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>

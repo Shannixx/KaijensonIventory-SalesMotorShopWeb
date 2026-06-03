@@ -1,0 +1,64 @@
+@model IEnumerable<SalesTransaction>
+@{ ViewData["Title"] = "Sales Summary"; }
+
+<div class="page-header">
+    <div>
+        <h1>Sales Summary</h1>
+        <p>Sales transactions report.</p>
+    </div>
+    <div>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Date From</label>
+                <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date To</label>
+                <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" />
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+                <a asp-action="SalesSummary" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr><th>Invoice #</th><th>Customer</th><th>Date</th><th>Total</th><th>Cashier</th><th class="text-end">Actions</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.InvoiceNumber</td>
+                            <td>@item.CustomerName</td>
+                            <td>@item.TransactionDate.ToString("MMM dd, yyyy")</td>
+                            <td>@item.TotalAmount.ToString("N2")</td>
+                            <td>@item.Staff?.StaffName</td>
+                            <td class="text-end">
+                                <a asp-controller="Sales" asp-action="Details" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i> Details</a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No sales found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

@@ -1,0 +1,211 @@
+@model SalesTransaction
+@{ ViewData["Title"] = "New Sale"; }
+
+<div class="page-header">
+    <div>
+        <h1>New Sale</h1>
+        <p>@ViewBag.InvoiceNumber</p>
+    </div>
+</div>
+
+<form asp-action="Create" method="post" id="saleForm">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Products</span>
+                    <input type="text" class="form-control form-control-sm" style="width:200px;" placeholder="Search product..." id="productSearch" />
+                </div>
+                <div class="card-body">
+                    @{
+                        var products = (IEnumerable<Product>)ViewBag.ProductsList;
+                    }
+                    <div class="row g-2" id="productGrid">
+                        @foreach (var p in products)
+                        {
+                            <div class="col-md-4 col-sm-6 product-card" data-name="@p.ProductName.ToLower()">
+                                <div class="card h-100 border cursor-pointer product-item" data-id="@p.ProductId" data-name="@p.ProductName" data-price="@p.Price.ToString("F2")" style="cursor:pointer; transition:all 0.15s;">
+                                    <div class="card-body text-center py-3">
+                                        <div class="fw-semibold small mb-1">@p.ProductName</div>
+                                        <div class="text-primary fw-bold">@p.Price.ToString("N2")</div>
+                                        <div class="small text-muted">Stock: @p.QuantityOnHand</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <span>Shopping Cart</span>
+                    <span class="text-muted" id="cartCount">0 item(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-container">
+                        <table class="table mb-0" id="cartTable">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th style="width:90px;">Qty</th>
+                                    <th style="width:80px;">Price</th>
+                                    <th style="width:80px;">Subtotal</th>
+                                    <th style="width:30px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cartBody">
+                                <tr id="cartEmpty"><td colspan="5" class="text-center py-4 text-muted">Cart is empty.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-body border-top">
+                    <div class="d-flex justify-content-between mb-1"><span>Total:</span><span class="fw-bold" id="cartTotal">0.00</span></div>
+                    <hr />
+                    <div class="mb-2">
+                        <label class="form-label small">Customer Name</label>
+                        <input asp-for="CustomerName" class="form-control" required />
+                        <span asp-validation-for="CustomerName" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Amount Paid</label>
+                        <input asp-for="AmountPaid" class="form-control" id="amountPaid" step="0.01" min="0" required />
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Change:</span>
+                        <span class="fw-bold" id="changeDisplay">0.00</span>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="checkoutBtn"><i class="bi bi-check-lg"></i> Complete Sale</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="itemsContainer"></div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let cart = [];
+
+        function renderCart() {
+            const tbody = document.getElementById('cartBody');
+            const empty = document.getElementById('cartEmpty');
+            let html = '';
+            let total = 0;
+            let count = 0;
+
+            cart.forEach((item, index) => {
+                const sub = item.price * item.quantity;
+                total += sub;
+                count += item.quantity;
+                html += `<tr>
+                    <td>${item.name}</td>
+                    <td>
+                        <div class="input-group input-group-sm" style="max-width:100px;">
+                            <button class="btn btn-outline-secondary" type="button" onclick="changeQty(${index}, -1)">−</button>
+                            <input type="number" class="form-control text-center" value="${item.quantity}" min="1" onchange="changeQtyTo(${index}, this.value)" />
+                            <button class="btn btn-outline-secondary" type="button" onclick="changeQty(${index}, 1)">+</button>
+                        </div>
+                    </td>
+                    <td>${item.price.toFixed(2)}</td>
+                    <td>${sub.toFixed(2)}</td>
+                    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">&times;</button></td>
+                </tr>`;
+            });
+
+            if (cart.length === 0) {
+                tbody.innerHTML = '<tr id="cartEmpty"><td colspan="5" class="text-center py-4 text-muted">Cart is empty.</td></tr>';
+            } else {
+                tbody.innerHTML = html;
+            }
+
+            document.getElementById('cartTotal').textContent = total.toFixed(2);
+            document.getElementById('cartCount').textContent = count + ' item(s)';
+            computeChange();
+        }
+
+        function computeChange() {
+            const total = parseFloat(document.getElementById('cartTotal').textContent) || 0;
+            const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+            document.getElementById('changeDisplay').textContent = (paid - total).toFixed(2);
+        }
+
+        document.getElementById('amountPaid').addEventListener('input', computeChange);
+
+        function addToCart(id, name, price) {
+            const existing = cart.findIndex(i => i.productId === id);
+            if (existing >= 0) {
+                cart[existing].quantity++;
+            } else {
+                cart.push({ productId: id, name, price, quantity: 1 });
+            }
+            renderCart();
+        }
+
+        function changeQty(index, delta) {
+            if (cart[index]) {
+                cart[index].quantity = Math.max(1, cart[index].quantity + delta);
+                renderCart();
+            }
+        }
+
+        function changeQtyTo(index, val) {
+            const qty = parseInt(val) || 1;
+            if (cart[index]) {
+                cart[index].quantity = Math.max(1, qty);
+                renderCart();
+            }
+        }
+
+        function removeItem(index) {
+            cart.splice(index, 1);
+            renderCart();
+        }
+
+        document.querySelectorAll('.product-item').forEach(el => {
+            el.addEventListener('click', function () {
+                const id = parseInt(this.dataset.id);
+                const name = this.dataset.name;
+                const price = parseFloat(this.dataset.price);
+                addToCart(id, name, price);
+                this.style.borderColor = '#FD7E14';
+                this.style.boxShadow = '0 0 0 2px rgba(253,126,20,0.2)';
+                setTimeout(() => {
+                    this.style.borderColor = '';
+                    this.style.boxShadow = '';
+                }, 500);
+            });
+        });
+
+        document.getElementById('productSearch').addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('.product-card').forEach(el => {
+                el.style.display = el.dataset.name.includes(q) ? '' : 'none';
+            });
+        });
+
+        document.getElementById('saleForm').addEventListener('submit', function (e) {
+            if (cart.length === 0) {
+                e.preventDefault();
+                alert('Please add at least one item to the cart.');
+                return;
+            }
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+            cart.forEach((item, index) => {
+                container.innerHTML += `<input type="hidden" name="items[${index}].ProductId" value="${item.productId}" />`;
+                container.innerHTML += `<input type="hidden" name="items[${index}].Quantity" value="${item.quantity}" />`;
+            });
+        });
+    </script>
+    <style>
+        .product-item:hover { border-color: #FD7E14 !important; box-shadow: 0 0 0 2px rgba(253,126,20,0.15); }
+        .product-item:active { transform: scale(0.97); }
+        .cursor-pointer { cursor: pointer; }
+    </style>
+}

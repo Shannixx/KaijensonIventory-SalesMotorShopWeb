@@ -1,0 +1,21 @@
+@model Staff
+@{ ViewData["Title"] = "Staff Details"; }
+<div class="page-header"><div><h1>Staff Details</h1><p>View staff account information.</p></div></div>
+<div class="card"><div class="card-body">
+<dl class="row mb-4">
+    <dt class="col-sm-3">ID</dt>
+    <dd class="col-sm-9">@Model.StaffId</dd>
+    <dt class="col-sm-3">Name</dt>
+    <dd class="col-sm-9">@Model.StaffName</dd>
+    <dt class="col-sm-3">Username</dt>
+    <dd class="col-sm-9">@Model.UserName</dd>
+    <dt class="col-sm-3">Contact Number</dt>
+    <dd class="col-sm-9">@Model.ContactNumber</dd>
+    <dt class="col-sm-3">Address</dt>
+    <dd class="col-sm-9">@Model.Address</dd>
+    <dt class="col-sm-3">Role</dt>
+    <dd class="col-sm-9"><span class="badge @(Model.Role == "Admin" ? "bg-primary" : "bg-secondary")">@Model.Role</span></dd>
+</dl>
+<a asp-action="Edit" asp-route-id="@Model.StaffId" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit</a>
+<a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+</div></div>

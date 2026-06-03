@@ -1,0 +1,77 @@
+@model IEnumerable<StockIn>
+@{ ViewData["Title"] = "Stock In"; }
+
+<div class="page-header">
+    <div>
+        <h1>Stock In</h1>
+        <p>Record incoming stock.</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Stock In</a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label small">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Product or supplier name..." value="@ViewData["CurrentFilter"]" />
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Product</th>
+                        <th>Supplier</th>
+                        <th>Qty Received</th>
+                        <th>Delivery Date</th>
+                        <th>Remarks</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.StockInId</td>
+                            <td>@item.Product?.ProductName</td>
+                            <td>@item.Supplier?.CompanyName</td>
+                            <td>@item.QuantityReceived</td>
+                            <td>@item.DeliveryDate.ToString("MMM dd, yyyy")</td>
+                            <td>@(item.Remarks ?? "-")</td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@item.StockInId" class="btn btn-sm btn-outline-info" title="Details"><i class="bi bi-eye"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No stock in records found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

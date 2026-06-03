@@ -1,0 +1,50 @@
+@model StockIn
+@{ ViewData["Title"] = "Create Stock In"; }
+
+<div class="page-header"><div><h1>Create Stock In</h1><p>Record incoming stock.</p></div></div>
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Create">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="ProductId" class="form-label"></label>
+                    <select asp-for="ProductId" class="form-select" asp-items="ViewBag.Products">
+                        <option value="">-- Select Product --</option>
+                    </select>
+                    <span asp-validation-for="ProductId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SupplierId" class="form-label"></label>
+                    <select asp-for="SupplierId" class="form-select" asp-items="ViewBag.Suppliers">
+                        <option value="">-- Select Supplier --</option>
+                    </select>
+                    <span asp-validation-for="SupplierId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="QuantityReceived" class="form-label"></label>
+                    <input asp-for="QuantityReceived" class="form-control" />
+                    <span asp-validation-for="QuantityReceived" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="DeliveryDate" class="form-label"></label>
+                    <input asp-for="DeliveryDate" class="form-control" type="date" />
+                    <span asp-validation-for="DeliveryDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-12">
+                    <label asp-for="Remarks" class="form-label"></label>
+                    <textarea asp-for="Remarks" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="Remarks" class="text-danger small"></span>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Create</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
