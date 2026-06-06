@@ -8,7 +8,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Key]
         public int TransactionId { get; set; }
 
-        [Required, StringLength(50)]
+        [StringLength(50)]
         [Display(Name = "Invoice Number")]
         public string InvoiceNumber { get; set; } = string.Empty;
 

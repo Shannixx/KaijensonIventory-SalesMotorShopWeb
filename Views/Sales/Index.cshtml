@@ -55,7 +55,9 @@
                             <td>@item.Staff?.StaffName</td>
                             <td class="text-end">
                                 <a asp-action="Details" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-info" title="Details"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Receipt" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-primary" target="_blank" title="Receipt"><i class="bi bi-receipt"></i></a>
+                                <a asp-action="Receipt" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-primary" target="_blank" title="Preview & Print"><i class="bi bi-receipt"></i></a>
+                                <a asp-action="DownloadPdfReceipt" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-danger" title="Download PDF"><i class="bi bi-filetype-pdf"></i></a>
+                                <a asp-action="ReceiptThermal80" asp-route-id="@item.TransactionId" class="btn btn-sm btn-outline-secondary" target="_blank" title="Thermal 80mm"><i class="bi bi-printer"></i></a>
                                 <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Cancel this transaction? Stock will be restored.');">
                                     <input type="hidden" name="id" value="@item.TransactionId" />
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel"><i class="bi bi-x-circle"></i></button>

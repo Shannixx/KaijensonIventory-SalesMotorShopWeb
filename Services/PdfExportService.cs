@@ -70,6 +70,65 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             }).GeneratePdf();
         }
 
+        public byte[] GenerateThermalReceipt80(SalesTransaction transaction)
+        {
+            return Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(227, 850);
+                    page.Margin(10);
+                    page.DefaultTextStyle(x => x.FontFamily("Inter").FontSize(8));
+
+                    page.Header().Column(col =>
+                    {
+                        col.Item().AlignCenter().Text("KAIJENSON MOTOR SHOP").Bold().FontSize(12).FontColor("#FF7F11");
+                        col.Item().AlignCenter().Text("123 Main Street, City Center").FontSize(7).FontColor(Colors.Grey.Medium);
+                        col.Item().AlignCenter().Text("Tel: (123) 456-7890").FontSize(7).FontColor(Colors.Grey.Medium);
+                        col.Item().PaddingVertical(3).LineHorizontal(1).LineColor("#FF7F11");
+                        col.Item().PaddingVertical(2).Text($"Invoice: {transaction.InvoiceNumber}").Bold().FontSize(8);
+                        col.Item().Text($"Date: {transaction.TransactionDate:MMM dd, yyyy HH:mm}").FontSize(7);
+                        col.Item().Text($"Customer: {transaction.CustomerName}").FontSize(7);
+                        col.Item().Text($"Cashier: {transaction.Staff?.StaffName ?? "N/A"}").FontSize(7);
+                        col.Item().PaddingVertical(2).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+                    });
+
+                    page.Content().Table(table =>
+                    {
+                        table.ColumnsDefinition(c =>
+                        {
+                            c.RelativeColumn(3);
+                            c.ConstantColumn(25);
+                            c.ConstantColumn(50);
+                        });
+
+                        table.Header(h =>
+                        {
+                            h.Cell().Text("Item").Bold().FontSize(7);
+                            h.Cell().AlignRight().Text("Qty").Bold().FontSize(7);
+                            h.Cell().AlignRight().Text("Amount").Bold().FontSize(7);
+                        });
+
+                        foreach (var item in transaction.SalesItems)
+                        {
+                            table.Cell().Text(item.Product?.ProductName ?? "Unknown").FontSize(7);
+                            table.Cell().AlignRight().Text(item.Quantity.ToString()).FontSize(7);
+                            table.Cell().AlignRight().Text(item.Subtotal.ToString("N2")).FontSize(7);
+                        }
+                    });
+
+                    page.Footer().Column(col =>
+                    {
+                        col.Item().PaddingVertical(2).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+                        col.Item().AlignRight().Text($"Total: {transaction.TotalAmount:N2}").Bold().FontSize(9);
+                        col.Item().AlignRight().Text($"Amount Paid: {transaction.AmountPaid:N2}").FontSize(7);
+                        col.Item().AlignRight().Text($"Change: {transaction.Change:N2}").FontSize(7);
+                        col.Item().PaddingTop(8).AlignCenter().Text("Thank you!").FontSize(7).FontColor(Colors.Grey.Medium);
+                    });
+                });
+            }).GeneratePdf();
+        }
+
         public byte[] GenerateSalesReport(List<SalesTransaction> transactions, DateTime? dateFrom, DateTime? dateTo)
         {
             return Document.Create(container =>

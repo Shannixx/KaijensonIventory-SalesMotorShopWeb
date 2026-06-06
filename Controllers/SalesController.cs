@@ -15,12 +15,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly PdfExportService _pdf;
+        private readonly DynamicReorderService _reorderService;
 
-        public SalesController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext, PdfExportService pdf)
+        public SalesController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext, PdfExportService pdf, DynamicReorderService reorderService)
         {
             _context = context;
             _hubContext = hubContext;
             _pdf = pdf;
+            _reorderService = reorderService;
         }
 
         public async Task<IActionResult> Index(string? searchString, int page = 1)
@@ -244,6 +246,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     await transaction.CommitAsync();
 
+                    foreach (var si in salesItems)
+                    {
+                        await _reorderService.RecalculateProductAsync(si.ProductId);
+                    }
+
                     await _hubContext.Clients.All.SendAsync("ReceiveNotification",
                         $"New sale: {model.InvoiceNumber} - {model.CustomerName} (₱{model.TotalAmount:N2})", "success");
                     await _hubContext.Clients.All.SendAsync("DashboardUpdated");
@@ -326,6 +333,41 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             byte[] pdf = _pdf.GenerateSalesReceipt(transaction);
             var fileName = $"Receipt_{transaction.InvoiceNumber}.pdf";
+            return File(pdf, "application/pdf", fileName);
+        }
+
+        public async Task<IActionResult> ReceiptThermal80(int id)
+        {
+            try
+            {
+                var transaction = await _context.SalesTransactions
+                    .Include(t => t.Staff)
+                    .Include(t => t.SalesItems).ThenInclude(i => i.Product)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.TransactionId == id);
+
+                if (transaction == null) return NotFound();
+                return View(transaction);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "An error occurred while loading the thermal receipt. Please try again.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        public async Task<IActionResult> DownloadPdfThermal80(int id)
+        {
+            var transaction = await _context.SalesTransactions
+                .Include(t => t.Staff)
+                .Include(t => t.SalesItems).ThenInclude(i => i.Product)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TransactionId == id);
+
+            if (transaction == null) return NotFound();
+
+            byte[] pdf = _pdf.GenerateThermalReceipt80(transaction);
+            var fileName = $"ThermalReceipt_{transaction.InvoiceNumber}.pdf";
             return File(pdf, "application/pdf", fileName);
         }
 
@@ -415,6 +457,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     await _context.SaveChangesAsync();
 
                     await dbTransaction.CommitAsync();
+
+                    foreach (var item in transaction.SalesItems)
+                    {
+                        await _reorderService.RecalculateProductAsync(item.ProductId);
+                    }
 
                     TempData["Success"] = "Sale cancelled and stock restored.";
                     return RedirectToAction(nameof(Index));

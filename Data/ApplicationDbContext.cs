@@ -88,6 +88,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<InventoryTransaction>()
                 .HasOne(t => t.Staff).WithMany().HasForeignKey(t => t.StaffId).OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<Product>()
+                .Property(p => p.LeadTimeDays)
+                .HasDefaultValue(30);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.UseAutoReorder)
+                .HasDefaultValue(false);
+
             modelBuilder.Entity<InventoryTransaction>()
                 .HasIndex(t => t.TransactionDate);
 

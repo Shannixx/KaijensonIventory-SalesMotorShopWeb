@@ -1,6 +1,7 @@
 using System.Linq;
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -11,11 +12,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly DynamicReorderService _reorderService;
 
-        public ProductsController(ApplicationDbContext context, IWebHostEnvironment env)
+        public ProductsController(ApplicationDbContext context, IWebHostEnvironment env, DynamicReorderService reorderService)
         {
             _context = context;
             _env = env;
+            _reorderService = reorderService;
         }
 
         public async Task<IActionResult> Index(string? searchString, int? categoryId, int page = 1)
@@ -96,7 +99,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
                     "SupplierId", "CompanyName");
 
-                return View();
+                return View(new Product { UseAutoReorder = true, LeadTimeDays = 30 });
             }
             catch
             {
@@ -135,7 +138,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ModelState.AddModelError("QuantityOnHand", "Quantity cannot be negative.");
                 }
 
-                if (product.ReorderLevel < 0)
+                if (!product.UseAutoReorder && product.ReorderLevel < 0)
                 {
                     ModelState.AddModelError("ReorderLevel", "Reorder level cannot be negative.");
                 }
@@ -181,6 +184,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 "SupplierId", "CompanyName", product.SupplierId);
                             return View(product);
                         }
+                    }
+
+                    if (product.UseAutoReorder)
+                    {
+                        product.ReorderLevel = 1;
+                        product.LastRecalcDate = DateTime.Now;
                     }
 
                     try
@@ -296,7 +305,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ModelState.AddModelError("QuantityOnHand", "Quantity cannot be negative.");
             }
 
-            if (product.ReorderLevel < 0)
+            if (!product.UseAutoReorder && product.ReorderLevel < 0)
             {
                 ModelState.AddModelError("ReorderLevel", "Reorder level cannot be negative.");
             }
@@ -359,10 +368,22 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             product.ImagePath = existing.ImagePath;
                         }
 
-                        product.StockStatus = CalculateStockStatus(product.QuantityOnHand, product.ReorderLevel);
                         product.CreatedAt = existing.CreatedAt;
 
+                        if (product.UseAutoReorder)
+                        {
+                            product.ReorderLevel = existing.ReorderLevel;
+                            product.LastRecalcDate = existing.LastRecalcDate;
+                        }
+
+                        product.StockStatus = CalculateStockStatus(product.QuantityOnHand, product.ReorderLevel);
+
                         _context.Products.Update(product);
+
+                        if (product.UseAutoReorder)
+                        {
+                            await _reorderService.RecalculateProductAsync(id);
+                        }
 
                         _context.ActivityLogs.Add(new ActivityLog
                         {
@@ -386,11 +407,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
                 "CategoryId", "CategoryName", product.CategoryId);
 
-            ViewBag.Suppliers = new SelectList(
-                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                "SupplierId", "CompanyName", product.SupplierId);
+                ViewBag.Suppliers = new SelectList(
+                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
+                    "SupplierId", "CompanyName", product.SupplierId);
 
-            return View(product);
+                ViewBag.AverageDailySales = await _reorderService.GetCurrentAverageDailySalesAsync(id);
+
+                return View(product);
         }
 
         public async Task<IActionResult> Details(int id)
@@ -412,6 +435,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .FirstOrDefaultAsync(p => p.ProductId == id);
 
                 if (product == null) return NotFound();
+
+                ViewBag.AverageDailySales = await _reorderService.GetCurrentAverageDailySalesAsync(id);
+
                 return View(product);
             }
             catch
@@ -510,6 +536,61 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "An error occurred while deleting the product. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Recalculate(int id)
+        {
+            int? staffId = HttpContext.Session.GetInt32("StaffId");
+            if (!staffId.HasValue)
+            {
+                TempData["ErrorMessage"] = "Session expired. Please log in again.";
+                return RedirectToAction("Login", "Account");
+            }
+
+            try
+            {
+                await _reorderService.RecalculateProductAsync(id);
+                TempData["Success"] = "Reorder level recalculated successfully.";
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "An error occurred while recalculating the reorder level.";
+            }
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecalculateAll()
+        {
+            int? staffId = HttpContext.Session.GetInt32("StaffId");
+            if (!staffId.HasValue)
+            {
+                TempData["ErrorMessage"] = "Session expired. Please log in again.";
+                return RedirectToAction("Login", "Account");
+            }
+
+            string? role = HttpContext.Session.GetString("StaffRole");
+            if (role != "Admin")
+            {
+                TempData["ErrorMessage"] = "Only administrators can perform batch recalculation.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            try
+            {
+                await _reorderService.RecalculateAllAsync();
+                TempData["Success"] = "All auto-reorder products recalculated successfully.";
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "An error occurred during batch recalculation.";
+            }
+
+            return RedirectToAction(nameof(Index));
         }
 
         private async Task<string?> SaveImageAsync(IFormFile? imageFile)

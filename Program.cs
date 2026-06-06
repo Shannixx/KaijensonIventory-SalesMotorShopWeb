@@ -13,6 +13,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddSingleton<HashingService>();
 builder.Services.AddSingleton<PdfExportService>();
+builder.Services.AddScoped<DynamicReorderService>();
+builder.Services.AddHostedService<RecurringRecalculationService>();
 
 builder.Services.AddSignalR();
 

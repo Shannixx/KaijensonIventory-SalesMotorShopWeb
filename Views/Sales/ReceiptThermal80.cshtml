@@ -1,0 +1,113 @@
+@model SalesTransaction
+@{ ViewData["Title"] = "Thermal Receipt"; Layout = null; }
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thermal Receipt - @Model.InvoiceNumber</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', 'Consolas', monospace;
+            font-size: 10px;
+            width: 72mm;
+            padding: 5px 8px;
+            color: #000;
+        }
+        .no-print { text-align: center; margin-bottom: 6px; }
+        .no-print button, .no-print a {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            padding: 6px 14px;
+            margin: 2px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            text-decoration: none;
+            color: #333;
+        }
+        .no-print .btn-primary { background: #FF7F11; color: #fff; border-color: #FF7F11; }
+        .header { text-align: center; margin-bottom: 6px; }
+        .header h2 { font-size: 14px; font-weight: bold; text-transform: uppercase; }
+        .header p { font-size: 8px; margin: 1px 0; }
+        .divider { border: none; border-top: 1px dashed #999; margin: 6px 0; }
+        .info { font-size: 9px; margin-bottom: 4px; }
+        .info-row { display: flex; justify-content: space-between; padding: 1px 0; }
+        .info-label { color: #555; }
+        table { width: 100%; font-size: 9px; border-collapse: collapse; }
+        th { text-align: left; padding: 3px 2px; border-bottom: 1px solid #999; font-size: 8px; text-transform: uppercase; }
+        td { padding: 2px 2px; border-bottom: 1px dotted #ddd; }
+        .text-right { text-align: right; }
+        .totals { font-size: 9px; margin-top: 4px; }
+        .totals-row { display: flex; justify-content: space-between; padding: 1px 0; }
+        .total-line { font-size: 11px; font-weight: bold; border-top: 2px solid #000; padding-top: 4px; margin-top: 2px; }
+        .footer { text-align: center; font-size: 8px; margin-top: 10px; color: #888; }
+        @@media print {
+            .no-print { display: none; }
+            body { width: 72mm; padding: 2px 4px; }
+            @@page { width: 80mm; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="btn-primary" onclick="window.print()">Print</button>
+        <a asp-action="DownloadPdfThermal80" asp-route-id="@Model.TransactionId">Download PDF</a>
+        <a asp-action="Details" asp-route-id="@Model.TransactionId">Back</a>
+    </div>
+
+    <div class="header">
+        <h2>KAIJENSON MOTOR SHOP</h2>
+        <p>123 Main Street, City Center</p>
+        <p>Tel: (123) 456-7890</p>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="info">
+        <div class="info-row"><span class="info-label">Invoice</span><span>@Model.InvoiceNumber</span></div>
+        <div class="info-row"><span class="info-label">Date</span><span>@Model.TransactionDate.ToString("MMM dd, yyyy h:mm tt")</span></div>
+        <div class="info-row"><span class="info-label">Customer</span><span>@Model.CustomerName</span></div>
+        <div class="info-row"><span class="info-label">Cashier</span><span>@Model.Staff?.StaffName</span></div>
+    </div>
+
+    <hr class="divider" />
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="text-right">Qty</th>
+                <th class="text-right">Price</th>
+                <th class="text-right">Sub</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.SalesItems)
+            {
+                <tr>
+                    <td>@item.Product?.ProductName</td>
+                    <td class="text-right">@item.Quantity</td>
+                    <td class="text-right">@item.UnitPrice.ToString("N2")</td>
+                    <td class="text-right">@item.Subtotal.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr class="divider" />
+
+    <div class="totals">
+        <div class="totals-row"><span>Total</span><span>@Model.TotalAmount.ToString("N2")</span></div>
+        <div class="totals-row"><span>Amount Paid</span><span>@Model.AmountPaid.ToString("N2")</span></div>
+        <div class="totals-row total-line"><span>Change</span><span>@Model.Change.ToString("N2")</span></div>
+    </div>
+
+    <div class="footer">
+        <p>Thank you for your purchase!</p>
+    </div>
+</body>
+</html>

@@ -44,6 +44,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Reorder Level")]
         public int ReorderLevel { get; set; }
 
+        [Range(1, 365)]
+        [Display(Name = "Lead Time (Days)")]
+        public int LeadTimeDays { get; set; } = 30;
+
+        [Display(Name = "Auto-calculate Reorder Level")]
+        public bool UseAutoReorder { get; set; }
+
+        [Display(Name = "Last Recalculated")]
+        public DateTime? LastRecalcDate { get; set; }
+
         [StringLength(30)]
         [Display(Name = "Stock Status")]
         public string StockStatus { get; set; } = "Available";

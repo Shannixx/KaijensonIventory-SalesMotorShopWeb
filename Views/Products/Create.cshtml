@@ -94,14 +94,26 @@
                     <span asp-validation-for="QuantityOnHand" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
-                    <label asp-for="ReorderLevel" class="form-label"></label>
-                    <input asp-for="ReorderLevel" class="form-control" />
+                    <label asp-for="LeadTimeDays" class="form-label"></label>
+                    <input asp-for="LeadTimeDays" class="form-control" />
+                    <span asp-validation-for="LeadTimeDays" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="ReorderLevel" class="form-label">Reorder Level</label>
+                    <input asp-for="ReorderLevel" class="form-control" id="ReorderLevel" readonly="@(Model.UseAutoReorder ? "readonly" : null)" />
                     <span asp-validation-for="ReorderLevel" class="text-danger small"></span>
+                    <small id="reorderNote" class="text-muted" style="display:@(Model.UseAutoReorder ? "inline" : "none")">Computed: Avg Daily Sales &times; Lead Time</small>
                 </div>
                 <div class="col-md-2">
                     <label asp-for="AverageCost" class="form-label"></label>
                     <input asp-for="AverageCost" class="form-control" step="0.01" />
                     <span asp-validation-for="AverageCost" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input asp-for="UseAutoReorder" class="form-check-input" id="UseAutoReorder" />
+                        <label asp-for="UseAutoReorder" class="form-check-label"></label>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="ImagePath" class="form-label">Product Image</label>
@@ -118,4 +130,18 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('UseAutoReorder').addEventListener('change', function() {
+            var field = document.getElementById('ReorderLevel');
+            var note = document.getElementById('reorderNote');
+            if (this.checked) {
+                field.readOnly = true;
+                field.value = '1';
+                note.style.display = 'inline';
+            } else {
+                field.readOnly = false;
+                note.style.display = 'none';
+            }
+        });
+    </script>
 }
