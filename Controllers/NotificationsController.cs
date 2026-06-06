@@ -56,7 +56,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(items);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading notifications. Please try again.";
                 return View(new List<Notification>());
@@ -84,7 +84,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while marking the notification as read. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -112,10 +112,27 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "All notifications marked as read.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while marking all notifications as read. Please try again.";
                 return RedirectToAction(nameof(Index));
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> GetUnreadCount()
+        {
+            int? staffId = HttpContext.Session.GetInt32("StaffId");
+            if (!staffId.HasValue) return Json(0);
+
+            try
+            {
+                int count = await _context.Notifications.CountAsync(n => !n.IsRead);
+                return Json(count);
+            }
+            catch
+            {
+                return Json(0);
             }
         }
 
@@ -141,7 +158,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Notification deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the notification. Please try again.";
                 return RedirectToAction(nameof(Index));

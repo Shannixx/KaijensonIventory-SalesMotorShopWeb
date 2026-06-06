@@ -1,7 +1,9 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
+using KaijensonIventory_SalesMotorShopWeb.Hubs;
 using KaijensonIventory_SalesMotorShopWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
@@ -9,7 +11,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class ServiceTransactionsController : Controller
     {
         private readonly ApplicationDbContext _context;
-        public ServiceTransactionsController(ApplicationDbContext context) { _context = context; }
+        private readonly IHubContext<NotificationHub> _hubContext;
+        public ServiceTransactionsController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext) { _context = context; _hubContext = hubContext; }
 
         public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1)
         {
@@ -57,7 +60,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(transactions);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading service transactions. Please try again.";
                 return View(new List<ServiceTransaction>());
@@ -86,7 +89,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View();
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the service transaction form. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -175,6 +178,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         _context.ServiceTransactions.Add(transaction);
                         await _context.SaveChangesAsync();
 
+                        // Record inventory transactions for parts used
+                        foreach (var part in transaction.PartsUsed)
+                        {
+                            Product? usedProduct = await _context.Products.FindAsync(part.ProductId);
+                            _context.InventoryTransactions.Add(new InventoryTransaction
+                            {
+                                ProductId = part.ProductId,
+                                TransactionType = "ServiceUse",
+                                Quantity = -part.Quantity,
+                                UnitCost = usedProduct?.AverageCost ?? 0,
+                                ReferenceId = transaction.ServiceTxnId,
+                                ReferenceType = "ServiceTransaction",
+                                StaffId = staffId,
+                                TransactionDate = DateTime.Now,
+                                Remarks = $"Service #{transaction.ServiceTxnId} - {transaction.CustomerName}"
+                            });
+                        }
+
                         _context.ActivityLogs.Add(new ActivityLog
                         {
                             Action = "Create",
@@ -187,10 +208,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                         await dbTransaction.CommitAsync();
 
+                        await _hubContext.Clients.All.SendAsync("ReceiveNotification",
+                            $"New service: {transaction.CustomerName} - ₱{transaction.ServiceFee:N2}", "success");
+                        await _hubContext.Clients.All.SendAsync("DashboardUpdated");
+
                         TempData["SuccessMessage"] = "Service transaction created successfully.";
                         return RedirectToAction(nameof(Index));
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         await dbTransaction.RollbackAsync();
                         throw; // Re-throw to be caught by outer catch block
@@ -206,7 +231,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while creating the service transaction. Please try again.";
                 ViewBag.Mechanics = new SelectList(
@@ -249,7 +274,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the service transaction for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -314,6 +339,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         existing.Status = transaction.Status;
                         existing.MechanicId = transaction.MechanicId;
 
+                        // Record reversals for old parts and restore stock
+                        foreach (var oldPart in existing.PartsUsed)
+                        {
+                            Product? oldProduct = await _context.Products.FindAsync(oldPart.ProductId);
+                            if (oldProduct != null)
+                            {
+                                oldProduct.QuantityOnHand += oldPart.Quantity;
+                                UpdateStockStatus(oldProduct);
+                            }
+
+                            _context.InventoryTransactions.Add(new InventoryTransaction
+                            {
+                                ProductId = oldPart.ProductId,
+                                TransactionType = "ServiceUse",
+                                Quantity = oldPart.Quantity,
+                                UnitCost = 0,
+                                ReferenceId = existing.ServiceTxnId,
+                                ReferenceType = "ServiceTransaction",
+                                StaffId = staffId,
+                                TransactionDate = DateTime.Now,
+                                Remarks = $"Service #{existing.ServiceTxnId} edit - restored part"
+                            });
+                        }
+                        existing.PartsUsed.Clear();
+
                         List<(int ProductId, int Quantity)> newParts = ParsePartsFromForm();
                         foreach (var part in newParts)
                         {
@@ -350,6 +400,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 ProductId = part.ProductId,
                                 Quantity = part.Quantity
                             });
+
+                            _context.InventoryTransactions.Add(new InventoryTransaction
+                            {
+                                ProductId = part.ProductId,
+                                TransactionType = "ServiceUse",
+                                Quantity = -part.Quantity,
+                                UnitCost = product.AverageCost,
+                                ReferenceId = existing.ServiceTxnId,
+                                ReferenceType = "ServiceTransaction",
+                                StaffId = staffId,
+                                TransactionDate = DateTime.Now,
+                                Remarks = $"Service #{existing.ServiceTxnId} edit - used part"
+                            });
                         }
 
                         string logDesc = $"Edited service transaction #{existing.ServiceTxnId} for {existing.CustomerName}";
@@ -367,10 +430,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         await _context.SaveChangesAsync();
                         await dbTransaction.CommitAsync();
 
+                        await _hubContext.Clients.All.SendAsync("ReceiveNotification",
+                            $"Service #{existing.ServiceTxnId} updated - {existing.CustomerName}", "info");
+                        await _hubContext.Clients.All.SendAsync("DashboardUpdated");
+
                         TempData["SuccessMessage"] = "Service transaction updated successfully.";
                         return RedirectToAction(nameof(Index));
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         await dbTransaction.RollbackAsync();
                         throw; // Re-throw to be caught by outer catch block
@@ -386,7 +453,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while updating the service transaction. Please try again.";
                 ViewBag.Mechanics = new SelectList(
@@ -421,7 +488,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (transaction == null) return NotFound();
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading service transaction details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -450,7 +517,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (transaction == null) return NotFound();
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the service transaction for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -504,16 +571,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     await dbTransaction.CommitAsync();
 
+                    await _hubContext.Clients.All.SendAsync("ReceiveNotification",
+                        $"Service #{transaction.ServiceTxnId} cancelled - {transaction.CustomerName}", "warning");
+                    await _hubContext.Clients.All.SendAsync("DashboardUpdated");
+
                     TempData["SuccessMessage"] = "Service transaction deleted successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
+                catch
                 {
                     await dbTransaction.RollbackAsync();
                     throw; // Re-throw to be caught by outer catch block
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the service transaction. Please try again.";
                 return RedirectToAction(nameof(Index));

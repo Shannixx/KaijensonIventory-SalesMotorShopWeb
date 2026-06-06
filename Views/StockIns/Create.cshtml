@@ -27,6 +27,11 @@
                     <span asp-validation-for="QuantityReceived" class="text-danger small"></span>
                 </div>
                 <div class="col-md-4">
+                    <label asp-for="UnitCost" class="form-label"></label>
+                    <input asp-for="UnitCost" class="form-control" />
+                    <span asp-validation-for="UnitCost" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
                     <label asp-for="DeliveryDate" class="form-label"></label>
                     <input asp-for="DeliveryDate" class="form-control" type="date" />
                     <span asp-validation-for="DeliveryDate" class="text-danger small"></span>

@@ -16,30 +16,34 @@
         <div class="alert alert-success mb-3">@TempData["SuccessMessage"]</div>
     }
 
-    <form asp-action="Login" method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+    <form asp-action="Login" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
         <div class="mb-3">
             <label asp-for="Username" class="form-label"></label>
-            <input asp-for="Username" class="form-control" placeholder="Enter your email" />
-            <span asp-validation-for="Username" class="text-danger small"></span>
+            <div class="input-icon-group">
+                <i class="bi bi-person input-icon"></i>
+                <input asp-for="Username" class="form-control" placeholder="Enter your username" autocomplete="username" />
+            </div>
+            <span asp-validation-for="Username" class="text-danger"></span>
         </div>
 
         <div class="mb-4">
             <label asp-for="Password" class="form-label"></label>
-            <div class="password-wrapper">
-                <input asp-for="Password" class="form-control" placeholder="Enter your password" />
-                <button type="button" class="toggle-pwd"><i class="bi bi-eye"></i></button>
+            <div class="password-wrapper input-icon-group">
+                <i class="bi bi-lock input-icon"></i>
+                <input asp-for="Password" class="form-control" placeholder="Enter your password" autocomplete="current-password" />
+                <button type="button" class="toggle-pwd" aria-label="Show password"><i class="bi bi-eye"></i></button>
             </div>
-            <span asp-validation-for="Password" class="text-danger small"></span>
+            <span asp-validation-for="Password" class="text-danger"></span>
         </div>
 
-        <button type="submit" class="btn btn-primary w-100">Sign In</button>
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-box-arrow-in-right"></i> Sign In
+        </button>
     </form>
 
-    <div class="auth-footer">
-        Don't have an account? <a asp-action="Register">Register here</a>
-    </div>
+
 </div>
 
 @section Scripts {

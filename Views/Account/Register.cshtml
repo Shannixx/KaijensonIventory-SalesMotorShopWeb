@@ -11,40 +11,55 @@
         <p>Register a new account</p>
     </div>
 
-    <form asp-action="Register" method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+    <form asp-action="Register" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
         <div class="mb-3">
             <label asp-for="StaffName" class="form-label"></label>
-            <input asp-for="StaffName" class="form-control" placeholder="Full name" />
-            <span asp-validation-for="StaffName" class="text-danger small"></span>
+            <div class="input-icon-group">
+                <i class="bi bi-person-badge input-icon"></i>
+                <input asp-for="StaffName" class="form-control" placeholder="Full name" autocomplete="name" />
+            </div>
+            <span asp-validation-for="StaffName" class="text-danger"></span>
         </div>
 
         <div class="mb-3">
             <label asp-for="Username" class="form-label"></label>
-            <input asp-for="Username" class="form-control" placeholder="Email address" />
-            <span asp-validation-for="Username" class="text-danger small"></span>
+            <div class="input-icon-group">
+                <i class="bi bi-person input-icon"></i>
+                <input asp-for="Username" class="form-control" placeholder="Enter your username" autocomplete="username" />
+            </div>
+            <span asp-validation-for="Username" class="text-danger"></span>
         </div>
 
         <div class="mb-3">
             <label asp-for="Password" class="form-label"></label>
-            <div class="password-wrapper">
-                <input asp-for="Password" class="form-control" placeholder="Create password" />
-                <button type="button" class="toggle-pwd"><i class="bi bi-eye"></i></button>
+            <div class="password-wrapper input-icon-group">
+                <i class="bi bi-lock input-icon"></i>
+                <input asp-for="Password" class="form-control" id="Password" placeholder="Create password" autocomplete="new-password" />
+                <button type="button" class="toggle-pwd" aria-label="Show password"><i class="bi bi-eye"></i></button>
             </div>
-            <span asp-validation-for="Password" class="text-danger small"></span>
+            <div class="password-strength-bar">
+                <div class="strength-fill" id="strengthFill"></div>
+            </div>
+            <span class="password-strength-text" id="strengthText"></span>
+            <span asp-validation-for="Password" class="text-danger"></span>
         </div>
 
         <div class="mb-4">
             <label asp-for="ConfirmPassword" class="form-label"></label>
-            <div class="password-wrapper">
-                <input asp-for="ConfirmPassword" class="form-control" placeholder="Confirm password" />
-                <button type="button" class="toggle-pwd"><i class="bi bi-eye"></i></button>
+            <div class="password-wrapper input-icon-group">
+                <i class="bi bi-lock-fill input-icon"></i>
+                <input asp-for="ConfirmPassword" class="form-control" id="ConfirmPassword" placeholder="Confirm password" autocomplete="new-password" />
+                <button type="button" class="toggle-pwd" aria-label="Show password"><i class="bi bi-eye"></i></button>
             </div>
-            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+            <span id="passwordMatchMsg" class="password-strength-text"></span>
+            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
         </div>
 
-        <button type="submit" class="btn btn-primary w-100">Register</button>
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-person-plus-fill"></i> Register
+        </button>
     </form>
 
     <div class="auth-footer">

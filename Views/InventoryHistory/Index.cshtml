@@ -1,0 +1,99 @@
+@model IEnumerable<InventoryTransaction>
+@{
+    ViewData["Title"] = "Inventory History";
+    string[] types = { "StockIn", "Sale", "SaleReversal", "ServiceUse" };
+}
+
+<div class="page-header">
+    <div>
+        <h1>Inventory History</h1>
+        <p>Track all inventory movements.</p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Product or remarks..." value="@ViewData["CurrentFilter"]" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Type</label>
+                <select name="transactionType" class="form-select">
+                    <option value="">All Types</option>
+                    @foreach (var t in types)
+                    {
+                        <option value="@t" selected="@(ViewData["TransactionType"]?.ToString() == t ? true : null)">@t</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Product</label>
+                <select name="productId" class="form-select" asp-items="ViewBag.Products">
+                    <option value="">All Products</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Date From</label>
+                <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Date To</label>
+                <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" />
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i></button>
+                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                        <th>Reference</th>
+                        <th>Staff</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.TransactionDate.ToString("MMM dd, yyyy HH:mm")</td>
+                            <td>@item.Product?.ProductName</td>
+                            <td>
+                                @if (item.TransactionType == "StockIn") { <span class="badge bg-success">Stock In</span> }
+                                else if (item.TransactionType == "Sale") { <span class="badge bg-danger">Sale</span> }
+                                else if (item.TransactionType == "SaleReversal") { <span class="badge bg-info">Sale Reversal</span> }
+                                else if (item.TransactionType == "ServiceUse") { <span class="badge bg-warning text-dark">Service Use</span> }
+                                else { <span class="badge bg-secondary">@item.TransactionType</span> }
+                            </td>
+                            <td class="fw-semibold @(item.Quantity < 0 ? "text-danger" : "text-success")">@(item.Quantity > 0 ? "+" : "")@item.Quantity</td>
+                            <td>@item.UnitCost.ToString("N2")</td>
+                            <td><span class="small">@(item.ReferenceType ?? "-") #@item.ReferenceId</span></td>
+                            <td>@item.Staff?.StaffName</td>
+                            <td class="small text-muted">@(item.Remarks ?? "-")</td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No inventory transactions found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

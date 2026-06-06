@@ -16,6 +16,7 @@
     <style>
         body { font-family: 'Inter', sans-serif; background: #fff; padding: 40px 20px; }
         .receipt { max-width: 500px; margin: 0 auto; }
+        .receipt-actions { text-align: center; margin-bottom: 20px; }
         .receipt-header { text-align: center; margin-bottom: 24px; }
         .receipt-header h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
         .receipt-header p { margin: 0; color: #6B7280; font-size: 13px; }
@@ -45,8 +46,13 @@
         <a asp-action="Details" asp-route-id="@Model.TransactionId" class="btn btn-outline-secondary">Back</a>
     </div>
 
-    <div class="receipt">
-        <div class="receipt-header">
+<div class="receipt-actions">
+    <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="bi bi-printer"></i> Print</button>
+    <a asp-action="DownloadPdfReceipt" asp-route-id="@Model.TransactionId" class="btn btn-outline-primary btn-sm"><i class="bi bi-filetype-pdf"></i> Download PDF</a>
+    <a asp-action="Details" asp-route-id="@Model.TransactionId" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+<div class="receipt">
+    <div class="receipt-header">
             <h2>KAIJENSON MOTOR SHOP</h2>
             <p>123 Main Street, City Center</p>
             <p>Tel: (123) 456-7890</p>

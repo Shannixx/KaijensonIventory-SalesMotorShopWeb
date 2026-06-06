@@ -41,8 +41,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         public int StaffId { get; set; }
 
+        public int? CustomerId { get; set; }
+
         public Mechanic? Mechanic { get; set; }
         public Staff? Staff { get; set; }
+        public Customer? Customer { get; set; }
         public ICollection<ServicePartUsed> PartsUsed { get; set; } = new List<ServicePartUsed>();
     }
 }

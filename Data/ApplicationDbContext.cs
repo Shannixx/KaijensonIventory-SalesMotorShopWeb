@@ -21,6 +21,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<Backup> Backups => Set<Backup>();
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+        public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
+        public DbSet<Customer> Customers => Set<Customer>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -79,6 +81,27 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
 
             modelBuilder.Entity<ActivityLog>()
                 .HasOne(l => l.Staff).WithMany().HasForeignKey(l => l.StaffId).OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<InventoryTransaction>()
+                .HasOne(t => t.Product).WithMany().HasForeignKey(t => t.ProductId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InventoryTransaction>()
+                .HasOne(t => t.Staff).WithMany().HasForeignKey(t => t.StaffId).OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<InventoryTransaction>()
+                .HasIndex(t => t.TransactionDate);
+
+            modelBuilder.Entity<InventoryTransaction>()
+                .HasIndex(t => new { t.ProductId, t.TransactionDate });
+
+            modelBuilder.Entity<Customer>()
+                .HasIndex(c => c.CustomerName);
+
+            modelBuilder.Entity<SalesTransaction>()
+                .HasOne(t => t.Customer).WithMany(c => c.SalesTransactions).HasForeignKey(t => t.CustomerId).OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<ServiceTransaction>()
+                .HasOne(t => t.Customer).WithMany(c => c.ServiceTransactions).HasForeignKey(t => t.CustomerId).OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

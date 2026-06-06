@@ -55,7 +55,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanics);
             }
-            catch (Exception ex)
+            catch
             {
                 // Log the exception in a real application
                 TempData["ErrorMessage"] = "An error occurred while loading mechanics. Please try again.";
@@ -82,7 +82,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanic);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading mechanic details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -134,7 +134,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["SuccessMessage"] = "Mechanic created successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
+                catch
                 {
                     TempData["ErrorMessage"] = "An error occurred while creating the mechanic. Please try again.";
                     return View(mechanic);
@@ -163,7 +163,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanic);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading mechanic for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -212,7 +212,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["ErrorMessage"] = "The mechanic was modified by another user. Please try again.";
                     return View(mechanic);
                 }
-                catch (Exception ex)
+                catch
                 {
                     TempData["ErrorMessage"] = "An error occurred while updating the mechanic. Please try again.";
                     return View(mechanic);
@@ -249,7 +249,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanic);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading mechanic for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -299,7 +299,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Mechanic deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the mechanic. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -356,7 +356,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return Json(new { success = true, message = msg });
             }
-            catch (Exception ex)
+            catch
             {
                 // Log the exception (in a real app, use a proper logger)
                 return Json(new { success = false, message = "An error occurred while deleting mechanics. Please try again." });
@@ -410,7 +410,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return Json(new { success = true, message = msg });
             }
-            catch (Exception ex)
+            catch
             {
                 // Log the exception (in a real app, use a proper logger)
                 return Json(new { success = false, message = "An error occurred while clearing mechanics. Please try again." });

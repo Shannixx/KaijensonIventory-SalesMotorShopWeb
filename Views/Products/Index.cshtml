@@ -14,9 +14,9 @@
 <div class="card mb-3">
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-5">
+            <div class="col-md-4">
                 <label class="form-label small">Search</label>
-                <input type="text" name="searchString" class="form-control" placeholder="Name or description..." value="@ViewData["CurrentFilter"]" />
+                <input type="text" name="searchString" class="form-control" placeholder="Name, brand, or part number..." value="@ViewData["CurrentFilter"]" />
             </div>
             <div class="col-md-4">
                 <label class="form-label small">Category</label>
@@ -24,7 +24,7 @@
                     <option value="">All Categories</option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex gap-2">
+            <div class="col-md-4 d-flex gap-2">
                 <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filter</button>
                 <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
             </div>
@@ -38,8 +38,11 @@
             <table class="table">
                 <thead>
                     <tr>
+                        <th style="width:50px;">Image</th>
                         <th>ID</th>
                         <th>Name</th>
+                        <th>Brand</th>
+                        <th>Part #</th>
                         <th>Category</th>
                         <th>Price</th>
                         <th>Stock</th>
@@ -51,10 +54,22 @@
                     @foreach (var item in Model)
                     {
                         <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.ImagePath))
+                                {
+                                    <img src="@item.ImagePath" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" onerror="this.src='/uploads/products/placeholder.svg'" />
+                                }
+                                else
+                                {
+                                    <img src="/uploads/products/placeholder.svg" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" />
+                                }
+                            </td>
                             <td>@item.ProductId</td>
-                            <td>@item.ProductName</td>
+                            <td><span class="fw-medium">@item.ProductName</span></td>
+                            <td>@(item.Brand ?? "-")</td>
+                            <td><span class="small">@(item.PartNumber ?? "-")</span></td>
                             <td>@item.Category?.CategoryName</td>
-                            <td>@item.Price.ToString("N2")</td>
+                            <td class="fw-semibold">@item.Price.ToString("N2")</td>
                             <td>@item.QuantityOnHand</td>
                             <td>
                                 @if (item.StockStatus == "Out of Stock") { <span class="badge bg-danger">Out of Stock</span> }
@@ -70,7 +85,7 @@
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="7" class="text-center py-4 text-muted">No products found.</td></tr>
+                        <tr><td colspan="10" class="text-center py-4 text-muted">No products found.</td></tr>
                     }
                 </tbody>
             </table>

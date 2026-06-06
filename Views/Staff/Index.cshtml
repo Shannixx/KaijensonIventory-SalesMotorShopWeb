@@ -17,10 +17,16 @@
 </form>
 <div class="card"><div class="card-body p-0"><div class="table-container"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Contact</th><th>Role</th><th class="actions">Actions</th></tr></thead><tbody>
 @foreach (var item in Model) {
-    bool isYou = ViewData["CurrentStaffId"] != null && (int)ViewData["CurrentStaffId"] == item.StaffId;
+    bool isYou = (ViewData["CurrentStaffId"] as int?) == item.StaffId;
     <tr class="@(isYou ? "table-warning" : "")">
         <td>@item.StaffId</td>
-        <td>@item.StaffName @(isYou ? "<span class='badge bg-warning text-dark'>You</span>" : "")</td>
+        <td>
+            @item.StaffName
+            @if (isYou)
+            {
+                <span class="badge bg-warning text-dark">You</span>
+            }
+        </td>
         <td>@item.UserName</td>
         <td>@item.ContactNumber</td>
         <td><span class="badge @(item.Role == "Admin" ? "bg-primary" : "bg-secondary")">@item.Role</span></td>

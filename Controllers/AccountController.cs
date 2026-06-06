@@ -44,13 +44,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return View(model);
                 }
 
-                string hashed = _hashing.HashData(model.Password);
                 Staff? staff = await _context.Staff
-                    .FirstOrDefaultAsync(s => s.UserName == model.Username && s.PasswordHash == hashed);
+                    .FirstOrDefaultAsync(s => s.UserName == model.Username);
 
-                if (staff == null)
+                if (staff == null || !_hashing.VerifyPassword(model.Password, staff.PasswordHash))
                 {
-                    // Log failed login attempt (in a real app, implement rate limiting)
                     _context.ActivityLogs.Add(new ActivityLog
                     {
                         Action = "Failed Login",
@@ -78,24 +76,40 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return RedirectToAction("Index", "Dashboard");
             }
-            catch (Exception ex)
+            catch
             {
-                // Log the exception in a real application
                 ModelState.AddModelError("", "An error occurred during login. Please try again.");
                 return View(model);
             }
         }
 
-        public IActionResult Register() => View();
+        public IActionResult Register()
+        {
+            // Admin only
+            string? staffRole = HttpContext.Session.GetString("StaffRole");
+            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
+                return RedirectToAction("Login");
+            }
+            return View();
+        }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
+            // Admin only
+            string? staffRole = HttpContext.Session.GetString("StaffRole");
+            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
+                return RedirectToAction("Login");
+            }
+
             if (!ModelState.IsValid) return View(model);
 
             try
             {
-                // Additional validation
                 if (string.IsNullOrWhiteSpace(model.StaffName) || 
                     string.IsNullOrWhiteSpace(model.Username) || 
                     string.IsNullOrWhiteSpace(model.Password))
@@ -104,7 +118,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return View(model);
                 }
 
-                // Check password strength
                 if (model.Password.Length < 6)
                 {
                     ModelState.AddModelError("", "Password must be at least 6 characters long.");
@@ -121,7 +134,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     StaffName = model.StaffName.Trim(),
                     UserName = model.Username.Trim(),
-                    PasswordHash = _hashing.HashData(model.Password),
+                    PasswordHash = _hashing.HashPassword(model.Password),
                     Role = "Manager"
                 };
 
@@ -136,12 +149,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Registration successful. Please log in.";
+                TempData["SuccessMessage"] = "Registration successful.";
                 return RedirectToAction("Login");
             }
-            catch (Exception ex)
+            catch
             {
-                // Log the exception in a real application
                 ModelState.AddModelError("", "An error occurred during registration. Please try again.");
                 return View(model);
             }
@@ -170,7 +182,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "You have been logged out successfully.";
                 return RedirectToAction("Login");
             }
-            catch (Exception ex)
+            catch
             {
                 // Even if logging fails, still clear the session
                 HttpContext.Session.Clear();

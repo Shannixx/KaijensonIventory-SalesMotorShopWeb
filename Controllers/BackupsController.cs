@@ -53,7 +53,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(items);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading backups. Please try again.";
                 return View(new List<Backup>());
@@ -124,9 +124,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "Backup created successfully.";
             }
-            catch (Exception ex)
+            catch
             {
-                TempData["ErrorMessage"] = $"Backup failed: {ex.Message}";
+                TempData["ErrorMessage"] = "Backup failed. Please try again.";
             }
 
             return RedirectToAction(nameof(Index));
@@ -160,7 +160,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["InfoMessage"] = "Restore functionality is not yet implemented. This feature will allow restoring data from backup files.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while attempting to restore the backup. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -212,7 +212,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Backup deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the backup. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -248,7 +248,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 byte[] fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
                 return File(fileBytes, "application/json", backup.BackupFile);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while downloading the backup. Please try again.";
                 return RedirectToAction(nameof(Index));

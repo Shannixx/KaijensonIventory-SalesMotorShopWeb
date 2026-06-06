@@ -1,51 +1,113 @@
+@model ReportStatsViewModel
 @{ ViewData["Title"] = "Reports"; }
 
 <div class="page-header">
     <div>
         <h1>Reports</h1>
-        <p>Generate system reports.</p>
+        <p>Generate and export system reports.</p>
     </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-md-6 col-lg-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="bi bi-receipt fs-1 d-block mb-3" style="color:var(--primary);"></i>
-                <h5>Sales Summary</h5>
-                <p class="text-muted small">View sales transactions filtered by date range.</p>
-                <a asp-action="SalesSummary" class="btn btn-primary btn-sm w-100">View Report</a>
+@* Stats Cards *@
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="report-stat-card">
+            <div class="report-stat-icon sales">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <div class="report-stat-info">
+                <div class="report-stat-label">Sales Reports</div>
+                <div class="report-stat-value" data-countup="@Model.TotalSales" data-duration="1200">0</div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="bi bi-boxes fs-1 d-block mb-3" style="color:var(--success);"></i>
-                <h5>Inventory Summary</h5>
-                <p class="text-muted small">View product inventory filtered by category.</p>
-                <a asp-action="InventorySummary" class="btn btn-success btn-sm w-100">View Report</a>
+    <div class="col-6 col-md-3">
+        <div class="report-stat-card">
+            <div class="report-stat-icon inventory">
+                <i class="bi bi-boxes"></i>
+            </div>
+            <div class="report-stat-info">
+                <div class="report-stat-label">Inventory Records</div>
+                <div class="report-stat-value" data-countup="@Model.TotalInventory" data-duration="1200">0</div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="bi bi-tools fs-1 d-block mb-3" style="color:var(--info);"></i>
-                <h5>Service Summary</h5>
-                <p class="text-muted small">View service transactions with filters.</p>
-                <a asp-action="ServiceSummary" class="btn btn-info btn-sm w-100 text-white">View Report</a>
+    <div class="col-6 col-md-3">
+        <div class="report-stat-card">
+            <div class="report-stat-icon service">
+                <i class="bi bi-tools"></i>
+            </div>
+            <div class="report-stat-info">
+                <div class="report-stat-label">Service Transactions</div>
+                <div class="report-stat-value" data-countup="@Model.TotalServices" data-duration="1200">0</div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <i class="bi bi-clock-history fs-1 d-block mb-3" style="color:var(--warning);"></i>
-                <h5>Activity Summary</h5>
-                <p class="text-muted small">View system audit trail with filters.</p>
-                <a asp-action="ActivitySummary" class="btn btn-warning btn-sm w-100">View Report</a>
+    <div class="col-6 col-md-3">
+        <div class="report-stat-card">
+            <div class="report-stat-icon activity">
+                <i class="bi bi-clock-history"></i>
             </div>
+            <div class="report-stat-info">
+                <div class="report-stat-label">Activity Logs</div>
+                <div class="report-stat-value" data-countup="@Model.TotalActivities" data-duration="1200">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Report Cards *@
+<div class="row g-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <h5 class="report-card-title">Sales Summary</h5>
+            <p class="report-card-desc">View sales transactions filtered by date range, with Excel export support.</p>
+            <a asp-action="SalesSummary" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon">
+                <i class="bi bi-boxes"></i>
+            </div>
+            <h5 class="report-card-title">Inventory Summary</h5>
+            <p class="report-card-desc">View product inventory filtered by category, with stock status tracking.</p>
+            <a asp-action="InventorySummary" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon">
+                <i class="bi bi-tools"></i>
+            </div>
+            <h5 class="report-card-title">Service Summary</h5>
+            <p class="report-card-desc">View service transactions with date and status filters.</p>
+            <a asp-action="ServiceSummary" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <h5 class="report-card-title">Activity Summary</h5>
+            <p class="report-card-desc">View system audit trail with module and date range filters.</p>
+            <a asp-action="ActivitySummary" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
         </div>
     </div>
 </div>

@@ -32,7 +32,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         public int StaffId { get; set; }
 
+        public int? CustomerId { get; set; }
+
         public Staff? Staff { get; set; }
+        public Customer? Customer { get; set; }
         public ICollection<SalesItem> SalesItems { get; set; } = new List<SalesItem>();
     }
 }

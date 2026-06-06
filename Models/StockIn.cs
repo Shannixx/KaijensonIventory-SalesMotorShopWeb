@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Models
 {
@@ -18,6 +19,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Delivery Date")]
         [DataType(DataType.Date)]
         public DateTime DeliveryDate { get; set; } = DateTime.Today;
+
+        [Range(0, 999999.99)]
+        [Column(TypeName = "decimal(18,2)")]
+        [Display(Name = "Unit Cost")]
+        public decimal UnitCost { get; set; }
 
         [StringLength(250)]
         public string? Remarks { get; set; }

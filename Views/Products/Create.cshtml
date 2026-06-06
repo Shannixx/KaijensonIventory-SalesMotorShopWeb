@@ -7,10 +7,62 @@
     <div class="card-body">
         <form asp-action="Create" enctype="multipart/form-data">
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label asp-for="ProductName" class="form-label"></label>
                     <input asp-for="ProductName" class="form-control" />
                     <span asp-validation-for="ProductName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Brand" class="form-label"></label>
+                    <input asp-for="Brand" class="form-control" list="brandList" placeholder="e.g. Honda" />
+                    <datalist id="brandList">
+                        <option value="Honda"></option>
+                        <option value="Yamaha"></option>
+                        <option value="Suzuki"></option>
+                        <option value="Kawasaki"></option>
+                        <option value="Kymco"></option>
+                        <option value="SYM"></option>
+                        <option value="Rusi"></option>
+                        <option value="Motorstar"></option>
+                        <option value="Skygo"></option>
+                        <option value="Bajaj"></option>
+                        <option value="CFMoto"></option>
+                        <option value="Benelli"></option>
+                        <option value="TVS"></option>
+                        <option value="BMW"></option>
+                        <option value="KTM"></option>
+                        <option value="Harley-Davidson"></option>
+                        <option value="Ducati"></option>
+                    </datalist>
+                    <span asp-validation-for="Brand" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="PartNumber" class="form-label"></label>
+                    <input asp-for="PartNumber" class="form-control" placeholder="e.g. 15410-KPP-901" />
+                    <span asp-validation-for="PartNumber" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="PartType" class="form-label"></label>
+                    <select asp-for="PartType" class="form-select">
+                        <option value="">Select</option>
+                        <option value="Engine Parts">Engine Parts</option>
+                        <option value="Brake Parts">Brake Parts</option>
+                        <option value="Electrical Parts">Electrical Parts</option>
+                        <option value="Oil">Oil</option>
+                        <option value="Filters">Filters</option>
+                        <option value="Tires">Tires</option>
+                        <option value="Bearings">Bearings</option>
+                        <option value="Chain Set">Chain Set</option>
+                        <option value="Suspension">Suspension</option>
+                        <option value="Accessories">Accessories</option>
+                        <option value="Body Parts">Body Parts</option>
+                        <option value="Gaskets">Gaskets</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ModelCompatibility" class="form-label"></label>
+                    <input asp-for="ModelCompatibility" class="form-control" placeholder="e.g. Click 125, NMAX, Raider 150" />
+                    <span asp-validation-for="ModelCompatibility" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
                     <label asp-for="CategoryId" class="form-label"></label>
@@ -28,23 +80,28 @@
                 </div>
                 <div class="col-md-12">
                     <label asp-for="Description" class="form-label"></label>
-                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
                     <span asp-validation-for="Description" class="text-danger small"></span>
                 </div>
                 <div class="col-md-4">
                     <label asp-for="Price" class="form-label"></label>
-                    <input asp-for="Price" class="form-control" />
+                    <input asp-for="Price" class="form-control" step="0.01" />
                     <span asp-validation-for="Price" class="text-danger small"></span>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label asp-for="QuantityOnHand" class="form-label"></label>
                     <input asp-for="QuantityOnHand" class="form-control" />
                     <span asp-validation-for="QuantityOnHand" class="text-danger small"></span>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label asp-for="ReorderLevel" class="form-label"></label>
                     <input asp-for="ReorderLevel" class="form-control" />
                     <span asp-validation-for="ReorderLevel" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="AverageCost" class="form-label"></label>
+                    <input asp-for="AverageCost" class="form-control" step="0.01" />
+                    <span asp-validation-for="AverageCost" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="ImagePath" class="form-label">Product Image</label>

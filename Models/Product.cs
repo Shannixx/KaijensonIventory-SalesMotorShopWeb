@@ -12,6 +12,22 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Product Name")]
         public string ProductName { get; set; } = string.Empty;
 
+        [StringLength(100)]
+        [Display(Name = "Brand")]
+        public string? Brand { get; set; }
+
+        [StringLength(100)]
+        [Display(Name = "Model Compatibility")]
+        public string? ModelCompatibility { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Part Number")]
+        public string? PartNumber { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Part Type")]
+        public string? PartType { get; set; }
+
         [StringLength(500)]
         [Display(Name = "Description")]
         public string? Description { get; set; }
@@ -31,6 +47,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [StringLength(30)]
         [Display(Name = "Stock Status")]
         public string StockStatus { get; set; } = "Available";
+
+        [Range(0, 999999.99)]
+        [Column(TypeName = "decimal(18,2)")]
+        [Display(Name = "Average Cost")]
+        public decimal AverageCost { get; set; }
 
         [StringLength(500)]
         [Display(Name = "Image")]

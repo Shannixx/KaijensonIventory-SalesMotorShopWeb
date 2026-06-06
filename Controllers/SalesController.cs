@@ -1,8 +1,11 @@
 using System.Linq;
 using KaijensonIventory_SalesMotorShopWeb.Data;
+using KaijensonIventory_SalesMotorShopWeb.Hubs;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
@@ -10,7 +13,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class SalesController : Controller
     {
         private readonly ApplicationDbContext _context;
-        public SalesController(ApplicationDbContext context) { _context = context; }
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly PdfExportService _pdf;
+
+        public SalesController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext, PdfExportService pdf)
+        {
+            _context = context;
+            _hubContext = hubContext;
+            _pdf = pdf;
+        }
 
         public async Task<IActionResult> Index(string? searchString, int page = 1)
         {
@@ -53,7 +64,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(transactions);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading sales transactions. Please try again.";
                 return View(new List<SalesTransaction>());
@@ -79,7 +90,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .ToListAsync();
                 return View();
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the sales form. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -205,6 +216,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     _context.SalesTransactions.Add(model);
                     await _context.SaveChangesAsync();
 
+                    foreach (var si in salesItems)
+                    {
+                        Product? soldProduct = await _context.Products.FindAsync(si.ProductId);
+                        _context.InventoryTransactions.Add(new InventoryTransaction
+                        {
+                            ProductId = si.ProductId,
+                            TransactionType = "Sale",
+                            Quantity = -si.Quantity,
+                            UnitCost = soldProduct?.AverageCost ?? 0,
+                            ReferenceId = model.TransactionId,
+                            ReferenceType = "Sale",
+                            StaffId = model.StaffId,
+                            TransactionDate = DateTime.Now,
+                            Remarks = $"Sale {model.InvoiceNumber}"
+                        });
+                    }
+
                     _context.ActivityLogs.Add(new ActivityLog
                     {
                         StaffId = model.StaffId,
@@ -216,16 +244,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     await transaction.CommitAsync();
 
+                    await _hubContext.Clients.All.SendAsync("ReceiveNotification",
+                        $"New sale: {model.InvoiceNumber} - {model.CustomerName} (₱{model.TotalAmount:N2})", "success");
+                    await _hubContext.Clients.All.SendAsync("DashboardUpdated");
+
                     TempData["Success"] = "Sale completed successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
+                catch
                 {
                     await transaction.RollbackAsync();
                     throw; // Re-throw to be caught by outer catch block
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while processing the sale. Please try again.";
                 ViewBag.InvoiceNumber = $"INV-{DateTime.Now:yyyyMMddHHmmss}";
@@ -255,7 +287,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (transaction == null) return NotFound();
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading sale details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -275,11 +307,26 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (transaction == null) return NotFound();
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading receipt. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        public async Task<IActionResult> DownloadPdfReceipt(int id)
+        {
+            var transaction = await _context.SalesTransactions
+                .Include(t => t.Staff)
+                .Include(t => t.SalesItems).ThenInclude(i => i.Product)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TransactionId == id);
+
+            if (transaction == null) return NotFound();
+
+            byte[] pdf = _pdf.GenerateSalesReceipt(transaction);
+            var fileName = $"Receipt_{transaction.InvoiceNumber}.pdf";
+            return File(pdf, "application/pdf", fileName);
         }
 
         public async Task<IActionResult> Delete(int id)
@@ -303,7 +350,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (transaction == null) return NotFound();
                 return View(transaction);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading sale for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -340,6 +387,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         {
                             item.Product.QuantityOnHand += item.Quantity;
                             item.Product.StockStatus = CalculateStockStatus(item.Product.QuantityOnHand, item.Product.ReorderLevel);
+
+                            _context.InventoryTransactions.Add(new InventoryTransaction
+                            {
+                                ProductId = item.ProductId,
+                                TransactionType = "SaleReversal",
+                                Quantity = item.Quantity,
+                                UnitCost = item.Product.AverageCost,
+                                ReferenceId = transaction.TransactionId,
+                                ReferenceType = "Sale",
+                                StaffId = staffId.Value,
+                                TransactionDate = DateTime.Now,
+                                Remarks = $"Sale {transaction.InvoiceNumber} cancelled, {item.Quantity} units returned"
+                            });
                         }
                     }
 
@@ -359,13 +419,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["Success"] = "Sale cancelled and stock restored.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
+                catch
                 {
                     await dbTransaction.RollbackAsync();
                     throw; // Re-throw to be caught by outer catch block
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while cancelling the sale. Please try again.";
                 return RedirectToAction(nameof(Index));

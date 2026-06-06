@@ -1,7 +1,9 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
+using KaijensonIventory_SalesMotorShopWeb.Hubs;
 using KaijensonIventory_SalesMotorShopWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
@@ -9,10 +11,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class StockInsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public StockInsController(ApplicationDbContext context)
+        public StockInsController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<IActionResult> Index(string? searchString, int page = 1)
@@ -53,7 +57,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(items);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading stock in records. Please try again.";
                 return View(new List<StockIn>());
@@ -72,9 +76,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
+                var products = await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync();
                 ViewBag.Products = new SelectList(
-                    await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync(),
-                    "ProductId", "ProductName");
+                    products.Select(p => new { p.ProductId, Display = $"{p.Brand ?? "Unknown"} - {p.ProductName}" }).ToList(),
+                    "ProductId", "Display");
 
                 ViewBag.Suppliers = new SelectList(
                     await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
@@ -82,7 +87,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View();
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the stock in form. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -109,6 +114,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ModelState.AddModelError("QuantityReceived", "Quantity received must be greater than zero.");
                 }
 
+                if (stockIn.UnitCost < 0)
+                {
+                    ModelState.AddModelError("UnitCost", "Unit cost cannot be negative.");
+                }
+
                 if (stockIn.ProductId <= 0)
                 {
                     ModelState.AddModelError("ProductId", "Please select a product.");
@@ -125,9 +135,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     if (product == null)
                     {
                         ModelState.AddModelError("ProductId", "Selected product not found.");
+                        var prodList = await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync();
                         ViewBag.Products = new SelectList(
-                            await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync(),
-                            "ProductId", "ProductName", stockIn.ProductId);
+                            prodList.Select(p => new { p.ProductId, Display = $"{p.Brand ?? "Unknown"} - {p.ProductName}" }).ToList(),
+                            "ProductId", "Display", stockIn.ProductId);
                         ViewBag.Suppliers = new SelectList(
                             await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
                             "SupplierId", "CompanyName", stockIn.SupplierId);
@@ -138,7 +149,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     using var dbTransaction = await _context.Database.BeginTransactionAsync();
                     try
                     {
+                        int oldQty = product.QuantityOnHand;
+                        decimal oldAvgCost = product.AverageCost;
                         product.QuantityOnHand += stockIn.QuantityReceived;
+                        product.AverageCost = oldQty > 0
+                            ? Math.Round(((oldAvgCost * oldQty) + (stockIn.UnitCost * stockIn.QuantityReceived)) / product.QuantityOnHand, 2)
+                            : stockIn.UnitCost;
                         product.StockStatus = CalculateStockStatus(product.QuantityOnHand, product.ReorderLevel);
 
                         stockIn.StaffId = staffId.Value;
@@ -151,25 +167,46 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             StaffId = stockIn.StaffId,
                             Action = "Create StockIn",
                             Module = "StockIn",
-                            Description = $"Received {stockIn.QuantityReceived} units of '{product.ProductName}' from supplier"
+                            Description = $"Received {stockIn.QuantityReceived} units of '{product.ProductName}' at {stockIn.UnitCost:N2} each from supplier"
+                        });
+
+                        await _context.SaveChangesAsync();
+
+                        _context.InventoryTransactions.Add(new InventoryTransaction
+                        {
+                            ProductId = stockIn.ProductId,
+                            TransactionType = "StockIn",
+                            Quantity = stockIn.QuantityReceived,
+                            UnitCost = stockIn.UnitCost,
+                            ReferenceId = stockIn.StockInId,
+                            ReferenceType = "StockIn",
+                            StaffId = stockIn.StaffId,
+                            TransactionDate = DateTime.Now,
+                            Remarks = $"Stock in from {stockIn.Supplier?.CompanyName ?? "supplier"}"
                         });
 
                         await _context.SaveChangesAsync();
                         await dbTransaction.CommitAsync();
 
+                        await _hubContext.Clients.All.SendAsync("ReceiveNotification",
+                            $"Stock in: {stockIn.QuantityReceived} units of '{product.ProductName}' received", "success");
+                        await _hubContext.Clients.All.SendAsync("StockUpdated",
+                            product.ProductName, product.QuantityOnHand, product.StockStatus);
+
                         TempData["SuccessMessage"] = "Stock in record created successfully.";
                         return RedirectToAction(nameof(Index));
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         await dbTransaction.RollbackAsync();
                         throw; // Re-throw to be caught by outer catch block
                     }
                 }
 
+                var prodList2 = await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync();
                 ViewBag.Products = new SelectList(
-                    await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync(),
-                    "ProductId", "ProductName", stockIn.ProductId);
+                    prodList2.Select(p => new { p.ProductId, Display = $"{p.Brand ?? "Unknown"} - {p.ProductName}" }).ToList(),
+                    "ProductId", "Display", stockIn.ProductId);
 
                 ViewBag.Suppliers = new SelectList(
                     await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
@@ -177,12 +214,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(stockIn);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while creating the stock in record. Please try again.";
+                var prodList3 = await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync();
                 ViewBag.Products = new SelectList(
-                    await _context.Products.AsNoTracking().OrderBy(p => p.ProductName).ToListAsync(),
-                    "ProductId", "ProductName", stockIn.ProductId);
+                    prodList3.Select(p => new { p.ProductId, Display = $"{p.Brand ?? "Unknown"} - {p.ProductName}" }).ToList(),
+                    "ProductId", "Display", stockIn.ProductId);
                 ViewBag.Suppliers = new SelectList(
                     await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
                     "SupplierId", "CompanyName", stockIn.SupplierId);
@@ -212,7 +250,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (item == null) return NotFound();
                 return View(item);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading stock in details. Please try again.";
                 return RedirectToAction(nameof(Index));

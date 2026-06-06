@@ -52,7 +52,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(services);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading services. Please try again.";
                 return View(new List<Service>());
@@ -83,7 +83,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(service);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading service details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -106,7 +106,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName");
                 return View();
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the create service form. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -145,7 +145,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["SuccessMessage"] = "Service created successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
+                catch
                 {
                     TempData["ErrorMessage"] = "An error occurred while creating the service. Please try again.";
                 }
@@ -177,7 +177,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
                 return View(service);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the service for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -228,7 +228,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
                     return View(service);
                 }
-                catch (Exception ex)
+                catch
                 {
                     TempData["ErrorMessage"] = "An error occurred while updating the service. Please try again.";
                 }
@@ -267,7 +267,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(service);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the service for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -313,7 +313,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Service deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the service. Please try again.";
                 return RedirectToAction(nameof(Index));

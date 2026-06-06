@@ -14,7 +14,7 @@
             <div class="metric-icon primary"><i class="bi bi-box-seam"></i></div>
             <div class="metric-info">
                 <p class="metric-label">Total Products</p>
-                <h3 class="metric-value">@Model.TotalProducts</h3>
+                <h3 class="metric-value" data-countup="@Model.TotalProducts">0</h3>
             </div>
         </div>
     </div>
@@ -22,8 +22,17 @@
         <div class="metric-card">
             <div class="metric-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
             <div class="metric-info">
-                <p class="metric-label">Low Stock Items</p>
-                <h3 class="metric-value">@Model.LowStockCount</h3>
+                <p class="metric-label">Low Stock</p>
+                <h3 class="metric-value" data-countup="@Model.LowStockCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon danger"><i class="bi bi-x-octagon"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Out of Stock</p>
+                <h3 class="metric-value" data-countup="@Model.OutOfStockCount">0</h3>
             </div>
         </div>
     </div>
@@ -32,7 +41,16 @@
             <div class="metric-icon success"><i class="bi bi-cash-coin"></i></div>
             <div class="metric-info">
                 <p class="metric-label">Today's Sales</p>
-                <h3 class="metric-value">@Model.TodaySalesAmount.ToString("N2")</h3>
+                <h3 class="metric-value" data-countup="@Model.TodaySalesAmount" data-decimals="2" data-prefix="₱">₱0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Today's Profit</p>
+                <h3 class="metric-value" data-countup="@Model.TodayProfit" data-decimals="2" data-prefix="₱">₱0.00</h3>
             </div>
         </div>
     </div>
@@ -41,7 +59,25 @@
             <div class="metric-icon info"><i class="bi bi-currency-dollar"></i></div>
             <div class="metric-info">
                 <p class="metric-label">Inventory Value</p>
-                <h3 class="metric-value">@Model.TotalInventoryValue.ToString("N2")</h3>
+                <h3 class="metric-value" data-countup="@Model.TotalInventoryValue" data-decimals="2" data-prefix="₱">₱0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon primary"><i class="bi bi-receipt"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Total Revenue</p>
+                <h3 class="metric-value" data-countup="@Model.TotalRevenue" data-decimals="2" data-prefix="₱">₱0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon info"><i class="bi bi-pie-chart"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Profit Margin</p>
+                <h3 class="metric-value" data-countup="@Model.ProfitMargin" data-decimals="1" data-suffix="%">0%</h3>
             </div>
         </div>
     </div>
@@ -50,7 +86,7 @@
 <div class="row g-3 mb-4">
     <div class="col-lg-8">
         <div class="card">
-            <div class="card-header">Monthly Sales Trend</div>
+            <div class="card-header">Revenue & Profit Trend</div>
             <div class="card-body">
                 <canvas id="salesChart" height="200"></canvas>
             </div>
@@ -77,7 +113,7 @@
                         <tbody>
                             @foreach (var p in Model.RecentLowStockProducts)
                             {
-                                <tr><td>@p.ProductName</td><td>@p.QuantityOnHand</td><td>@p.ReorderLevel</td></tr>
+                                <tr><td>@p.ProductName</td><td class="text-danger fw-semibold">@p.QuantityOnHand</td><td>@p.ReorderLevel</td></tr>
                             }
                             @if (!Model.RecentLowStockProducts.Any())
                             {
@@ -113,16 +149,42 @@
     </div>
     <div class="col-lg-4">
         <div class="card">
+            <div class="card-header">Top Selling Products</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+                        <tbody>
+                            @foreach (var tp in Model.TopSellingProducts)
+                            {
+                                <tr><td>@tp.ProductName</td><td>@tp.TotalQuantity</td><td>@tp.TotalRevenue.ToString("N2")</td></tr>
+                            }
+                            @if (!Model.TopSellingProducts.Any())
+                            {
+                                <tr><td colspan="3" class="text-center py-4 text-muted">No sales data yet.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-2">
+    <div class="col-lg-12">
+        <div class="card">
             <div class="card-header">Ongoing Services</div>
             <div class="card-body p-0">
                 <div class="table-container">
                     <table class="table">
-                        <thead><tr><th>Customer</th><th>Status</th><th>Date</th></tr></thead>
+                        <thead><tr><th>Customer</th><th>Vehicle</th><th>Status</th><th>Fee</th><th>Date</th></tr></thead>
                         <tbody>
                             @foreach (var sv in Model.OngoingServices)
                             {
                                 <tr>
                                     <td>@sv.CustomerName</td>
+                                    <td>@(sv.Make ?? "-") @(sv.Model ?? "")</td>
                                     <td>
                                         @{
                                             string badgeClass = sv.Status switch
@@ -136,12 +198,13 @@
                                         }
                                         <span class="badge @badgeClass">@sv.Status</span>
                                     </td>
+                                    <td>@sv.ServiceFee.ToString("N2")</td>
                                     <td>@sv.Date.ToString("MMM dd")</td>
                                 </tr>
                             }
                             @if (!Model.OngoingServices.Any())
                             {
-                                <tr><td colspan="3" class="text-center py-4 text-muted">No ongoing services.</td></tr>
+                                <tr><td colspan="5" class="text-center py-4 text-muted">No ongoing services.</td></tr>
                             }
                         </tbody>
                     </table>
@@ -158,23 +221,32 @@
             type: 'bar',
             data: {
                 labels: @Html.Raw(Json.Serialize(Model.ChartLabels)),
-                datasets: [{
-                    label: 'Sales',
-                    data: @Html.Raw(Json.Serialize(Model.ChartSalesData)),
-                    backgroundColor: 'rgba(253,126,20,0.7)',
-                    borderColor: 'rgba(253,126,20,1)',
-                    borderWidth: 1
-                }]
+                datasets: [
+                    {
+                        label: 'Revenue',
+                        data: @Html.Raw(Json.Serialize(Model.ChartSalesData)),
+                        backgroundColor: 'rgba(255,127,17,0.7)',
+                        borderColor: 'rgba(255,127,17,1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Profit',
+                        data: @Html.Raw(Json.Serialize(Model.ChartProfitData)),
+                        backgroundColor: 'rgba(16,185,129,0.7)',
+                        borderColor: 'rgba(16,185,129,1)',
+                        borderWidth: 1
+                    }
+                ]
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false } },
+                plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
                 scales: { y: { beginAtZero: true, ticks: { callback: v => '₱' + v.toLocaleString() } } }
             }
         });
 
         const catCtx = document.getElementById('categoryChart').getContext('2d');
-        const catColors = ['rgba(253,126,20,0.8)', 'rgba(16,185,129,0.8)', 'rgba(59,130,246,0.8)', 'rgba(239,68,68,0.8)', 'rgba(245,158,11,0.8)', 'rgba(139,92,246,0.8)', 'rgba(236,72,153,0.8)'];
+        const catColors = ['rgba(255,127,17,0.8)', 'rgba(16,185,129,0.8)', 'rgba(59,130,246,0.8)', 'rgba(239,68,68,0.8)', 'rgba(245,158,11,0.8)', 'rgba(139,92,246,0.8)', 'rgba(236,72,153,0.8)'];
         new Chart(catCtx, {
             type: 'doughnut',
             data: {

@@ -60,7 +60,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(staff);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading staff. Please try again.";
                 return View(new List<Staff>());
@@ -94,7 +94,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(staff);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading staff details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -173,7 +173,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (ModelState.IsValid)
                 {
-                    staff.PasswordHash = _hashing.HashData(Password);
+                    staff.PasswordHash = _hashing.HashPassword(Password);
                     if (string.IsNullOrEmpty(staff.Role)) staff.Role = "Manager";
 
                     _context.Staff.Add(staff);
@@ -195,7 +195,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(staff);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while creating staff. Please try again.";
                 return View(staff);
@@ -229,7 +229,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(staff);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading staff for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -335,7 +335,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["ErrorMessage"] = "The staff record was modified by another user. Please try again.";
                     return View(staff);
                 }
-                catch (Exception ex)
+                catch
                 {
                     TempData["ErrorMessage"] = "An error occurred while updating staff. Please try again.";
                     return View(staff);
@@ -379,7 +379,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(staff);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading staff for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -447,7 +447,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Staff deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting staff. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -486,7 +486,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TargetStaffName"] = staff.StaffName;
                 return View();
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading password change form. Please try again.";
                 return RedirectToAction("Index", "Dashboard");
@@ -524,8 +524,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 // For self-password change, verify current password
                 if (isSelf)
                 {
-                    string currentHash = _hashing.HashData(CurrentPassword ?? "");
-                    if (staff.PasswordHash != currentHash)
+                    if (!_hashing.VerifyPassword(CurrentPassword ?? "", staff.PasswordHash))
                     {
                         ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
                     }
@@ -546,7 +545,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (ModelState.IsValid)
                 {
-                    staff.PasswordHash = _hashing.HashData(NewPassword);
+                    staff.PasswordHash = _hashing.HashPassword(NewPassword);
                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
@@ -567,7 +566,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TargetStaffName"] = staff.StaffName;
                 return View();
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while changing password. Please try again.";
                 return RedirectToAction(nameof(Index));

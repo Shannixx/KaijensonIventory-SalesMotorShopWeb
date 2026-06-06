@@ -25,11 +25,16 @@
                 <table class="table table-borderless mb-0">
                     <tr><th style="width:180px;">Product ID</th><td>@Model.ProductId</td></tr>
                     <tr><th>Name</th><td>@Model.ProductName</td></tr>
+                    <tr><th>Brand</th><td>@(Model.Brand ?? "-")</td></tr>
+                    <tr><th>Part Number</th><td>@(Model.PartNumber ?? "-")</td></tr>
+                    <tr><th>Part Type</th><td>@(Model.PartType ?? "-")</td></tr>
+                    <tr><th>Model Compatibility</th><td>@(Model.ModelCompatibility ?? "-")</td></tr>
                     <tr><th>Description</th><td>@(Model.Description ?? "-")</td></tr>
                     <tr><th>Category</th><td>@Model.Category?.CategoryName</td></tr>
                     <tr><th>Supplier</th><td>@Model.Supplier?.CompanyName</td></tr>
-                    <tr><th>Price</th><td>@Model.Price.ToString("N2")</td></tr>
+                    <tr><th>Price</th><td class="fw-semibold">@Model.Price.ToString("N2")</td></tr>
                     <tr><th>Quantity On Hand</th><td>@Model.QuantityOnHand</td></tr>
+                    <tr><th>Average Cost</th><td>@Model.AverageCost.ToString("N2")</td></tr>
                     <tr><th>Reorder Level</th><td>@Model.ReorderLevel</td></tr>
                     <tr><th>Stock Status</th><td>
                         @if (Model.StockStatus == "Out of Stock") { <span class="badge bg-danger">Out of Stock</span> }

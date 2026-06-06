@@ -63,7 +63,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(logs);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading activity logs. Please try again.";
                 return View(new List<ActivityLog>());

@@ -50,7 +50,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 return View(suppliers);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading suppliers. Please try again.";
                 return View(new List<Supplier>());
@@ -79,7 +79,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(supplier);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading supplier details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -121,6 +121,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (ModelState.IsValid)
                 {
+                    // Check duplicate company name
+                    bool exists = await _context.Suppliers.AnyAsync(s => s.CompanyName == supplier.CompanyName);
+                    if (exists)
+                    {
+                        ModelState.AddModelError("CompanyName", "A supplier with this company name already exists.");
+                        return View(supplier);
+                    }
+
                     _context.Suppliers.Add(supplier);
                     await _context.SaveChangesAsync();
 
@@ -138,7 +146,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
                 return View(supplier);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while creating the supplier. Please try again.";
                 return View(supplier);
@@ -164,7 +172,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(supplier);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the supplier for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -192,11 +200,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
 
             if (ModelState.IsValid)
-            {
-                try
                 {
-                    _context.Suppliers.Update(supplier);
-                    await _context.SaveChangesAsync();
+                    // Check duplicate company name (exclude self)
+                    bool exists = await _context.Suppliers.AnyAsync(s => s.CompanyName == supplier.CompanyName && s.SupplierId != id);
+                    if (exists)
+                    {
+                        ModelState.AddModelError("CompanyName", "A supplier with this company name already exists.");
+                        return View(supplier);
+                    }
+
+                    try
+                    {
+                        _context.Suppliers.Update(supplier);
+                        await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
@@ -218,7 +234,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["ErrorMessage"] = "The supplier was modified by another user. Please try again.";
                     return View(supplier);
                 }
-                catch (Exception ex)
+                catch
                 {
                     TempData["ErrorMessage"] = "An error occurred while updating the supplier. Please try again.";
                     return View(supplier);
@@ -259,7 +275,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(supplier);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the supplier for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -310,7 +326,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = $"Supplier '{name}' deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the supplier. Please try again.";
                 return RedirectToAction(nameof(Index));

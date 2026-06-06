@@ -39,7 +39,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
                     string s = searchString.ToLower();
-                    query = query.Where(p => p.ProductName.ToLower().Contains(s) || (p.Description != null && p.Description.ToLower().Contains(s)));
+                    query = query.Where(p => p.ProductName.ToLower().Contains(s)
+                        || (p.Description != null && p.Description.ToLower().Contains(s))
+                        || (p.Brand != null && p.Brand.ToLower().Contains(s))
+                        || (p.PartNumber != null && p.PartNumber.ToLower().Contains(s)));
                 }
 
                 if (categoryId.HasValue && categoryId.Value > 0)
@@ -66,7 +69,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(products);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading products. Please try again.";
                 return View(new List<Product>());
@@ -95,7 +98,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View();
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the product creation form. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -149,6 +152,37 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (ModelState.IsValid)
                 {
+                    // Check duplicate product name
+                    bool nameExists = await _context.Products.AnyAsync(p => p.ProductName == product.ProductName);
+                    if (nameExists)
+                    {
+                        ModelState.AddModelError("ProductName", "A product with this name already exists.");
+                        ViewBag.Categories = new SelectList(
+                            await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
+                            "CategoryId", "CategoryName", product.CategoryId);
+                        ViewBag.Suppliers = new SelectList(
+                            await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
+                            "SupplierId", "CompanyName", product.SupplierId);
+                        return View(product);
+                    }
+
+                    // Check duplicate part number
+                    if (!string.IsNullOrWhiteSpace(product.PartNumber))
+                    {
+                        bool partExists = await _context.Products.AnyAsync(p => p.PartNumber == product.PartNumber);
+                        if (partExists)
+                        {
+                            ModelState.AddModelError("PartNumber", "A product with this part number already exists.");
+                            ViewBag.Categories = new SelectList(
+                                await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
+                                "CategoryId", "CategoryName", product.CategoryId);
+                            ViewBag.Suppliers = new SelectList(
+                                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
+                                "SupplierId", "CompanyName", product.SupplierId);
+                            return View(product);
+                        }
+                    }
+
                     try
                     {
                         product.ImagePath = await SaveImageAsync(imageFile);
@@ -169,7 +203,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         TempData["Success"] = "Product created successfully.";
                         return RedirectToAction(nameof(Index));
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         TempData["ErrorMessage"] = "An error occurred while creating the product. Please try again.";
                     }
@@ -185,7 +219,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(product);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while creating the product. Please try again.";
                 ViewBag.Categories = new SelectList(
@@ -225,7 +259,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(product);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the product for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -278,44 +312,75 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
 
             if (ModelState.IsValid)
-            {
-                try
                 {
-                    Product? existing = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == id);
-                    if (existing == null) return NotFound();
-
-                    if (imageFile != null)
+                    // Check duplicate product name (exclude self)
+                    bool nameExists = await _context.Products.AnyAsync(p => p.ProductName == product.ProductName && p.ProductId != id);
+                    if (nameExists)
                     {
-                        DeleteImageFile(existing.ImagePath);
-                        product.ImagePath = await SaveImageAsync(imageFile);
+                        ModelState.AddModelError("ProductName", "A product with this name already exists.");
+                        ViewBag.Categories = new SelectList(
+                            await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
+                            "CategoryId", "CategoryName", product.CategoryId);
+                        ViewBag.Suppliers = new SelectList(
+                            await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
+                            "SupplierId", "CompanyName", product.SupplierId);
+                        return View(product);
                     }
-                    else
+
+                    // Check duplicate part number (exclude self)
+                    if (!string.IsNullOrWhiteSpace(product.PartNumber))
                     {
-                        product.ImagePath = existing.ImagePath;
+                        bool partExists = await _context.Products.AnyAsync(p => p.PartNumber == product.PartNumber && p.ProductId != id);
+                        if (partExists)
+                        {
+                            ModelState.AddModelError("PartNumber", "A product with this part number already exists.");
+                            ViewBag.Categories = new SelectList(
+                                await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
+                                "CategoryId", "CategoryName", product.CategoryId);
+                            ViewBag.Suppliers = new SelectList(
+                                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
+                                "SupplierId", "CompanyName", product.SupplierId);
+                            return View(product);
+                        }
                     }
 
-                    product.StockStatus = CalculateStockStatus(product.QuantityOnHand, product.ReorderLevel);
-                    product.CreatedAt = existing.CreatedAt;
-
-                    _context.Products.Update(product);
-
-                    _context.ActivityLogs.Add(new ActivityLog
+                    try
                     {
-                        StaffId = staffId,
-                        Action = "Edit Product",
-                        Module = "Product",
-                        Description = $"Product {product.ProductName} - Qty: {product.QuantityOnHand}, Price: {product.Price}"
-                    });
+                        Product? existing = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == id);
+                        if (existing == null) return NotFound();
 
-                    await _context.SaveChangesAsync();
-                    TempData["Success"] = "Product updated successfully.";
-                    return RedirectToAction(nameof(Index));
+                        if (imageFile != null)
+                        {
+                            DeleteImageFile(existing.ImagePath);
+                            product.ImagePath = await SaveImageAsync(imageFile);
+                        }
+                        else
+                        {
+                            product.ImagePath = existing.ImagePath;
+                        }
+
+                        product.StockStatus = CalculateStockStatus(product.QuantityOnHand, product.ReorderLevel);
+                        product.CreatedAt = existing.CreatedAt;
+
+                        _context.Products.Update(product);
+
+                        _context.ActivityLogs.Add(new ActivityLog
+                        {
+                            StaffId = staffId,
+                            Action = "Edit Product",
+                            Module = "Product",
+                            Description = $"Product {product.ProductName} - Qty: {product.QuantityOnHand}, Price: {product.Price}"
+                        });
+
+                        await _context.SaveChangesAsync();
+                        TempData["Success"] = "Product updated successfully.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                    catch
+                    {
+                        TempData["ErrorMessage"] = "An error occurred while updating the product. Please try again.";
+                    }
                 }
-                catch (Exception ex)
-                {
-                    TempData["ErrorMessage"] = "An error occurred while updating the product. Please try again.";
-                }
-            }
 
             ViewBag.Categories = new SelectList(
                 await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
@@ -349,7 +414,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (product == null) return NotFound();
                 return View(product);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading product details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -389,7 +454,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(product);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the product for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -440,7 +505,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["Success"] = "Product deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the product. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -480,7 +545,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return "~/uploads/products/" + fileName;
             }
-            catch (Exception ex)
+            catch
             {
                 // Log the exception in a real application
                 throw new InvalidOperationException("Failed to save image file. Please try again.");

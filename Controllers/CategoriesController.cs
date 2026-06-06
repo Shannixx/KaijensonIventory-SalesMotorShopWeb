@@ -48,7 +48,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 return View(categories);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading categories. Please try again.";
                 return View(new List<Category>());
@@ -77,7 +77,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(category);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading category details. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -144,7 +144,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
                 return View(category);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while creating the category. Please try again.";
                 return View(category);
@@ -170,7 +170,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(category);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the category for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -232,7 +232,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["ErrorMessage"] = "The category was modified by another user. Please try again.";
                     return View(category);
                 }
-                catch (Exception ex)
+                catch
                 {
                     TempData["ErrorMessage"] = "An error occurred while updating the category. Please try again.";
                     return View(category);
@@ -271,7 +271,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(category);
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while loading the category for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
@@ -320,7 +320,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = $"Category '{name}' deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+            catch
             {
                 TempData["ErrorMessage"] = "An error occurred while deleting the category. Please try again.";
                 return RedirectToAction(nameof(Index));
