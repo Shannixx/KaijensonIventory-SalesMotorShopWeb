@@ -6,5 +6,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public int TotalInventory { get; set; }
         public int TotalServices { get; set; }
         public int TotalActivities { get; set; }
+        public int TotalCustomers { get; set; }
+        public int TotalSuppliers { get; set; }
+        public int TotalPurchaseOrders { get; set; }
     }
 }

@@ -4,6 +4,7 @@ using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260606161645_AddIsWalkInCustomer")]
+    partial class AddIsWalkInCustomer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -303,12 +306,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<DateTime?>("LastRecalcDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("LastSaleDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("LastStockInDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("LeadTimeDays")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -360,90 +357,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.HasIndex("SupplierId");
 
                     b.ToTable("Products");
-                });
-
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrder", b =>
-                {
-                    b.Property<int>("PurchaseOrderId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PurchaseOrderId"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ExpectedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PONumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("StaffId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("PurchaseOrderId");
-
-                    b.HasIndex("PONumber")
-                        .IsUnique();
-
-                    b.HasIndex("StaffId");
-
-                    b.HasIndex("SupplierId");
-
-                    b.ToTable("PurchaseOrders");
-                });
-
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrderItem", b =>
-                {
-                    b.Property<int>("PurchaseOrderItemId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PurchaseOrderItemId"));
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PurchaseOrderId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Total")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("UnitCost")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("PurchaseOrderItemId");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("PurchaseOrderId");
-
-                    b.ToTable("PurchaseOrderItems");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.SalesItem", b =>
@@ -815,44 +728,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Navigation("Supplier");
                 });
 
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrder", b =>
-                {
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "Staff")
-                        .WithMany()
-                        .HasForeignKey("StaffId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Supplier", "Supplier")
-                        .WithMany()
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Staff");
-
-                    b.Navigation("Supplier");
-                });
-
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrderItem", b =>
-                {
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrder", "PurchaseOrder")
-                        .WithMany("Items")
-                        .HasForeignKey("PurchaseOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("PurchaseOrder");
-                });
-
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.SalesItem", b =>
                 {
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Product", "Product")
@@ -991,11 +866,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Navigation("SalesTransactions");
 
                     b.Navigation("ServiceTransactions");
-                });
-
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrder", b =>
-                {
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.SalesTransaction", b =>

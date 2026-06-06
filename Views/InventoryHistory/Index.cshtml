@@ -1,7 +1,8 @@
 @model IEnumerable<InventoryTransaction>
 @{
     ViewData["Title"] = "Inventory History";
-    string[] types = { "StockIn", "Sale", "SaleReversal", "ServiceUse" };
+    string[] types = { "StockIn", "Sale", "SaleReversal", "ServiceUse", "PO Receiving" };
+    var balance = ViewBag.StartingBalance as Dictionary<int, int> ?? new();
 }
 
 <div class="page-header">
@@ -77,6 +78,7 @@
                                 else if (item.TransactionType == "Sale") { <span class="badge bg-danger">Sale</span> }
                                 else if (item.TransactionType == "SaleReversal") { <span class="badge bg-info">Sale Reversal</span> }
                                 else if (item.TransactionType == "ServiceUse") { <span class="badge bg-warning text-dark">Service Use</span> }
+                                else if (item.TransactionType == "PO Receiving") { <span class="badge bg-primary">PO Receiving</span> }
                                 else { <span class="badge bg-secondary">@item.TransactionType</span> }
                             </td>
                             <td class="fw-semibold @(item.Quantity < 0 ? "text-danger" : "text-success")">@(item.Quantity > 0 ? "+" : "")@item.Quantity</td>

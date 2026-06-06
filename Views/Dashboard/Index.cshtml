@@ -22,7 +22,7 @@
         <div class="metric-card">
             <div class="metric-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
             <div class="metric-info">
-                <p class="metric-label">Low Stock</p>
+                <p class="metric-label">Low Stock Products</p>
                 <h3 class="metric-value" data-countup="@Model.LowStockCount">0</h3>
             </div>
         </div>
@@ -38,19 +38,64 @@
     </div>
     <div class="col-md-3">
         <div class="metric-card">
-            <div class="metric-icon success"><i class="bi bi-cash-coin"></i></div>
+            <div class="metric-icon primary"><i class="bi bi-people"></i></div>
             <div class="metric-info">
-                <p class="metric-label">Today's Sales</p>
-                <h3 class="metric-value" data-countup="@Model.TodaySalesAmount" data-decimals="2" data-prefix="₱">₱0.00</h3>
+                <p class="metric-label">Total Customers</p>
+                <h3 class="metric-value" data-countup="@Model.TotalCustomers">0</h3>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="metric-card">
-            <div class="metric-icon success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="metric-icon warning"><i class="bi bi-person-walk"></i></div>
             <div class="metric-info">
-                <p class="metric-label">Today's Profit</p>
-                <h3 class="metric-value" data-countup="@Model.TodayProfit" data-decimals="2" data-prefix="₱">₱0.00</h3>
+                <p class="metric-label">Walk-In Customers</p>
+                <h3 class="metric-value" data-countup="@Model.WalkInCount">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon success"><i class="bi bi-person-check"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Registered Customers</p>
+                <h3 class="metric-value" data-countup="@Model.RegisteredCustomers">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon danger"><i class="bi bi-arrow-repeat"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Need Reorder</p>
+                <h3 class="metric-value" data-countup="@Model.LowStockRequireReorder">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon primary"><i class="bi bi-file-earmark-text"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Pending POs</p>
+                <h3 class="metric-value" data-countup="@Model.PendingPurchaseOrders">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon success"><i class="bi bi-cash-coin"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Monthly Revenue</p>
+                <h3 class="metric-value" data-countup="@Model.MonthlyRevenue" data-decimals="2" data-prefix="₱">₱0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon info"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Monthly Profit</p>
+                <h3 class="metric-value" data-countup="@Model.MonthlyProfit" data-decimals="2" data-prefix="₱">₱0.00</h3>
             </div>
         </div>
     </div>
@@ -65,16 +110,7 @@
     </div>
     <div class="col-md-3">
         <div class="metric-card">
-            <div class="metric-icon primary"><i class="bi bi-receipt"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Total Revenue</p>
-                <h3 class="metric-value" data-countup="@Model.TotalRevenue" data-decimals="2" data-prefix="₱">₱0.00</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon info"><i class="bi bi-pie-chart"></i></div>
+            <div class="metric-icon primary"><i class="bi bi-pie-chart"></i></div>
             <div class="metric-info">
                 <p class="metric-label">Profit Margin</p>
                 <h3 class="metric-value" data-countup="@Model.ProfitMargin" data-decimals="1" data-suffix="%">0%</h3>
@@ -109,20 +145,33 @@
             <div class="card-body p-0">
                 <div class="table-container">
                     <table class="table">
-                        <thead><tr><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
+                        <thead><tr><th>Product</th><th>Qty</th><th>Reorder</th><th></th></tr></thead>
                         <tbody>
                             @foreach (var p in Model.RecentLowStockProducts)
                             {
-                                <tr><td>@p.ProductName</td><td class="text-danger fw-semibold">@p.QuantityOnHand</td><td>@p.ReorderLevel</td></tr>
+                                <tr>
+                                    <td><a asp-controller="Products" asp-action="Details" asp-route-id="@p.ProductId">@p.ProductName</a></td>
+                                    <td class="text-danger fw-semibold">@p.QuantityOnHand</td>
+                                    <td>@p.ReorderLevel</td>
+                                    <td>
+                                        <a asp-controller="PurchaseOrders" asp-action="CreateFromLowStock" asp-route-productId="@p.ProductId" class="btn btn-sm btn-outline-primary" title="Generate PO"><i class="bi bi-file-earmark-plus"></i></a>
+                                    </td>
+                                </tr>
                             }
                             @if (!Model.RecentLowStockProducts.Any())
                             {
-                                <tr><td colspan="3" class="text-center py-4 text-muted">No low stock items.</td></tr>
+                                <tr><td colspan="4" class="text-center py-4 text-muted">No low stock items.</td></tr>
                             }
                         </tbody>
                     </table>
                 </div>
             </div>
+            @if (Model.RecentLowStockProducts.Any())
+            {
+                <div class="card-footer text-center">
+                    <a asp-controller="PurchaseOrders" asp-action="CreateFromLowStock" class="btn btn-sm btn-primary"><i class="bi bi-file-earmark-plus"></i> Generate Purchase Order</a>
+                </div>
+            }
         </div>
     </div>
     <div class="col-lg-4">
@@ -135,7 +184,7 @@
                         <tbody>
                             @foreach (var s in Model.RecentSales)
                             {
-                                <tr><td>@s.InvoiceNumber</td><td>@s.CustomerName</td><td>@s.TotalAmount.ToString("N2")</td><td>@s.Staff?.StaffName</td></tr>
+                                <tr><td><a asp-controller="Sales" asp-action="Details" asp-route-id="@s.TransactionId">@s.InvoiceNumber</a></td><td>@s.CustomerName</td><td>@s.TotalAmount.ToString("N2")</td><td>@s.Staff?.StaffName</td></tr>
                             }
                             @if (!Model.RecentSales.Any())
                             {
@@ -162,6 +211,88 @@
                             @if (!Model.TopSellingProducts.Any())
                             {
                                 <tr><td colspan="3" class="text-center py-4 text-muted">No sales data yet.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-2">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Recent Stock In</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Date</th><th>Product</th><th>Qty</th><th>Supplier</th></tr></thead>
+                        <tbody>
+                            @foreach (var si in Model.RecentStockIns)
+                            {
+                                <tr>
+                                    <td>@si.DeliveryDate.ToString("MMM dd")</td>
+                                    <td>@si.Product?.ProductName</td>
+                                    <td>@si.QuantityReceived</td>
+                                    <td>@si.Supplier?.CompanyName</td>
+                                </tr>
+                            }
+                            @if (!Model.RecentStockIns.Any())
+                            {
+                                <tr><td colspan="4" class="text-center py-4 text-muted">No stock in records.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Top Customers</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Customer</th><th>Lifetime Spend</th><th>Purchases</th></tr></thead>
+                        <tbody>
+                            @foreach (var c in Model.TopCustomers)
+                            {
+                                <tr>
+                                    <td><a asp-controller="Customers" asp-action="Details" asp-route-id="@c.CustomerId" class="fw-medium">@c.CustomerName</a></td>
+                                    <td>@c.TotalPurchases.ToString("N2")</td>
+                                    <td>@c.TransactionCount</td>
+                                </tr>
+                            }
+                            @if (!Model.TopCustomers.Any())
+                            {
+                                <tr><td colspan="3" class="text-center py-4 text-muted">No customer data yet.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Active Alerts</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Type</th><th>Message</th><th>Date</th></tr></thead>
+                        <tbody>
+                            @foreach (var n in Model.ActiveAlerts)
+                            {
+                                <tr>
+                                    <td><span class="badge @(n.AlertType == "Stock Alert" ? "bg-danger" : "bg-warning text-dark")">@n.AlertType</span></td>
+                                    <td class="small">@n.Message</td>
+                                    <td class="small">@n.CreatedAt.ToString("MMM dd")</td>
+                                </tr>
+                            }
+                            @if (!Model.ActiveAlerts.Any())
+                            {
+                                <tr><td colspan="3" class="text-center py-4 text-muted">No active alerts.</td></tr>
                             }
                         </tbody>
                     </table>

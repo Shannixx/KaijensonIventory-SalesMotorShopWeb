@@ -23,6 +23,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
         public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
         public DbSet<Customer> Customers => Set<Customer>();
+        public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+        public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -110,6 +112,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
 
             modelBuilder.Entity<ServiceTransaction>()
                 .HasOne(t => t.Customer).WithMany(c => c.ServiceTransactions).HasForeignKey(t => t.CustomerId).OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<PurchaseOrder>()
+                .HasOne(p => p.Supplier).WithMany().HasForeignKey(p => p.SupplierId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseOrder>()
+                .HasOne(p => p.Staff).WithMany().HasForeignKey(p => p.StaffId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .HasOne(i => i.PurchaseOrder).WithMany(p => p.Items).HasForeignKey(i => i.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .HasOne(i => i.Product).WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseOrder>()
+                .HasIndex(p => p.PONumber).IsUnique();
         }
     }
 }

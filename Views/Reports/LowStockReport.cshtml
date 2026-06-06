@@ -1,0 +1,72 @@
+@model IEnumerable<Product>
+@{ ViewData["Title"] = "Low Stock Report"; }
+
+<div class="page-header">
+    <div>
+        <h1>Low Stock Report</h1>
+        <p>Products that need reordering.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="PurchaseOrders" asp-action="CreateFromLowStock" class="btn btn-primary"><i class="bi bi-file-earmark-plus"></i> Generate Purchase Order</a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search product..." value="@ViewData["Search"]" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Reorder Level</th>
+                        <th>Status</th>
+                        <th>Supplier</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td><a asp-controller="Products" asp-action="Details" asp-route-id="@p.ProductId">@p.ProductName</a></td>
+                            <td>@p.Category?.CategoryName</td>
+                            <td class="text-danger fw-semibold">@p.QuantityOnHand</td>
+                            <td>@p.ReorderLevel</td>
+                            <td>
+                                @if (p.QuantityOnHand <= 0) { <span class="badge bg-danger">Out of Stock</span> }
+                                else if (p.QuantityOnHand <= p.ReorderLevel / 2) { <span class="badge bg-danger">Critical</span> }
+                                else { <span class="badge bg-warning text-dark">Low Stock</span> }
+                            </td>
+                            <td>@p.Supplier?.CompanyName</td>
+                            <td>
+                                <a asp-controller="PurchaseOrders" asp-action="CreateFromLowStock" asp-route-productId="@p.ProductId" class="btn btn-sm btn-outline-primary" title="Generate PO"><i class="bi bi-file-earmark-plus"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No low stock products found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

@@ -27,6 +27,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 var today = DateTime.Today;
+                var monthStart = new DateTime(today.Year, today.Month, 1);
 
                 var todaySales = await _context.SalesTransactions
                     .Where(t => t.TransactionDate.Date == today)
@@ -116,16 +117,98 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .AsNoTracking()
                     .ToListAsync();
 
+                // Customer statistics
+                int totalCustomers = await _context.Customers.CountAsync();
+                int walkInCount = await _context.Customers.CountAsync(c => c.IsWalkInCustomer);
+                int registeredCount = totalCustomers - walkInCount;
+                decimal avgPurchase = totalCustomers > 0
+                    ? await _context.Customers.AverageAsync(c => (decimal?)c.TotalPurchases) ?? 0
+                    : 0;
+
+                var topCustomers = await _context.Customers
+                    .Where(c => !c.IsWalkInCustomer)
+                    .OrderByDescending(c => c.TotalPurchases)
+                    .Take(5)
+                    .Select(c => new CustomerSummaryInfo
+                    {
+                        CustomerId = c.CustomerId,
+                        CustomerName = c.CustomerName,
+                        ContactNumber = c.ContactNumber,
+                        TotalPurchases = c.TotalPurchases,
+                        LastPurchaseDate = c.LastPurchaseDate,
+                        TransactionCount = c.SalesTransactions.Count
+                    })
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var recentCustomers = await _context.Customers
+                    .Where(c => c.LastPurchaseDate != null && !c.IsWalkInCustomer)
+                    .OrderByDescending(c => c.LastPurchaseDate)
+                    .Take(5)
+                    .Select(c => new CustomerSummaryInfo
+                    {
+                        CustomerId = c.CustomerId,
+                        CustomerName = c.CustomerName,
+                        ContactNumber = c.ContactNumber,
+                        TotalPurchases = c.TotalPurchases,
+                        LastPurchaseDate = c.LastPurchaseDate,
+                        TransactionCount = c.SalesTransactions.Count
+                    })
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Monthly stats
+                var monthlySales = await _context.SalesTransactions
+                    .Where(t => t.TransactionDate >= monthStart)
+                    .ToListAsync();
+                decimal monthlyRevenue = monthlySales.Sum(t => t.TotalAmount);
+                decimal monthlyCOGS = 0;
+                foreach (var sale in monthlySales)
+                {
+                    var items = await _context.SalesItems
+                        .Include(i => i.Product)
+                        .Where(i => i.TransactionId == sale.TransactionId)
+                        .ToListAsync();
+                    monthlyCOGS += items.Sum(i => (i.Quantity * (i.Product?.AverageCost ?? 0)));
+                }
+
+                // Recent stock ins
+                var recentStockIns = await _context.StockIns
+                    .Include(s => s.Product)
+                    .Include(s => s.Supplier)
+                    .OrderByDescending(s => s.DeliveryDate)
+                    .Take(5)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Active alerts
+                var activeAlerts = await _context.Notifications
+                    .Where(n => !n.IsRead)
+                    .OrderByDescending(n => n.CreatedAt)
+                    .Take(5)
+                    .AsNoTracking()
+                    .ToListAsync();
+
                 var viewModel = new DashboardViewModel
                 {
                     TotalProducts = await _context.Products.CountAsync(),
                     TotalCategories = await _context.Categories.CountAsync(),
                     TotalSuppliers = await _context.Suppliers.CountAsync(),
                     TotalMechanics = await _context.Mechanics.CountAsync(),
+                    TotalCustomers = totalCustomers,
+                    WalkInCount = walkInCount,
+                    RegisteredCustomers = registeredCount,
+                    AveragePurchasePerCustomer = avgPurchase,
+                    TopCustomers = topCustomers,
+                    RecentCustomers = recentCustomers,
                     LowStockCount = await _context.Products
                         .CountAsync(p => p.QuantityOnHand <= p.ReorderLevel && p.QuantityOnHand > 0),
                     OutOfStockCount = await _context.Products
                         .CountAsync(p => p.QuantityOnHand <= 0),
+                    LowStockRequireReorder = await _context.Products
+                        .CountAsync(p => p.QuantityOnHand <= p.ReorderLevel),
+                    PendingPurchaseOrders = await _context.PurchaseOrders
+                        .CountAsync(p => p.Status == "Draft" || p.Status == "Ordered"),
                     TodaySalesCount = todaySales.Count,
                     TodaySalesAmount = todaySalesAmount,
                     TodayProfit = todaySalesAmount - todayCOGS,
@@ -135,6 +218,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TotalCOGS = totalCOGS,
                     TotalProfit = totalProfit,
                     ProfitMargin = profitMargin,
+                    MonthlyRevenue = monthlyRevenue,
+                    MonthlyProfit = monthlyRevenue - monthlyCOGS,
                     RecentLowStockProducts = await _context.Products
                         .Where(p => p.QuantityOnHand <= p.ReorderLevel && p.QuantityOnHand > 0)
                         .OrderBy(p => p.QuantityOnHand)
@@ -153,6 +238,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         .Take(5)
                         .AsNoTracking()
                         .ToListAsync(),
+                    RecentStockIns = recentStockIns,
+                    ActiveAlerts = activeAlerts,
                     ChartLabels = chartLabels,
                     ChartSalesData = chartSalesData,
                     ChartProfitData = chartProfitData,

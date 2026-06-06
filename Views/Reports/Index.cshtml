@@ -54,6 +54,39 @@
             </div>
         </div>
     </div>
+    <div class="col-6 col-md-3">
+        <div class="report-stat-card">
+            <div class="report-stat-icon" style="background:rgba(16,185,129,0.12);color:#10b981;">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="report-stat-info">
+                <div class="report-stat-label">Customers</div>
+                <div class="report-stat-value" data-countup="@Model.TotalCustomers" data-duration="1200">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="report-stat-card">
+            <div class="report-stat-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                <i class="bi bi-truck"></i>
+            </div>
+            <div class="report-stat-info">
+                <div class="report-stat-label">Suppliers</div>
+                <div class="report-stat-value" data-countup="@Model.TotalSuppliers" data-duration="1200">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="report-stat-card">
+            <div class="report-stat-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+                <i class="bi bi-file-earmark-text"></i>
+            </div>
+            <div class="report-stat-info">
+                <div class="report-stat-label">Purchase Orders</div>
+                <div class="report-stat-value" data-countup="@Model.TotalPurchaseOrders" data-duration="1200">0</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @* Report Cards *@
@@ -105,6 +138,58 @@
             <h5 class="report-card-title">Activity Summary</h5>
             <p class="report-card-desc">View system audit trail with module and date range filters.</p>
             <a asp-action="ActivitySummary" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+                <i class="bi bi-people"></i>
+            </div>
+            <h5 class="report-card-title">Customer Report</h5>
+            <p class="report-card-desc">View customer purchase history, lifetime spend, and activity.</p>
+            <a asp-action="CustomerReport" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">
+                <i class="bi bi-truck"></i>
+            </div>
+            <h5 class="report-card-title">Supplier Report</h5>
+            <p class="report-card-desc">View supplier performance, deliveries, and product listings.</p>
+            <a asp-action="SupplierReport" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <h5 class="report-card-title">Low Stock Report</h5>
+            <p class="report-card-desc">View all products that need reordering with stock status.</p>
+            <a asp-action="LowStockReport" class="report-btn">
+                <span>View Report</span>
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="report-card">
+            <div class="report-card-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">
+                <i class="bi bi-file-earmark-text"></i>
+            </div>
+            <h5 class="report-card-title">Purchase Order Report</h5>
+            <p class="report-card-desc">View all purchase orders with supplier and status filters.</p>
+            <a asp-action="PurchaseOrderReport" class="report-btn">
                 <span>View Report</span>
                 <i class="bi bi-arrow-right"></i>
             </a>

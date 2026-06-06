@@ -1,0 +1,168 @@
+@model PurchaseOrder
+@{
+    ViewData["Title"] = "Edit " + Model.PONumber;
+    var products = ViewBag.Products as IEnumerable<Product> ?? new List<Product>();
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit @Model.PONumber</h1>
+        <p>Modify purchase order details.</p>
+    </div>
+</div>
+
+<form asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" method="post" id="poForm">
+    <input type="hidden" asp-for="PurchaseOrderId" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Order Items</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addRow()"><i class="bi bi-plus-lg"></i> Add Item</button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-container">
+                        <table class="table mb-0" id="itemsTable">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th style="width:100px;">Quantity</th>
+                                    <th style="width:120px;">Unit Cost</th>
+                                    <th style="width:120px;">Total</th>
+                                    <th style="width:40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-body border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Grand Total:</span>
+                        <span class="fw-bold fs-5" id="grandTotal">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">Order Details</div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label small">Supplier <span class="text-danger">*</span></label>
+                        <select asp-for="SupplierId" class="form-select" required>
+                            <option value="">-- Select Supplier --</option>
+                            @foreach (var s in ViewBag.Suppliers as SelectList ?? new SelectList(Enumerable.Empty<Supplier>()))
+                            {
+                                <option value="@s.Value">@s.Text</option>
+                            }
+                        </select>
+                        <span asp-validation-for="SupplierId" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Expected Date</label>
+                        <input asp-for="ExpectedDate" type="date" class="form-control" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Notes</label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 mt-2"><i class="bi bi-save"></i> Save Changes</button>
+                    <a asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary w-100 mt-1">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="itemsContainer"></div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let rowIndex = 0;
+        const products = @Html.Raw(Json.Serialize(products.Select(p => new { p.ProductId, p.ProductName, brand = p.Brand ?? "", supplier = p.Supplier?.CompanyName ?? "" })));
+        const existingItems = @Html.Raw(Json.Serialize(Model.Items.Select(i => new { productId = i.ProductId, quantity = i.Quantity, unitCost = i.UnitCost })));
+
+        function addRow(productId, qty, unitCost) {
+            const tbody = document.getElementById('itemsBody');
+            const idx = rowIndex++;
+            const tr = document.createElement('tr');
+            tr.id = `row_${idx}`;
+            tr.innerHTML = `
+                <td>
+                    <select name="items[${idx}].ProductId" class="form-select form-select-sm product-select" required onchange="updateItemTotal(this, ${idx})">
+                        <option value="">-- Select --</option>
+                        ${products.map(p => `<option value="${p.productId}" ${productId && p.productId === productId ? 'selected' : ''}>${p.brand} - ${p.productName} (${p.supplier})</option>`).join('')}
+                    </select>
+                </td>
+                <td><input type="number" name="items[${idx}].Quantity" class="form-control form-control-sm qty-input" value="${qty || 1}" min="1" required onchange="updateItemTotal(this, ${idx})" /></td>
+                <td><input type="number" name="items[${idx}].UnitCost" class="form-control form-control-sm cost-input" value="${unitCost || 0}" step="0.01" min="0" required onchange="updateItemTotal(this, ${idx})" /></td>
+                <td><span class="item-total fw-semibold" id="total_${idx}">${((qty || 1) * (unitCost || 0)).toFixed(2)}</span></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(${idx})">&times;</button></td>
+            `;
+            tr.dataset.index = idx;
+            tbody.appendChild(tr);
+
+            if (productId) {
+                const sel = tr.querySelector('.product-select');
+                sel.value = productId;
+            }
+            updateItemTotal(null, idx);
+            updateGrandTotal();
+        }
+
+        function removeRow(idx) {
+            const row = document.getElementById(`row_${idx}`);
+            if (row) {
+                row.remove();
+                updateGrandTotal();
+            }
+        }
+
+        function updateItemTotal(input, idx) {
+            const row = document.getElementById(`row_${idx}`);
+            if (!row) return;
+            const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+            const cost = parseFloat(row.querySelector('.cost-input').value) || 0;
+            const total = document.getElementById(`total_${idx}`);
+            if (total) total.textContent = (qty * cost).toFixed(2);
+            updateGrandTotal();
+        }
+
+        function updateGrandTotal() {
+            let total = 0;
+            document.querySelectorAll('.item-total').forEach(el => {
+                total += parseFloat(el.textContent) || 0;
+            });
+            document.getElementById('grandTotal').textContent = total.toFixed(2);
+        }
+
+        document.getElementById('poForm').addEventListener('submit', function(e) {
+            const tbody = document.getElementById('itemsBody');
+            const rows = tbody.querySelectorAll('tr[id^="row_"]');
+            if (rows.length === 0) {
+                e.preventDefault();
+                alert('Please add at least one item.');
+                return;
+            }
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+            rows.forEach((row, idx) => {
+                const sel = row.querySelector('.product-select');
+                const qty = row.querySelector('.qty-input');
+                const cost = row.querySelector('.cost-input');
+                container.innerHTML += `<input type="hidden" name="items[${idx}].ProductId" value="${sel.value}" />`;
+                container.innerHTML += `<input type="hidden" name="items[${idx}].Quantity" value="${qty.value}" />`;
+                container.innerHTML += `<input type="hidden" name="items[${idx}].UnitCost" value="${cost.value}" />`;
+                container.innerHTML += `<input type="hidden" name="items[${idx}].Total" value="${(parseFloat(qty.value) * parseFloat(cost.value)).toFixed(2)}" />`;
+            });
+        });
+
+        // Load existing items
+        existingItems.forEach(item => addRow(item.productId, item.quantity, item.unitCost));
+    </script>
+}

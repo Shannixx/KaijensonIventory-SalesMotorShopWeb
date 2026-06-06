@@ -90,6 +90,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .AsNoTracking()
                     .ToListAsync();
 
+                ViewBag.TotalTransactions = await _context.SalesTransactions.CountAsync(t => t.CustomerId == id)
+                    + await _context.ServiceTransactions.CountAsync(t => t.CustomerId == id);
+
+                ViewBag.PurchasedProducts = await _context.SalesItems
+                    .Where(si => si.Transaction!.CustomerId == id && si.Product != null)
+                    .Include(si => si.Product)
+                    .Select(si => si.Product!)
+                    .Distinct()
+                    .Take(10)
+                    .AsNoTracking()
+                    .ToListAsync();
+
                 return View(customer);
             }
             catch

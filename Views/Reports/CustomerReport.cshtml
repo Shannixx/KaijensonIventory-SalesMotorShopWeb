@@ -1,0 +1,61 @@
+@model IEnumerable<Customer>
+@{ ViewData["Title"] = "Customer Report"; }
+
+<div class="page-header">
+    <div>
+        <h1>Customer Report</h1>
+        <p>Customer purchase history and activity.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search customer..." value="@ViewData["Search"]" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Contact</th>
+                        <th>Type</th>
+                        <th>Lifetime Spend</th>
+                        <th>Last Purchase</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        <tr>
+                            <td><a asp-controller="Customers" asp-action="Details" asp-route-id="@c.CustomerId">@c.CustomerName</a></td>
+                            <td>@(c.ContactNumber ?? "-")</td>
+                            <td>@(c.IsWalkInCustomer ? "Walk-in" : "Registered")</td>
+                            <td class="fw-semibold">@c.TotalPurchases.ToString("N2")</td>
+                            <td>@(c.LastPurchaseDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+                            <td>@c.CreatedAt.ToString("MMM dd, yyyy")</td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No customers found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

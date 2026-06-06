@@ -27,6 +27,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public List<string> CategoryLabels { get; set; } = new();
         public List<int> CategoryCounts { get; set; } = new();
         public List<ProductSalesInfo> TopSellingProducts { get; set; } = new();
+        public int TotalCustomers { get; set; }
+        public int WalkInCount { get; set; }
+        public int RegisteredCustomers { get; set; }
+        public decimal AveragePurchasePerCustomer { get; set; }
+        public List<CustomerSummaryInfo> TopCustomers { get; set; } = new();
+        public List<CustomerSummaryInfo> RecentCustomers { get; set; } = new();
+        public int LowStockRequireReorder { get; set; }
+        public int PendingPurchaseOrders { get; set; }
+        public decimal MonthlyRevenue { get; set; }
+        public decimal MonthlyProfit { get; set; }
+        public List<StockIn> RecentStockIns { get; set; } = new();
+        public List<Notification> ActiveAlerts { get; set; } = new();
     }
 
     public class ProductSalesInfo
@@ -34,5 +46,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public string ProductName { get; set; } = string.Empty;
         public int TotalQuantity { get; set; }
         public decimal TotalRevenue { get; set; }
+    }
+
+    public class CustomerSummaryInfo
+    {
+        public int CustomerId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string? ContactNumber { get; set; }
+        public decimal TotalPurchases { get; set; }
+        public DateTime? LastPurchaseDate { get; set; }
+        public int TransactionCount { get; set; }
     }
 }

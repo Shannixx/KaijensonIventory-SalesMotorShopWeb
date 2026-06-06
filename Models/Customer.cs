@@ -25,7 +25,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [StringLength(500)]
         public string? Notes { get; set; }
 
-        [Display(Name = "Total Purchases")]
+        [Display(Name = "Walk-in Customer")]
+        public bool IsWalkInCustomer { get; set; }
+
+        [Display(Name = "Lifetime Spend")]
         [DataType(DataType.Currency)]
         [System.ComponentModel.DataAnnotations.Schema.Column(TypeName = "decimal(18,2)")]
         public decimal TotalPurchases { get; set; }

@@ -54,6 +54,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Last Recalculated")]
         public DateTime? LastRecalcDate { get; set; }
 
+        [Display(Name = "Last Sale Date")]
+        [DataType(DataType.Date)]
+        public DateTime? LastSaleDate { get; set; }
+
+        [Display(Name = "Last Stock In Date")]
+        [DataType(DataType.Date)]
+        public DateTime? LastStockInDate { get; set; }
+
         [StringLength(30)]
         [Display(Name = "Stock Status")]
         public string StockStatus { get; set; } = "Available";

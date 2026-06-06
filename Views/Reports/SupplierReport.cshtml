@@ -1,0 +1,59 @@
+@model IEnumerable<Supplier>
+@{ ViewData["Title"] = "Supplier Report"; }
+
+<div class="page-header">
+    <div>
+        <h1>Supplier Report</h1>
+        <p>Supplier performance and product listings.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search supplier..." value="@ViewData["Search"]" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Contact</th>
+                        <th>Products Supplied</th>
+                        <th>Total Deliveries</th>
+                        <th>Last Delivery</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model)
+                    {
+                        <tr>
+                            <td><a asp-controller="Suppliers" asp-action="Details" asp-route-id="@s.SupplierId">@s.CompanyName</a></td>
+                            <td>@(s.ContactPerson ?? "-") / @(s.ContactNumber ?? "-")</td>
+                            <td>@s.Products.Count</td>
+                            <td>@(s.StockIns?.Count ?? 0)</td>
+                            <td>@(s.StockIns?.OrderByDescending(si => si.DeliveryDate).FirstOrDefault()?.DeliveryDate.ToString("MMM dd, yyyy") ?? "-")</td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="5" class="text-center py-4 text-muted">No suppliers found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

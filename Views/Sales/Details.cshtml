@@ -23,7 +23,16 @@
             </div>
             <div class="col-md-3">
                 <div class="small text-muted">Customer</div>
-                <div class="fw-semibold">@Model.CustomerName</div>
+                <div class="fw-semibold">
+                    @if (Model.Customer != null)
+                    {
+                        <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.Customer.CustomerId">@Model.CustomerName</a>
+                    }
+                    else
+                    {
+                        @Model.CustomerName
+                    }
+                </div>
             </div>
             <div class="col-md-3">
                 <div class="small text-muted">Date</div>

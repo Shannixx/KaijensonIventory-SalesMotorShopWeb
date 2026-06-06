@@ -3,12 +3,14 @@
     ViewData["Title"] = Model.CustomerName;
     var recentSales = ViewBag.RecentSales as List<SalesTransaction> ?? new();
     var recentServices = ViewBag.RecentServices as List<ServiceTransaction> ?? new();
+    var purchasedProducts = ViewBag.PurchasedProducts as List<Product> ?? new();
+    var totalTransactions = (int)(ViewBag.TotalTransactions ?? 0);
 }
 
 <div class="page-header">
     <div>
         <h1>@Model.CustomerName</h1>
-        <p>Customer details and history.</p>
+        <p>Customer profile and purchase history.</p>
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>
@@ -17,63 +19,100 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon primary"><i class="bi bi-cash-stack"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Lifetime Spend</p>
+                <h3 class="metric-value" data-prefix="₱" data-decimals="2">₱@Model.TotalPurchases.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon info"><i class="bi bi-receipt"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Total Transactions</p>
+                <h3 class="metric-value">@totalTransactions</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon warning"><i class="bi bi-calendar"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Last Purchase</p>
+                <h3 class="metric-value small">@(Model.LastPurchaseDate?.ToString("MMM dd, yyyy") ?? "N/A")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon @(Model.IsWalkInCustomer ? "warning" : "success")"><i class="bi @(Model.IsWalkInCustomer ? "bi-person-walk" : "bi-person-check")"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Type</p>
+                <h3 class="metric-value small">@(Model.IsWalkInCustomer ? "Walk-in" : "Registered")</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
                 <div class="small text-muted">Contact Number</div>
                 <div class="fw-medium">@(Model.ContactNumber ?? "-")</div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
+            <div class="col-md-3">
                 <div class="small text-muted">Email</div>
                 <div class="fw-medium">@(Model.Email ?? "-")</div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <div class="small text-muted">Total Purchases</div>
-                <div class="fw-medium">@Model.TotalPurchases.ToString("N2")</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <div class="small text-muted">Last Purchase</div>
-                <div class="fw-medium">@(Model.LastPurchaseDate?.ToString("MMM dd, yyyy") ?? "N/A")</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
+            <div class="col-md-3">
                 <div class="small text-muted">Address</div>
                 <div class="fw-medium">@(Model.Address ?? "-")</div>
             </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Created</div>
+                <div class="fw-medium">@Model.CreatedAt.ToString("MMM dd, yyyy")</div>
+            </div>
         </div>
-    </div>
-    @if (!string.IsNullOrEmpty(Model.Notes))
-    {
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="row mt-2">
+                <div class="col-12">
                     <div class="small text-muted">Notes</div>
                     <div>@Model.Notes</div>
                 </div>
             </div>
-        </div>
-    }
+        }
+    </div>
 </div>
+
+@if (purchasedProducts.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header">Purchased Products</div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var p in purchasedProducts)
+                {
+                    <a asp-controller="Products" asp-action="Details" asp-route-id="@p.ProductId" class="badge bg-light text-dark border text-decoration-none p-2">
+                        @p.ProductName
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+}
 
 <div class="row g-3">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><span>Recent Sales</span></div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Purchase History</span>
+                <a asp-controller="Sales" asp-action="Index" asp-route-searchString="@Model.CustomerName" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
             <div class="card-body p-0">
                 <div class="table-container">
                     <table class="table mb-0">
@@ -97,7 +136,7 @@
                             }
                             @if (!recentSales.Any())
                             {
-                                <tr><td colspan="4" class="text-center py-3 text-muted">No sales yet.</td></tr>
+                                <tr><td colspan="4" class="text-center py-3 text-muted">No purchases yet.</td></tr>
                             }
                         </tbody>
                     </table>
@@ -107,7 +146,10 @@
     </div>
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><span>Recent Services</span></div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Service History</span>
+                <a asp-controller="ServiceTransactions" asp-action="Index" asp-route-searchString="@Model.CustomerName" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
             <div class="card-body p-0">
                 <div class="table-container">
                     <table class="table mb-0">
@@ -125,13 +167,25 @@
                                 <tr>
                                     <td><a asp-controller="ServiceTransactions" asp-action="Details" asp-route-id="@svc.ServiceTxnId">#@svc.ServiceTxnId</a></td>
                                     <td>@svc.Date.ToString("MMM dd, yyyy")</td>
-                                    <td>@svc.Status</td>
+                                    <td>
+                                        @{
+                                            string badge = svc.Status switch
+                                            {
+                                                "Pending" => "bg-warning",
+                                                "In Progress" => "bg-info",
+                                                "Completed" => "bg-success",
+                                                "Cancelled" => "bg-danger",
+                                                _ => "bg-secondary"
+                                            };
+                                        }
+                                        <span class="badge @badge">@svc.Status</span>
+                                    </td>
                                     <td>@svc.ServiceFee.ToString("N2")</td>
                                 </tr>
                             }
                             @if (!recentServices.Any())
                             {
-                                <tr><td colspan="4" class="text-center py-3 text-muted">No services yet.</td></tr>
+                                <tr><td colspan="4" class="text-center py-3 text-muted">No service history.</td></tr>
                             }
                         </tbody>
                     </table>

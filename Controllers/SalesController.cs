@@ -40,6 +40,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 int pageSize = 10;
                 IQueryable<SalesTransaction> query = _context.SalesTransactions
                     .Include(t => t.Staff)
+                    .Include(t => t.Customer)
                     .Include(t => t.SalesItems).ThenInclude(i => i.Product)
                     .AsNoTracking();
 
@@ -101,7 +102,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(SalesTransaction model, List<SalesItem> items)
+        public async Task<IActionResult> Create(SalesTransaction model, List<SalesItem> items, int? selectedCustomerId, string? customerType, string? quickAddName, string? quickAddContact, string? walkinName, string? walkinContact)
         {
             // Validate session
             int? staffId = HttpContext.Session.GetInt32("StaffId");
@@ -113,11 +114,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                if (string.IsNullOrWhiteSpace(model.CustomerName))
-                {
-                    ModelState.AddModelError("CustomerName", "Customer name is required.");
-                }
-
                 if (items == null || items.Count == 0)
                 {
                     ModelState.AddModelError("", "At least one item is required.");
@@ -139,6 +135,99 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 model.InvoiceNumber = $"INV-{DateTime.Now:yyyyMMddHHmmss}";
                 model.TransactionDate = DateTime.Now;
                 model.StaffId = staffId.Value;
+
+                // Determine customer linkage
+                if (customerType == "existing" && selectedCustomerId.HasValue)
+                {
+                    var cust = await _context.Customers.FindAsync(selectedCustomerId.Value);
+                    if (cust != null)
+                    {
+                        model.CustomerId = cust.CustomerId;
+                        model.CustomerName = cust.CustomerName;
+                    }
+                }
+                else if (customerType == "quickadd" && !string.IsNullOrWhiteSpace(quickAddName))
+                {
+                    var newCust = new Customer
+                    {
+                        CustomerName = quickAddName.Trim(),
+                        ContactNumber = quickAddContact?.Trim(),
+                        IsWalkInCustomer = false
+                    };
+                    _context.Customers.Add(newCust);
+                    await _context.SaveChangesAsync();
+                    model.CustomerId = newCust.CustomerId;
+                    model.CustomerName = newCust.CustomerName;
+                }
+                else if (customerType == "walkin")
+                {
+                    string? name = string.IsNullOrWhiteSpace(walkinName) ? model.CustomerName : walkinName.Trim();
+                    string? contact = string.IsNullOrWhiteSpace(walkinContact) ? null : walkinContact.Trim();
+
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        name = "Walk-in Customer";
+                    }
+
+                    // Search for existing customer by Name + Contact Number (duplicate prevention)
+                    Customer? existing;
+                    if (contact != null)
+                    {
+                        existing = await _context.Customers
+                            .Where(c => c.CustomerName == name && c.ContactNumber == contact)
+                            .FirstOrDefaultAsync();
+                    }
+                    else
+                    {
+                        existing = await _context.Customers
+                            .Where(c => c.CustomerName == name && (c.ContactNumber == null || c.ContactNumber == ""))
+                            .FirstOrDefaultAsync();
+                    }
+
+                    if (existing != null)
+                    {
+                        // Reuse existing customer record (prevents duplicates)
+                        model.CustomerId = existing.CustomerId;
+                        model.CustomerName = existing.CustomerName;
+                    }
+                    else
+                    {
+                        // Create new walk-in customer record
+                        var newCust = new Customer
+                        {
+                            CustomerName = name,
+                            ContactNumber = contact,
+                            IsWalkInCustomer = true
+                        };
+                        _context.Customers.Add(newCust);
+                        await _context.SaveChangesAsync();
+                        model.CustomerId = newCust.CustomerId;
+                        model.CustomerName = newCust.CustomerName;
+                    }
+                }
+                else
+                {
+                    // Fallback — should not reach here with the new UI, but keep for backward compat
+                    var walkIn = await _context.Customers.FirstOrDefaultAsync(c => c.IsWalkInCustomer);
+                    if (walkIn == null)
+                    {
+                        walkIn = new Customer
+                        {
+                            CustomerName = "Walk-in Customer",
+                            IsWalkInCustomer = true,
+                            Notes = "Default walk-in customer record."
+                        };
+                        _context.Customers.Add(walkIn);
+                        await _context.SaveChangesAsync();
+                    }
+                    model.CustomerId = walkIn.CustomerId;
+                    model.CustomerName = walkIn.CustomerName;
+                }
+
+                if (string.IsNullOrWhiteSpace(model.CustomerName))
+                {
+                    model.CustomerName = "Walk-in Customer";
+                }
 
                 decimal total = 0;
                 var salesItems = new List<SalesItem>();
@@ -221,6 +310,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     foreach (var si in salesItems)
                     {
                         Product? soldProduct = await _context.Products.FindAsync(si.ProductId);
+                        if (soldProduct != null)
+                        {
+                            soldProduct.LastSaleDate = DateTime.Now;
+                        }
                         _context.InventoryTransactions.Add(new InventoryTransaction
                         {
                             ProductId = si.ProductId,
@@ -245,6 +338,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     await _context.SaveChangesAsync();
 
                     await transaction.CommitAsync();
+
+                    // Update customer stats
+                    if (model.CustomerId.HasValue)
+                    {
+                        var cust = await _context.Customers.FindAsync(model.CustomerId.Value);
+                        if (cust != null)
+                        {
+                            cust.TotalPurchases += model.TotalAmount;
+                            cust.LastPurchaseDate = model.TransactionDate;
+                            await _context.SaveChangesAsync();
+                            await _hubContext.Clients.All.SendAsync("DashboardUpdated");
+                        }
+                    }
 
                     foreach (var si in salesItems)
                     {
@@ -287,6 +393,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 var transaction = await _context.SalesTransactions
                     .Include(t => t.Staff)
+                    .Include(t => t.Customer)
                     .Include(t => t.SalesItems).ThenInclude(i => i.Product)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(t => t.TransactionId == id);
@@ -299,6 +406,30 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "An error occurred while loading sale details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetCustomersJson(string? term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return Json(new List<object>());
+
+            var customers = await _context.Customers
+                .Where(c => c.CustomerName.ToLower().Contains(term.ToLower())
+                    || (c.ContactNumber != null && c.ContactNumber.Contains(term)))
+                .OrderBy(c => c.CustomerName)
+                .Take(20)
+                .Select(c => new
+                {
+                    id = c.CustomerId,
+                    name = c.CustomerName,
+                    contact = c.ContactNumber ?? "",
+                    isWalkIn = c.IsWalkInCustomer
+                })
+                .AsNoTracking()
+                .ToListAsync();
+
+            return Json(customers);
         }
 
         public async Task<IActionResult> Receipt(int id)
@@ -385,6 +516,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 var transaction = await _context.SalesTransactions
                     .Include(t => t.Staff)
+                    .Include(t => t.Customer)
                     .Include(t => t.SalesItems).ThenInclude(i => i.Product)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(t => t.TransactionId == id);

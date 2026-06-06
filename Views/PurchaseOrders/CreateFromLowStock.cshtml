@@ -1,0 +1,97 @@
+@model IEnumerable<Product>
+@{
+    ViewData["Title"] = "Create PO from Low Stock";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Create Purchase Order</h1>
+        <p>Generate purchase order from low stock items.</p>
+    </div>
+</div>
+
+<form asp-action="CreateFromLowStock" method="post" id="poForm">
+    @Html.AntiForgeryToken()
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">Low Stock Products</div>
+                <div class="card-body p-0">
+                    <div class="table-container">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;"><input type="checkbox" id="selectAll" checked /></th>
+                                    <th>Product</th>
+                                    <th>Current Stock</th>
+                                    <th>Reorder Level</th>
+                                    <th>Supplier</th>
+                                    <th style="width:100px;">Order Qty</th>
+                                    <th style="width:120px;">Est. Unit Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int idx = 0;
+                                    var defaultSupplierId = ViewBag.PreselectedSupplierId as int?;
+                                }
+                                @foreach (var p in Model)
+                                {
+                                    <tr>
+                                        <td><input type="checkbox" class="product-check" name="productIds" value="@p.ProductId" checked /></td>
+                                        <td>@p.ProductName</td>
+                                        <td class="text-danger fw-semibold">@p.QuantityOnHand</td>
+                                        <td>@p.ReorderLevel</td>
+                                        <td>@p.Supplier?.CompanyName</td>
+                                        <td>
+                                            <input type="number" name="quantities" class="form-control form-control-sm" value="@Math.Max(p.ReorderLevel - p.QuantityOnHand + p.ReorderLevel, 10)" min="1" />
+                                        </td>
+                                        <td>
+                                            <input type="number" name="unitCosts" class="form-control form-control-sm" value="@p.AverageCost.ToString("F2")" step="0.01" min="0" />
+                                        </td>
+                                    </tr>
+                                    idx++;
+                                }
+                                @if (!Model.Any())
+                                {
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">No low stock products found.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">Order Details</div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label small">Supplier <span class="text-danger">*</span></label>
+                        <select name="supplierId" class="form-select" required>
+                            <option value="">-- Select Supplier --</option>
+                            @foreach (var s in ViewBag.Suppliers as SelectList ?? new SelectList(Enumerable.Empty<Supplier>()))
+                            {
+                                <option value="@s.Value">@s.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        <i class="bi bi-info-circle"></i> Select a supplier to create the purchase order. Only items from the selected supplier will be included.
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mt-2"><i class="bi bi-file-earmark-plus"></i> Create Purchase Order</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary w-100 mt-1">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        document.getElementById('selectAll').addEventListener('change', function() {
+            document.querySelectorAll('.product-check').forEach(cb => cb.checked = this.checked);
+        });
+    </script>
+}

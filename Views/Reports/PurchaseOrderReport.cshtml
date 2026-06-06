@@ -1,0 +1,86 @@
+@model IEnumerable<PurchaseOrder>
+@{ ViewData["Title"] = "Purchase Order Report"; }
+
+<div class="page-header">
+    <div>
+        <h1>Purchase Order Report</h1>
+        <p>All purchase orders.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="Search PO# or supplier..." value="@ViewData["Search"]" />
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Draft" selected="@(ViewData["Status"]?.ToString() == "Draft")">Draft</option>
+                    <option value="Ordered" selected="@(ViewData["Status"]?.ToString() == "Ordered")">Ordered</option>
+                    <option value="Partially Received" selected="@(ViewData["Status"]?.ToString() == "Partially Received")">Partially Received</option>
+                    <option value="Received" selected="@(ViewData["Status"]?.ToString() == "Received")">Received</option>
+                    <option value="Cancelled" selected="@(ViewData["Status"]?.ToString() == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>PO #</th>
+                        <th>Supplier</th>
+                        <th>Order Date</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th>Items</th>
+                        <th>Created By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var po in Model)
+                    {
+                        <tr>
+                            <td><a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@po.PurchaseOrderId">@po.PONumber</a></td>
+                            <td>@po.Supplier?.CompanyName</td>
+                            <td>@po.OrderDate.ToString("MMM dd, yyyy")</td>
+                            <td>@po.TotalAmount.ToString("N2")</td>
+                            <td>
+                                @{
+                                    string badge = po.Status switch
+                                    {
+                                        "Draft" => "bg-secondary",
+                                        "Ordered" => "bg-primary",
+                                        "Partially Received" => "bg-warning text-dark",
+                                        "Received" => "bg-success",
+                                        "Cancelled" => "bg-danger",
+                                        _ => "bg-secondary"
+                                    };
+                                }
+                                <span class="badge @badge">@po.Status</span>
+                            </td>
+                            <td>@(po.Items?.Count ?? 0)</td>
+                            <td>@po.Staff?.StaffName</td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No purchase orders found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

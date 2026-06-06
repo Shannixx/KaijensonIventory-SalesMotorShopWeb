@@ -1,0 +1,180 @@
+@model PurchaseOrder
+@{
+    ViewData["Title"] = "PO " + Model.PONumber;
+    string badgeClass = Model.Status switch
+    {
+        "Draft" => "bg-secondary",
+        "Ordered" => "bg-primary",
+        "Partially Received" => "bg-warning text-dark",
+        "Received" => "bg-success",
+        "Cancelled" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+
+<div class="page-header">
+    <div>
+        <h1>@Model.PONumber</h1>
+        <p>Purchase Order Details</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (Model.Status == "Draft")
+        {
+            <a asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" class="btn btn-warning"><i class="bi bi-pencil"></i> Edit</a>
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Ordered" />
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Mark Ordered</button>
+            </form>
+        }
+        @if (Model.Status == "Ordered")
+        {
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Received" />
+                <button type="submit" class="btn btn-success" onclick="return confirm('Mark PO as fully received? This will update inventory.')"><i class="bi bi-box-seam"></i> Receive All</button>
+            </form>
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Partially Received" />
+                <button type="submit" class="btn btn-warning"><i class="bi bi-truck"></i> Partial Receive</button>
+            </form>
+        }
+        @if (Model.Status == "Partially Received")
+        {
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Received" />
+                <button type="submit" class="btn btn-success" onclick="return confirm('Mark PO as fully received?')"><i class="bi bi-check-all"></i> Mark Received</button>
+            </form>
+        }
+        @if (Model.Status == "Draft" || Model.Status == "Ordered")
+        {
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Cancelled" />
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel this purchase order?')"><i class="bi bi-x-circle"></i> Cancel</button>
+            </form>
+        }
+        @if (Model.Status == "Draft" || Model.Status == "Cancelled")
+        {
+            <form asp-action="Delete" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Delete this purchase order?')"><i class="bi bi-trash"></i> Delete</button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Status</div>
+                <div><span class="badge @badgeClass fs-6">@Model.Status</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Supplier</div>
+                <div class="fw-medium">@Model.Supplier?.CompanyName</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Order Date</div>
+                <div class="fw-medium">@Model.OrderDate.ToString("MMM dd, yyyy")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Expected Date</div>
+                <div class="fw-medium">@(Model.ExpectedDate?.ToString("MMM dd, yyyy") ?? "-")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Total Amount</div>
+                <div class="fw-medium fs-5">@Model.TotalAmount.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Items</div>
+                <div class="fw-medium">@Model.Items.Count</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Created By</div>
+                <div class="fw-medium">@Model.Staff?.StaffName</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="small text-muted">Created At</div>
+                <div class="fw-medium">@Model.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Notes))
+{
+    <div class="card mb-4">
+        <div class="card-header">Notes</div>
+        <div class="card-body">
+            <p class="mb-0">@Model.Notes</p>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">Order Items</div>
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td>@item.Product?.ProductName</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.UnitCost.ToString("N2")</td>
+                            <td class="fw-semibold">@item.Total.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="3" class="text-end">Grand Total:</td>
+                        <td>@Model.TotalAmount.ToString("N2")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

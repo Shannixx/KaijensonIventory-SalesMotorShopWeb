@@ -119,6 +119,11 @@
                 <div class="nav-section">Inventory &amp; Reports</div>
                 <ul class="nav-list">
                     <li class="nav-item">
+                        <a asp-controller="PurchaseOrders" asp-action="Index" class="nav-link @(IsActive("PurchaseOrders") ? "active" : "")" data-title="Purchase Orders">
+                            <i class="bi bi-file-earmark-text"></i><span>Purchase Orders</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a asp-controller="StockIns" asp-action="Index" class="nav-link @(IsActive("StockIns") ? "active" : "")" data-title="Stock In">
                             <i class="bi bi-box-arrow-in-right"></i><span>Stock In</span>
                         </a>

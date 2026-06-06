@@ -93,6 +93,18 @@ using (var scope = app.Services.CreateScope())
 
     db.SaveChanges();
 
+    // Seed walk-in customer (only if none exists by flag)
+    if (!db.Customers.Any(c => c.IsWalkInCustomer))
+    {
+        db.Customers.Add(new Customer
+        {
+            CustomerName = "Walk-in Customer",
+            IsWalkInCustomer = true,
+            Notes = "Default walk-in customer record. All walk-in sales link here."
+        });
+        db.SaveChanges();
+    }
+
     // Seed products (only if none exist)
     if (!db.Products.Any())
     {

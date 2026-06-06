@@ -40,7 +40,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TotalSales = await _context.SalesTransactions.CountAsync(),
                 TotalInventory = await _context.Products.CountAsync(),
                 TotalServices = await _context.ServiceTransactions.CountAsync(),
-                TotalActivities = await _context.ActivityLogs.CountAsync()
+                TotalActivities = await _context.ActivityLogs.CountAsync(),
+                TotalCustomers = await _context.Customers.CountAsync(),
+                TotalSuppliers = await _context.Suppliers.CountAsync(),
+                TotalPurchaseOrders = await _context.PurchaseOrders.CountAsync()
             };
 
             return View(stats);
@@ -263,6 +266,159 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 TempData["ErrorMessage"] = "An error occurred while generating the activity summary report.";
                 return View(new List<ActivityLog>());
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  CUSTOMER REPORT
+        // ──────────────────────────────────────────────
+        public async Task<IActionResult> CustomerReport(string? search, int page = 1)
+        {
+            if (!SessionValid()) return RedirectToLogin();
+
+            try
+            {
+                int pageSize = 10;
+                IQueryable<Customer> query = _context.Customers.AsNoTracking();
+
+                if (!string.IsNullOrWhiteSpace(search))
+                    query = query.Where(c => c.CustomerName.Contains(search) || (c.ContactNumber != null && c.ContactNumber.Contains(search)));
+
+                int total = await query.CountAsync();
+                var items = await query
+                    .OrderByDescending(c => c.TotalPurchases)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                ViewData["Page"] = page;
+                ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewData["Search"] = search;
+
+                return View(items);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "An error occurred.";
+                return View(new List<Customer>());
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  SUPPLIER REPORT
+        // ──────────────────────────────────────────────
+        public async Task<IActionResult> SupplierReport(string? search, int page = 1)
+        {
+            if (!SessionValid()) return RedirectToLogin();
+
+            try
+            {
+                int pageSize = 10;
+                IQueryable<Supplier> query = _context.Suppliers
+                    .Include(s => s.Products)
+                    .AsNoTracking();
+
+                if (!string.IsNullOrWhiteSpace(search))
+                    query = query.Where(s => s.CompanyName.Contains(search));
+
+                int total = await query.CountAsync();
+                var items = await query
+                    .OrderBy(s => s.CompanyName)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                ViewData["Page"] = page;
+                ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewData["Search"] = search;
+
+                return View(items);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "An error occurred.";
+                return View(new List<Supplier>());
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  LOW STOCK REPORT
+        // ──────────────────────────────────────────────
+        public async Task<IActionResult> LowStockReport(string? search, int page = 1)
+        {
+            if (!SessionValid()) return RedirectToLogin();
+
+            try
+            {
+                int pageSize = 20;
+                IQueryable<Product> query = _context.Products
+                    .Include(p => p.Category)
+                    .Include(p => p.Supplier)
+                    .Where(p => p.QuantityOnHand <= p.ReorderLevel)
+                    .AsNoTracking();
+
+                if (!string.IsNullOrWhiteSpace(search))
+                    query = query.Where(p => p.ProductName.Contains(search));
+
+                int total = await query.CountAsync();
+                var items = await query
+                    .OrderBy(p => p.QuantityOnHand)
+                    .ThenBy(p => p.ProductName)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                ViewData["Page"] = page;
+                ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewData["Search"] = search;
+
+                return View(items);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "An error occurred.";
+                return View(new List<Product>());
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  PURCHASE ORDER REPORT
+        // ──────────────────────────────────────────────
+        public async Task<IActionResult> PurchaseOrderReport(string? status, string? search, int page = 1)
+        {
+            if (!SessionValid()) return RedirectToLogin();
+
+            try
+            {
+                int pageSize = 10;
+                IQueryable<PurchaseOrder> query = _context.PurchaseOrders
+                    .Include(p => p.Supplier)
+                    .Include(p => p.Staff)
+                    .AsNoTracking();
+
+                if (!string.IsNullOrWhiteSpace(status))
+                    query = query.Where(p => p.Status == status);
+                if (!string.IsNullOrWhiteSpace(search))
+                    query = query.Where(p => p.PONumber.Contains(search) || p.Supplier!.CompanyName.Contains(search));
+
+                int total = await query.CountAsync();
+                var items = await query
+                    .OrderByDescending(p => p.OrderDate)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                ViewData["Page"] = page;
+                ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewData["Status"] = status;
+                ViewData["Search"] = search;
+
+                return View(items);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "An error occurred.";
+                return View(new List<PurchaseOrder>());
             }
         }
 

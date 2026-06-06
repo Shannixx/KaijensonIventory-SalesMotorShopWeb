@@ -1,0 +1,94 @@
+@model IEnumerable<PurchaseOrder>
+@{
+    ViewData["Title"] = "Purchase Orders";
+    var page = (int)(ViewData["Page"] ?? 1);
+    var totalPages = (int)(ViewData["TotalPages"] ?? 1);
+    var filter = ViewData["CurrentFilter"] as string;
+    var statusFilter = ViewData["StatusFilter"] as string;
+}
+
+<div class="page-header">
+    <div>
+        <h1>Purchase Orders</h1>
+        <p>Manage purchase orders.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Purchase Order</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="searchString" class="form-control" placeholder="Search by PO# or supplier..." value="@filter" />
+            </div>
+            <div class="col-md-3">
+                <select name="statusFilter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Draft" selected="@(statusFilter == "Draft")">Draft</option>
+                    <option value="Ordered" selected="@(statusFilter == "Ordered")">Ordered</option>
+                    <option value="Partially Received" selected="@(statusFilter == "Partially Received")">Partially Received</option>
+                    <option value="Received" selected="@(statusFilter == "Received")">Received</option>
+                    <option value="Cancelled" selected="@(statusFilter == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> Filter</button>
+            </div>
+        </form>
+
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>PO #</th>
+                        <th>Supplier</th>
+                        <th>Order Date</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th>Items</th>
+                        <th>Created By</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var po in Model)
+                    {
+                        <tr>
+                            <td><a asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="fw-medium">@po.PONumber</a></td>
+                            <td>@po.Supplier?.CompanyName</td>
+                            <td>@po.OrderDate.ToString("MMM dd, yyyy")</td>
+                            <td>@po.TotalAmount.ToString("N2")</td>
+                            <td>
+                                @{
+                                    string badgeClass = po.Status switch
+                                    {
+                                        "Draft" => "bg-secondary",
+                                        "Ordered" => "bg-primary",
+                                        "Partially Received" => "bg-warning text-dark",
+                                        "Received" => "bg-success",
+                                        "Cancelled" => "bg-danger",
+                                        _ => "bg-secondary"
+                                    };
+                                }
+                                <span class="badge @badgeClass">@po.Status</span>
+                            </td>
+                            <td>@po.Items.Count</td>
+                            <td>@po.Staff?.StaffName</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No purchase orders found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pagination" />
+    </div>
+</div>

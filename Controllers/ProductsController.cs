@@ -438,6 +438,22 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 ViewBag.AverageDailySales = await _reorderService.GetCurrentAverageDailySalesAsync(id);
 
+                var lastSale = await _context.SalesItems
+                    .Where(si => si.ProductId == id)
+                    .OrderByDescending(si => si.Transaction!.TransactionDate)
+                    .Select(si => (DateTime?)si.Transaction!.TransactionDate)
+                    .FirstOrDefaultAsync();
+                ViewBag.LastSaleDate = lastSale;
+
+                var lastStockIn = await _context.StockIns
+                    .Where(si => si.ProductId == id)
+                    .OrderByDescending(si => si.DeliveryDate)
+                    .Select(si => (DateTime?)si.DeliveryDate)
+                    .FirstOrDefaultAsync();
+                ViewBag.LastStockInDate = lastStockIn;
+
+                ViewBag.InventoryValue = product.QuantityOnHand * product.AverageCost;
+
                 return View(product);
             }
             catch

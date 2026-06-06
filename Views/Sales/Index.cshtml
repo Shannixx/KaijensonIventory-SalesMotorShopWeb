@@ -47,7 +47,16 @@
                     {
                         <tr>
                             <td>@item.InvoiceNumber</td>
-                            <td>@item.CustomerName</td>
+                            <td>
+                                @if (item.Customer != null)
+                                {
+                                    <a asp-controller="Customers" asp-action="Details" asp-route-id="@item.Customer.CustomerId" class="fw-medium text-decoration-none">@item.CustomerName</a>
+                                }
+                                else
+                                {
+                                    @item.CustomerName
+                                }
+                            </td>
                             <td>@item.TransactionDate.ToString("MMM dd, yyyy")</td>
                             <td>@item.TotalAmount.ToString("N2")</td>
                             <td>@item.AmountPaid.ToString("N2")</td>
