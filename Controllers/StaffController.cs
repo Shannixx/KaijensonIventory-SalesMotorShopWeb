@@ -6,34 +6,35 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
-    public class StaffController : Controller
+    public class StaffController : BaseController
     {
         private readonly ApplicationDbContext _context;
         private readonly HashingService _hashing;
+        private readonly ILogger<StaffController> _logger;
 
-        public StaffController(ApplicationDbContext context, HashingService hashing)
+        public StaffController(ApplicationDbContext context, HashingService hashing, ILogger<StaffController> logger)
         {
             _context = context;
             _hashing = hashing;
+            _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        private IActionResult? CheckAdminAccess()
         {
-            // Validate session and role (Admin only)
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            if (!IsSessionValid())
+                return RedirectToLogin();
+            if (!IsAdmin())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
                 return RedirectToAction("Index", "Dashboard");
             }
+            return null;
+        }
+
+        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        {
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
             try
             {
@@ -42,7 +43,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
-                    query = query.Where(s => s.StaffName.Contains(searchString) || s.UserName.Contains(searchString));
+                    string s = searchString.ToLower();
+                    query = query.Where(s2 => s2.StaffName.ToLower().Contains(s) || s2.UserName.ToLower().Contains(s));
                 }
 
                 int total = await query.CountAsync();
@@ -53,15 +55,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Take(pageSize)
                     .ToListAsync();
 
-                ViewData["CurrentFilter"] = searchString;
+                ViewData["CurrentFilter"] = searchString ?? "";
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
-                ViewData["CurrentStaffId"] = staffId;
+                ViewData["CurrentStaffId"] = GetCurrentStaffId();
 
                 return View(staff);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading staff list");
                 TempData["ErrorMessage"] = "An error occurred while loading staff. Please try again.";
                 return View(new List<Staff>());
             }
@@ -69,33 +72,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Details(int? id)
         {
-            // Validate session and role (Admin only)
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
-            if (id == null) return NotFound();
+            if (id == null || id <= 0) return NotFound();
 
             try
             {
                 Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
                 if (staff == null) return NotFound();
-
                 return View(staff);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading staff details for ID {StaffId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading staff details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -103,21 +93,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public IActionResult Create()
         {
-            // Validate session and role (Admin only)
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
             return View();
         }
@@ -126,21 +103,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("StaffName,UserName,ContactNumber,Address,Role")] Staff staff, string Password, string ConfirmPassword)
         {
-            // Validate session and role (Admin only)
-            int? currentStaffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!currentStaffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
             try
             {
@@ -184,7 +148,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         Action = "Create Staff",
                         Module = "Staff",
                         Description = $"Staff {staff.StaffName} - created",
-                        StaffId = currentStaffId,
+                        StaffId = GetCurrentStaffId(),
                         Timestamp = DateTime.Now
                     });
                     await _context.SaveChangesAsync();
@@ -195,8 +159,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(staff);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating staff");
                 TempData["ErrorMessage"] = "An error occurred while creating staff. Please try again.";
                 return View(staff);
             }
@@ -204,33 +169,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Edit(int? id)
         {
-            // Validate session and role (Admin only)
-            int? currentStaffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!currentStaffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
-            if (id == null) return NotFound();
+            if (id == null || id <= 0) return NotFound();
 
             try
             {
                 Staff? staff = await _context.Staff.FindAsync(id);
                 if (staff == null) return NotFound();
-
                 return View(staff);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading staff for editing ID {StaffId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading staff for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -240,58 +192,43 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("StaffId,StaffName,UserName,ContactNumber,Address,Role")] Staff staff)
         {
-            // Validate session and role (Admin only)
-            int? currentStaffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!currentStaffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
             if (id != staff.StaffId) return NotFound();
 
-            bool isSelf = currentStaffId == id;
-
-            if (isSelf)
+            try
             {
-                Staff? existing = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
-                if (existing != null && existing.Role != staff.Role)
+                bool isSelf = GetCurrentStaffId() == id;
+
+                if (isSelf)
                 {
-                    ModelState.AddModelError("Role", "You cannot change your own role.");
+                    Staff? existing = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
+                    if (existing != null && existing.Role != staff.Role)
+                    {
+                        ModelState.AddModelError("Role", "You cannot change your own role.");
+                    }
                 }
-            }
 
-            // Validate required fields
-            if (string.IsNullOrWhiteSpace(staff.StaffName))
-            {
-                ModelState.AddModelError("StaffName", "Staff name is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(staff.UserName))
-            {
-                ModelState.AddModelError("UserName", "Username is required.");
-            }
-            else
-            {
-                // Check if username is already taken by another staff member
-                bool usernameExists = await _context.Staff.AnyAsync(s => s.UserName == staff.UserName && s.StaffId != id);
-                if (usernameExists)
+                if (string.IsNullOrWhiteSpace(staff.StaffName))
                 {
-                    ModelState.AddModelError("UserName", "Username already exists.");
+                    ModelState.AddModelError("StaffName", "Staff name is required.");
                 }
-            }
 
-            if (ModelState.IsValid)
-            {
-                try
+                if (string.IsNullOrWhiteSpace(staff.UserName))
+                {
+                    ModelState.AddModelError("UserName", "Username is required.");
+                }
+                else
+                {
+                    bool usernameExists = await _context.Staff.AnyAsync(s => s.UserName == staff.UserName && s.StaffId != id);
+                    if (usernameExists)
+                    {
+                        ModelState.AddModelError("UserName", "Username already exists.");
+                    }
+                }
+
+                if (ModelState.IsValid)
                 {
                     Staff? existing = await _context.Staff.FindAsync(id);
                     if (existing == null) return NotFound();
@@ -307,7 +244,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     await _context.SaveChangesAsync();
 
-                    // Update session if editing self
                     if (isSelf)
                     {
                         HttpContext.Session.SetString("StaffName", existing.StaffName);
@@ -319,7 +255,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         Action = "Edit Staff",
                         Module = "Staff",
                         Description = $"Staff {oldName} -> {staff.StaffName}, Role: {oldRole} -> {staff.Role}",
-                        StaffId = currentStaffId,
+                        StaffId = GetCurrentStaffId(),
                         Timestamp = DateTime.Now
                     });
                     await _context.SaveChangesAsync();
@@ -327,48 +263,35 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["SuccessMessage"] = "Staff updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!await _context.Staff.AnyAsync(s => s.StaffId == id))
-                        return NotFound();
 
-                    TempData["ErrorMessage"] = "The staff record was modified by another user. Please try again.";
-                    return View(staff);
-                }
-                catch
-                {
-                    TempData["ErrorMessage"] = "An error occurred while updating staff. Please try again.";
-                    return View(staff);
-                }
+                return View(staff);
             }
-
-            return View(staff);
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogError(ex, "Concurrency error editing staff ID {StaffId}", id);
+                if (!await _context.Staff.AnyAsync(s => s.StaffId == id))
+                    return NotFound();
+                TempData["ErrorMessage"] = "The staff record was modified by another user. Please try again.";
+                return View(staff);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error editing staff ID {StaffId}", id);
+                TempData["ErrorMessage"] = "An error occurred while updating staff. Please try again.";
+                return View(staff);
+            }
         }
 
         public async Task<IActionResult> Delete(int? id)
         {
-            // Validate session and role (Admin only)
-            int? currentStaffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!currentStaffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
-            if (id == null) return NotFound();
+            if (id == null || id <= 0) return NotFound();
 
             try
             {
-                // Prevent self-deletion
-                if (currentStaffId == id)
+                if (GetCurrentStaffId() == id)
                 {
                     TempData["ErrorMessage"] = "You cannot delete your own account.";
                     return RedirectToAction(nameof(Index));
@@ -379,8 +302,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(staff);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading staff for deletion ID {StaffId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading staff for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -390,38 +314,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            // Validate session and role (Admin only)
-            int? currentStaffId = HttpContext.Session.GetInt32("StaffId");
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            
-            if (!currentStaffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-            
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
-
-            // Prevent self-deletion
-            if (currentStaffId == id)
-            {
-                TempData["ErrorMessage"] = "You cannot delete your own account.";
-                return RedirectToAction(nameof(Index));
-            }
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
 
             try
             {
+                if (GetCurrentStaffId() == id)
+                {
+                    TempData["ErrorMessage"] = "You cannot delete your own account.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 Staff? staff = await _context.Staff.FindAsync(id);
                 if (staff == null) return NotFound();
 
-                // Check if staff has any transactions
                 bool hasTransactions = await _context.SalesTransactions.AnyAsync(st => st.StaffId == id) ||
                                      await _context.ServiceTransactions.AnyAsync(st => st.StaffId == id) ||
-                                     await _context.StockIns.AnyAsync(si => si.StaffId == id);
+                                     await _context.StockIns.AnyAsync(si => si.StaffId == id) ||
+                                     await _context.PurchaseOrders.AnyAsync(po => po.StaffId == id);
 
                 if (hasTransactions)
                 {
@@ -439,7 +349,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     Action = "Delete Staff",
                     Module = "Staff",
                     Description = $"Staff {name} - deleted",
-                    StaffId = currentStaffId,
+                    StaffId = GetCurrentStaffId(),
                     Timestamp = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
@@ -447,8 +357,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Staff deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error deleting staff ID {StaffId}", id);
                 TempData["ErrorMessage"] = "An error occurred while deleting staff. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -456,26 +367,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> ChangePassword(int? id)
         {
-            // Validate session
-            int? currentStaffId = HttpContext.Session.GetInt32("StaffId");
-            if (!currentStaffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            if (!IsSessionValid())
+                return RedirectToLogin();
 
-            if (id == null) return NotFound();
+            if (id == null || id <= 0) return NotFound();
 
             try
             {
                 Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
                 if (staff == null) return NotFound();
 
-                // Only allow self-password change or admin changing any password
-                string? staffRole = HttpContext.Session.GetString("StaffRole");
-                bool isSelf = currentStaffId == id;
-                bool isAdmin = string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase);
-                
+                bool isSelf = GetCurrentStaffId() == id;
+                bool isAdmin = IsAdmin();
+
                 if (!isSelf && !isAdmin)
                 {
                     TempData["ErrorMessage"] = "Access denied. You can only change your own password.";
@@ -486,8 +390,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TargetStaffName"] = staff.StaffName;
                 return View();
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading password change form for staff ID {StaffId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading password change form. Please try again.";
                 return RedirectToAction("Index", "Dashboard");
             }
@@ -497,31 +402,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(int id, string CurrentPassword, string NewPassword, string ConfirmNewPassword)
         {
-            // Validate session
-            int? currentStaffId = HttpContext.Session.GetInt32("StaffId");
-            if (!currentStaffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            if (!IsSessionValid())
+                return RedirectToLogin();
 
             try
             {
                 Staff? staff = await _context.Staff.FindAsync(id);
                 if (staff == null) return NotFound();
 
-                // Only allow self-password change or admin changing any password
-                string? staffRole = HttpContext.Session.GetString("StaffRole");
-                bool isSelf = currentStaffId == id;
-                bool isAdmin = string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase);
-                
+                bool isSelf = GetCurrentStaffId() == id;
+                bool isAdmin = IsAdmin();
+
                 if (!isSelf && !isAdmin)
                 {
                     TempData["ErrorMessage"] = "Access denied. You can only change your own password.";
                     return RedirectToAction("Index", "Dashboard");
                 }
 
-                // For self-password change, verify current password
                 if (isSelf)
                 {
                     if (!_hashing.VerifyPassword(CurrentPassword ?? "", staff.PasswordHash))
@@ -553,7 +450,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         Action = "Change Password",
                         Module = "Staff",
                         Description = $"Password changed for staff {staff.StaffName}",
-                        StaffId = currentStaffId,
+                        StaffId = GetCurrentStaffId(),
                         Timestamp = DateTime.Now
                     });
                     await _context.SaveChangesAsync();
@@ -566,8 +463,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TargetStaffName"] = staff.StaffName;
                 return View();
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error changing password for staff ID {StaffId}", id);
                 TempData["ErrorMessage"] = "An error occurred while changing password. Please try again.";
                 return RedirectToAction(nameof(Index));
             }

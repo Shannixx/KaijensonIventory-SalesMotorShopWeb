@@ -76,6 +76,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 ViewBag.RecentSales = await _context.SalesTransactions
                     .Include(t => t.Staff)
+                    .Include(t => t.SalesItems)
                     .Where(t => t.CustomerId == id)
                     .OrderByDescending(t => t.TransactionDate)
                     .Take(10)
@@ -93,12 +94,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewBag.TotalTransactions = await _context.SalesTransactions.CountAsync(t => t.CustomerId == id)
                     + await _context.ServiceTransactions.CountAsync(t => t.CustomerId == id);
 
+                ViewBag.TotalQtyPurchased = await _context.SalesItems
+                    .Where(si => si.Transaction!.CustomerId == id)
+                    .SumAsync(si => (int?)si.Quantity) ?? 0;
+
                 ViewBag.PurchasedProducts = await _context.SalesItems
                     .Where(si => si.Transaction!.CustomerId == id && si.Product != null)
                     .Include(si => si.Product)
                     .Select(si => si.Product!)
                     .Distinct()
                     .Take(10)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                ViewBag.RewardRedemptions = await _context.RewardRedemptions
+                    .Include(r => r.RedeemedByStaff)
+                    .Where(r => r.CustomerId == id)
+                    .OrderByDescending(r => r.RedeemedAt)
                     .AsNoTracking()
                     .ToListAsync();
 

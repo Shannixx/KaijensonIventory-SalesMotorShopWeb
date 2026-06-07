@@ -135,6 +135,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         CustomerName = c.CustomerName,
                         ContactNumber = c.ContactNumber,
                         TotalPurchases = c.TotalPurchases,
+                        RewardPoints = c.RewardPoints,
                         LastPurchaseDate = c.LastPurchaseDate,
                         TransactionCount = c.SalesTransactions.Count
                     })
@@ -151,6 +152,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         CustomerName = c.CustomerName,
                         ContactNumber = c.ContactNumber,
                         TotalPurchases = c.TotalPurchases,
+                        RewardPoints = c.RewardPoints,
                         LastPurchaseDate = c.LastPurchaseDate,
                         TransactionCount = c.SalesTransactions.Count
                     })
@@ -186,6 +188,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Where(n => !n.IsRead)
                     .OrderByDescending(n => n.CreatedAt)
                     .Take(5)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var topLoyal = await _context.Customers
+                    .Where(c => !c.IsWalkInCustomer)
+                    .OrderByDescending(c => c.RewardPoints)
+                    .Take(5)
+                    .Select(c => new CustomerSummaryInfo
+                    {
+                        CustomerId = c.CustomerId,
+                        CustomerName = c.CustomerName,
+                        ContactNumber = c.ContactNumber,
+                        TotalPurchases = c.TotalPurchases,
+                        RewardPoints = c.RewardPoints,
+                        LastPurchaseDate = c.LastPurchaseDate,
+                        TransactionCount = c.SalesTransactions.Count
+                    })
                     .AsNoTracking()
                     .ToListAsync();
 
@@ -245,7 +264,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ChartProfitData = chartProfitData,
                     CategoryLabels = categoryDist.Select(c => c.Category).ToList(),
                     CategoryCounts = categoryDist.Select(c => c.Count).ToList(),
-                    TopSellingProducts = topSelling
+                    TopSellingProducts = topSelling,
+                    TopLoyalCustomers = topLoyal
                 };
 
                 return View(viewModel);

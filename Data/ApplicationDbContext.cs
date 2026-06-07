@@ -25,6 +25,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<Customer> Customers => Set<Customer>();
         public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
         public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+        public DbSet<RewardRedemption> RewardRedemptions => Set<RewardRedemption>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -127,6 +128,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
 
             modelBuilder.Entity<PurchaseOrder>()
                 .HasIndex(p => p.PONumber).IsUnique();
+
+            modelBuilder.Entity<RewardRedemption>()
+                .HasOne(r => r.Customer).WithMany(c => c.RewardRedemptions).HasForeignKey(r => r.CustomerId).OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RewardRedemption>()
+                .HasOne(r => r.RedeemedByStaff).WithMany().HasForeignKey(r => r.RedeemedByStaffId).OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<RewardRedemption>()
+                .HasOne(r => r.SalesTransaction).WithMany().HasForeignKey(r => r.SalesTransactionId).OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

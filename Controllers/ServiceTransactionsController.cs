@@ -352,7 +352,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             _context.InventoryTransactions.Add(new InventoryTransaction
                             {
                                 ProductId = oldPart.ProductId,
-                                TransactionType = "ServiceUse",
+                                TransactionType = "ServiceUseReversal",
                                 Quantity = oldPart.Quantity,
                                 UnitCost = 0,
                                 ReferenceId = existing.ServiceTxnId,
@@ -594,15 +594,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         private List<(int ProductId, int Quantity)> ParsePartsFromForm()
         {
             var parts = new List<(int ProductId, int Quantity)>();
-            int index = 0;
-            while (Request.Form.ContainsKey($"Items[{index}].ProductId"))
+            for (int index = 0; index < 100; index++)
             {
+                if (!Request.Form.ContainsKey($"Items[{index}].ProductId"))
+                    continue;
                 if (int.TryParse(Request.Form[$"Items[{index}].ProductId"], out int pid) && pid > 0 &&
                     int.TryParse(Request.Form[$"Items[{index}].Quantity"], out int qty) && qty > 0)
                 {
                     parts.Add((pid, qty));
                 }
-                index++;
             }
             return parts;
         }

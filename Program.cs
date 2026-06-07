@@ -151,6 +151,26 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    // Create opening balance inventory transactions for seeded products
+    if (db.Products.Any() && !db.InventoryTransactions.Any())
+    {
+        var defaultStaff = db.Staff.FirstOrDefault();
+        foreach (var p in db.Products.Where(p => p.QuantityOnHand > 0))
+        {
+            db.InventoryTransactions.Add(new InventoryTransaction
+            {
+                ProductId = p.ProductId,
+                TransactionType = "Opening Balance",
+                Quantity = p.QuantityOnHand,
+                UnitCost = p.AverageCost,
+                StaffId = defaultStaff?.StaffId,
+                TransactionDate = p.CreatedAt,
+                Remarks = $"Opening balance for {p.ProductName} ({p.QuantityOnHand} units @ {p.AverageCost:N2})"
+            });
+        }
+        db.SaveChanges();
+    }
+
     // Seed services (only if none exist)
     if (!db.Services.Any())
     {

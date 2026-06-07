@@ -305,6 +305,39 @@
 <div class="row g-3 mt-2">
     <div class="col-lg-12">
         <div class="card">
+            <div class="card-header">Top Loyal Customers</div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Customer</th><th>Lifetime Spend</th><th>Reward Points</th><th>Tier</th><th>Transactions</th></tr></thead>
+                        <tbody>
+                            @foreach (var c in Model.TopLoyalCustomers)
+                            {
+                                string tier = c.TotalPurchases >= 50000 ? "Platinum" : c.TotalPurchases >= 20000 ? "Gold" : c.TotalPurchases >= 10000 ? "Silver" : c.TotalPurchases >= 3000 ? "Bronze" : "Regular";
+                                string tierBadge = tier switch { "Platinum" => "bg-dark", "Gold" => "bg-warning text-dark", "Silver" => "bg-secondary", "Bronze" => "bg-danger", _ => "bg-light text-dark" };
+                                <tr>
+                                    <td><a asp-controller="Customers" asp-action="Details" asp-route-id="@c.CustomerId" class="fw-medium">@c.CustomerName</a></td>
+                                    <td>@c.TotalPurchases.ToString("N2")</td>
+                                    <td><span class="badge bg-warning text-dark">@c.RewardPoints</span></td>
+                                    <td><span class="badge @tierBadge">@tier</span></td>
+                                    <td>@c.TransactionCount</td>
+                                </tr>
+                            }
+                            @if (!Model.TopLoyalCustomers.Any())
+                            {
+                                <tr><td colspan="5" class="text-center py-4 text-muted">No loyalty data yet.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-2">
+    <div class="col-lg-12">
+        <div class="card">
             <div class="card-header">Ongoing Services</div>
             <div class="card-body p-0">
                 <div class="table-container">

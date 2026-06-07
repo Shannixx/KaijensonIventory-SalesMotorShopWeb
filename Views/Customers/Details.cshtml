@@ -5,12 +5,14 @@
     var recentServices = ViewBag.RecentServices as List<ServiceTransaction> ?? new();
     var purchasedProducts = ViewBag.PurchasedProducts as List<Product> ?? new();
     var totalTransactions = (int)(ViewBag.TotalTransactions ?? 0);
+    var totalQtyPurchased = (int)(ViewBag.TotalQtyPurchased ?? 0);
+    var rewardRedemptions = ViewBag.RewardRedemptions as List<RewardRedemption> ?? new();
 }
 
 <div class="page-header">
     <div>
         <h1>@Model.CustomerName</h1>
-        <p>Customer profile and purchase history.</p>
+        <p>Customer profile, purchase history, and loyalty rewards.</p>
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>
@@ -24,7 +26,7 @@
             <div class="metric-icon primary"><i class="bi bi-cash-stack"></i></div>
             <div class="metric-info">
                 <p class="metric-label">Lifetime Spend</p>
-                <h3 class="metric-value" data-prefix="₱" data-decimals="2">₱@Model.TotalPurchases.ToString("N2")</h3>
+                <h3 class="metric-value">₱@Model.TotalPurchases.ToString("N2")</h3>
             </div>
         </div>
     </div>
@@ -39,6 +41,15 @@
     </div>
     <div class="col-md-3">
         <div class="metric-card">
+            <div class="metric-icon info"><i class="bi bi-box-seam"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Total Items Purchased</p>
+                <h3 class="metric-value">@totalQtyPurchased</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
             <div class="metric-icon warning"><i class="bi bi-calendar"></i></div>
             <div class="metric-info">
                 <p class="metric-label">Last Purchase</p>
@@ -46,12 +57,63 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="metric-card">
-            <div class="metric-icon @(Model.IsWalkInCustomer ? "warning" : "success")"><i class="bi @(Model.IsWalkInCustomer ? "bi-person-walk" : "bi-person-check")"></i></div>
+            <div class="metric-icon primary"><i class="bi bi-trophy"></i></div>
             <div class="metric-info">
-                <p class="metric-label">Type</p>
-                <h3 class="metric-value small">@(Model.IsWalkInCustomer ? "Walk-in" : "Registered")</h3>
+                <p class="metric-label">Loyalty Tier</p>
+                <h3 class="metric-value small">
+                    @{ string tierBadge = Model.LoyaltyTier switch { "Platinum" => "bg-dark", "Gold" => "bg-warning text-dark", "Silver" => "bg-secondary", "Bronze" => "bg-danger", _ => "bg-light text-dark" }; }
+                    <span class="badge @tierBadge" style="font-size:1rem;">@Model.LoyaltyTier</span>
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon info"><i class="bi bi-star"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Reward Points</p>
+                <h3 class="metric-value">@Model.RewardPoints</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon success"><i class="bi bi-gift"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Available Reward</p>
+                <h3 class="metric-value small">
+                    @if (Model.RewardPoints >= 100)
+                    {
+                        <span class="text-success fw-bold">@Model.AvailableReward</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">@Model.AvailableReward</span>
+                    }
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon warning"><i class="bi bi-arrow-up-circle"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Next Reward</p>
+                <h3 class="metric-value small">
+                    @if (Model.PointsForNextReward > 0)
+                    {
+                        <span>@Model.PointsForNextReward pts to @Model.NextRewardName</span>
+                    }
+                    else
+                    {
+                        <span class="text-success">Max Rewards Unlocked!</span>
+                    }
+                </h3>
             </div>
         </div>
     </div>
@@ -121,6 +183,7 @@
                                 <th>Invoice</th>
                                 <th>Date</th>
                                 <th>Total</th>
+                                <th>Items</th>
                                 <th>Cashier</th>
                             </tr>
                         </thead>
@@ -131,12 +194,13 @@
                                     <td><a asp-controller="Sales" asp-action="Details" asp-route-id="@sale.TransactionId">@sale.InvoiceNumber</a></td>
                                     <td>@sale.TransactionDate.ToString("MMM dd, yyyy")</td>
                                     <td>@sale.TotalAmount.ToString("N2")</td>
+                                    <td>@(sale.SalesItems?.Count ?? 0)</td>
                                     <td>@sale.Staff?.StaffName</td>
                                 </tr>
                             }
                             @if (!recentSales.Any())
                             {
-                                <tr><td colspan="4" class="text-center py-3 text-muted">No purchases yet.</td></tr>
+                                <tr><td colspan="5" class="text-center py-3 text-muted">No purchases yet.</td></tr>
                             }
                         </tbody>
                     </table>
@@ -168,17 +232,8 @@
                                     <td><a asp-controller="ServiceTransactions" asp-action="Details" asp-route-id="@svc.ServiceTxnId">#@svc.ServiceTxnId</a></td>
                                     <td>@svc.Date.ToString("MMM dd, yyyy")</td>
                                     <td>
-                                        @{
-                                            string badge = svc.Status switch
-                                            {
-                                                "Pending" => "bg-warning",
-                                                "In Progress" => "bg-info",
-                                                "Completed" => "bg-success",
-                                                "Cancelled" => "bg-danger",
-                                                _ => "bg-secondary"
-                                            };
-                                        }
-                                        <span class="badge @badge">@svc.Status</span>
+                                        @{ string sBadge = svc.Status switch { "Pending" => "bg-warning", "In Progress" => "bg-info", "Completed" => "bg-success", "Cancelled" => "bg-danger", _ => "bg-secondary" }; }
+                                        <span class="badge @sBadge">@svc.Status</span>
                                     </td>
                                     <td>@svc.ServiceFee.ToString("N2")</td>
                                 </tr>
@@ -194,3 +249,35 @@
         </div>
     </div>
 </div>
+
+@if (rewardRedemptions.Any())
+{
+    <div class="card mt-3">
+        <div class="card-header">Reward Redemption History</div>
+        <div class="card-body p-0">
+            <div class="table-container">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reward</th>
+                            <th>Points Used</th>
+                            <th>Redeemed By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in rewardRedemptions)
+                        {
+                            <tr>
+                                <td>@r.RedeemedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                                <td>@r.RewardName</td>
+                                <td>@r.PointsCost</td>
+                                <td>@r.RedeemedByStaff?.StaffName</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}

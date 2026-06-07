@@ -124,6 +124,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a asp-controller="InventoryHealth" asp-action="Index" class="nav-link @(IsActive("InventoryHealth") ? "active" : "")" data-title="Inventory Health">
+                            <i class="bi bi-shield-check"></i><span>Inventory Health</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a asp-controller="StockIns" asp-action="Index" class="nav-link @(IsActive("StockIns") ? "active" : "")" data-title="Stock In">
                             <i class="bi bi-box-arrow-in-right"></i><span>Stock In</span>
                         </a>

@@ -83,11 +83,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewBag.TotalStockSupplied = await _context.StockIns
                     .Where(si => si.SupplierId == id)
                     .SumAsync(si => (int?)si.QuantityReceived) ?? 0;
+
+                var stockIns = await _context.StockIns
+                    .Where(si => si.SupplierId == id)
+                    .ToListAsync();
+                ViewBag.TotalValueSupplied = stockIns.Sum(si => si.QuantityReceived * si.UnitCost);
+
                 ViewBag.LastDeliveryDate = await _context.StockIns
                     .Where(si => si.SupplierId == id)
                     .OrderByDescending(si => si.DeliveryDate)
                     .Select(si => (DateTime?)si.DeliveryDate)
                     .FirstOrDefaultAsync() ?? null;
+
+                ViewBag.PurchaseOrderCount = await _context.PurchaseOrders.CountAsync(po => po.SupplierId == id);
+                ViewBag.PendingPOCount = await _context.PurchaseOrders
+                    .CountAsync(po => po.SupplierId == id && (po.Status == "Draft" || po.Status == "Ordered"));
 
                 var recentStockIns = await _context.StockIns
                     .Where(si => si.SupplierId == id)
@@ -98,6 +108,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .AsNoTracking()
                     .ToListAsync();
                 ViewBag.RecentDeliveries = recentStockIns;
+
+                var recentPOs = await _context.PurchaseOrders
+                    .Where(po => po.SupplierId == id)
+                    .Include(po => po.Staff)
+                    .OrderByDescending(po => po.OrderDate)
+                    .Take(10)
+                    .AsNoTracking()
+                    .ToListAsync();
+                ViewBag.RecentPurchaseOrders = recentPOs;
 
                 return View(supplier);
             }

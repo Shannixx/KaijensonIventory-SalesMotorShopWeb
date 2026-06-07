@@ -4,6 +4,7 @@ using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607113812_AddCustomerRewardPoints")]
+    partial class AddCustomerRewardPoints
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -449,49 +452,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.ToTable("PurchaseOrderItems");
                 });
 
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.RewardRedemption", b =>
-                {
-                    b.Property<int>("RewardRedemptionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RewardRedemptionId"));
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int>("PointsCost")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("RedeemedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("RedeemedByStaffId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RewardName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int?>("SalesTransactionId")
-                        .HasColumnType("int");
-
-                    b.HasKey("RewardRedemptionId");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("RedeemedByStaffId");
-
-                    b.HasIndex("SalesTransactionId");
-
-                    b.ToTable("RewardRedemptions");
-                });
-
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.SalesItem", b =>
                 {
                     b.Property<int>("SalesItemId")
@@ -899,31 +859,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Navigation("PurchaseOrder");
                 });
 
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.RewardRedemption", b =>
-                {
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Customer", "Customer")
-                        .WithMany("RewardRedemptions")
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "RedeemedByStaff")
-                        .WithMany()
-                        .HasForeignKey("RedeemedByStaffId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.SalesTransaction", "SalesTransaction")
-                        .WithMany()
-                        .HasForeignKey("SalesTransactionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("RedeemedByStaff");
-
-                    b.Navigation("SalesTransaction");
-                });
-
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.SalesItem", b =>
                 {
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Product", "Product")
@@ -1059,8 +994,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Customer", b =>
                 {
-                    b.Navigation("RewardRedemptions");
-
                     b.Navigation("SalesTransactions");
 
                     b.Navigation("ServiceTransactions");

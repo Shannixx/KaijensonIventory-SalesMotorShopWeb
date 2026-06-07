@@ -39,6 +39,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public decimal MonthlyProfit { get; set; }
         public List<StockIn> RecentStockIns { get; set; } = new();
         public List<Notification> ActiveAlerts { get; set; } = new();
+        public List<CustomerSummaryInfo> TopLoyalCustomers { get; set; } = new();
     }
 
     public class ProductSalesInfo
@@ -54,6 +55,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public string CustomerName { get; set; } = string.Empty;
         public string? ContactNumber { get; set; }
         public decimal TotalPurchases { get; set; }
+        public int RewardPoints { get; set; }
         public DateTime? LastPurchaseDate { get; set; }
         public int TransactionCount { get; set; }
     }

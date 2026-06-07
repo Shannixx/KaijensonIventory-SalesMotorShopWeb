@@ -328,6 +328,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         });
                     }
 
+                    // Update customer stats inside the transaction
+                    if (model.CustomerId.HasValue)
+                    {
+                        var cust = await _context.Customers.FindAsync(model.CustomerId.Value);
+                        if (cust != null)
+                        {
+                            cust.TotalPurchases += model.TotalAmount;
+                            cust.LastPurchaseDate = model.TransactionDate;
+                            cust.RewardPoints += (int)(model.TotalAmount / 100);
+                        }
+                    }
+
                     _context.ActivityLogs.Add(new ActivityLog
                     {
                         StaffId = model.StaffId,
@@ -338,19 +350,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     await _context.SaveChangesAsync();
 
                     await transaction.CommitAsync();
-
-                    // Update customer stats
-                    if (model.CustomerId.HasValue)
-                    {
-                        var cust = await _context.Customers.FindAsync(model.CustomerId.Value);
-                        if (cust != null)
-                        {
-                            cust.TotalPurchases += model.TotalAmount;
-                            cust.LastPurchaseDate = model.TransactionDate;
-                            await _context.SaveChangesAsync();
-                            await _hubContext.Clients.All.SendAsync("DashboardUpdated");
-                        }
-                    }
 
                     foreach (var si in salesItems)
                     {
@@ -584,6 +583,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         Module = "Sales",
                         Description = $"Sale {transaction.InvoiceNumber} cancelled, stock restored."
                     });
+
+                    if (transaction.CustomerId.HasValue)
+                    {
+                        var cust = await _context.Customers.FindAsync(transaction.CustomerId.Value);
+                        if (cust != null)
+                        {
+                            cust.TotalPurchases -= transaction.TotalAmount;
+                            int pointsLost = (int)(transaction.TotalAmount / 100);
+                            cust.RewardPoints = Math.Max(0, cust.RewardPoints - pointsLost);
+                        }
+                    }
 
                     _context.SalesTransactions.Remove(transaction);
                     await _context.SaveChangesAsync();

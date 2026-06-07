@@ -170,7 +170,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             Description = $"Received {stockIn.QuantityReceived} units of '{product.ProductName}' at {stockIn.UnitCost:N2} each from supplier"
                         });
 
-                        await _context.SaveChangesAsync();
+                            await _context.SaveChangesAsync();
+
+                        string supplierName = await _context.Suppliers
+                            .Where(s => s.SupplierId == stockIn.SupplierId)
+                            .Select(s => s.CompanyName)
+                            .FirstOrDefaultAsync() ?? "Unknown Supplier";
 
                         _context.InventoryTransactions.Add(new InventoryTransaction
                         {
@@ -182,7 +187,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             ReferenceType = "StockIn",
                             StaffId = stockIn.StaffId,
                             TransactionDate = DateTime.Now,
-                            Remarks = $"Stock in from {stockIn.Supplier?.CompanyName ?? "supplier"}"
+                            Remarks = $"Stock in from {supplierName}"
                         });
 
                         await _context.SaveChangesAsync();

@@ -1,7 +1,7 @@
 @model IEnumerable<InventoryTransaction>
 @{
     ViewData["Title"] = "Inventory History";
-    string[] types = { "StockIn", "Sale", "SaleReversal", "ServiceUse", "PO Receiving" };
+    string[] types = { "StockIn", "Sale", "SaleReversal", "ServiceUse", "ServiceUseReversal", "PO Receiving", "Opening Balance", "Adjustment" };
     var balance = ViewBag.StartingBalance as Dictionary<int, int> ?? new();
 }
 
@@ -78,7 +78,10 @@
                                 else if (item.TransactionType == "Sale") { <span class="badge bg-danger">Sale</span> }
                                 else if (item.TransactionType == "SaleReversal") { <span class="badge bg-info">Sale Reversal</span> }
                                 else if (item.TransactionType == "ServiceUse") { <span class="badge bg-warning text-dark">Service Use</span> }
+                                else if (item.TransactionType == "ServiceUseReversal") { <span class="badge bg-info text-dark">Service Use Reversal</span> }
                                 else if (item.TransactionType == "PO Receiving") { <span class="badge bg-primary">PO Receiving</span> }
+                                else if (item.TransactionType == "Opening Balance") { <span class="badge bg-dark">Opening Balance</span> }
+                                else if (item.TransactionType == "Adjustment") { <span class="badge bg-secondary">Adjustment</span> }
                                 else { <span class="badge bg-secondary">@item.TransactionType</span> }
                             </td>
                             <td class="fw-semibold @(item.Quantity < 0 ? "text-danger" : "text-success")">@(item.Quantity > 0 ? "+" : "")@item.Quantity</td>

@@ -140,7 +140,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 _context.PurchaseOrders.Add(model);
                 await _context.SaveChangesAsync();
 
-                foreach (var item in items)
+                foreach (var item in items!)
                 {
                     item.PurchaseOrderId = model.PurchaseOrderId;
                     item.Total = item.Quantity * item.UnitCost;
@@ -149,15 +149,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 await _context.SaveChangesAsync();
 
-                model.TotalAmount = items.Sum(i => i.Total);
+                model.TotalAmount = items!.Sum(i => i.Total);
                 await _context.SaveChangesAsync();
 
+                var supplierName = await _context.Suppliers
+                    .Where(s => s.SupplierId == model.SupplierId)
+                    .Select(s => s.CompanyName)
+                    .FirstOrDefaultAsync() ?? "Unknown";
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     StaffId = staffId,
                     Action = "Create Purchase Order",
                     Module = "PurchaseOrder",
-                    Description = $"Created PO #{model.PONumber} for supplier {model.Supplier?.CompanyName ?? "Unknown"} - Total: {model.TotalAmount:N2}"
+                    Description = $"Created PO #{model.PONumber} for supplier {supplierName} - Total: {model.TotalAmount:N2}"
                 });
                 await _context.SaveChangesAsync();
 
@@ -308,7 +312,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     _context.PurchaseOrderItems.Add(item);
                 }
 
-                existing.TotalAmount = items.Sum(i => i.Total);
+                existing.TotalAmount = items?.Sum(i => i.Total) ?? 0;
                 await _context.SaveChangesAsync();
 
                 _context.ActivityLogs.Add(new ActivityLog
