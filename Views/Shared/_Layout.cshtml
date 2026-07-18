@@ -50,11 +50,6 @@
                 <div class="nav-section">Management</div>
                 <ul class="nav-list">
                     <li class="nav-item">
-                        <a asp-controller="Customers" asp-action="Index" class="nav-link @(IsActive("Customers") ? "active" : "")" data-title="Customers">
-                            <i class="bi bi-people"></i><span>Customers</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a asp-controller="Mechanics" asp-action="Index" class="nav-link @(IsActive("Mechanics") ? "active" : "")" data-title="Mechanic">
                             <i class="bi bi-tools"></i><span>Mechanic</span>
                         </a>
@@ -62,11 +57,6 @@
                     <li class="nav-item">
                         <a asp-controller="Suppliers" asp-action="Index" class="nav-link @(IsActive("Suppliers") ? "active" : "")" data-title="Supplier">
                             <i class="bi bi-truck"></i><span>Supplier</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a asp-controller="Sales" asp-action="Index" class="nav-link @(IsActive("Sales") ? "active" : "")" data-title="Sales Transaction">
-                            <i class="bi bi-cash-coin"></i><span>Sales Transaction</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -96,53 +86,6 @@
                             <i class="bi bi-clock-history"></i><span>Activity Log</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a asp-controller="Notifications" asp-action="Index" class="nav-link @(IsActive("Notifications") ? "active" : "")" data-title="Notifications">
-                            <i class="bi bi-bell-fill"></i><span>Notifications</span>
-                        </a>
-                    </li>
-                    @if (isAdmin)
-                    {
-                        <li class="nav-item">
-                            <a asp-controller="Staff" asp-action="Index" class="nav-link @(IsActive("Staff") && action == "Index" ? "active" : "")" data-title="Access Control">
-                                <i class="bi bi-shield-lock-fill"></i><span>Access Control</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a asp-controller="Backups" asp-action="Index" class="nav-link @(IsActive("Backups") ? "active" : "")" data-title="Backup &amp; Recovery">
-                                <i class="bi bi-hdd-stack-fill"></i><span>Backup &amp; Recovery</span>
-                            </a>
-                        </li>
-                    }
-                </ul>
-
-                <div class="nav-section">Inventory &amp; Reports</div>
-                <ul class="nav-list">
-                    <li class="nav-item">
-                        <a asp-controller="PurchaseOrders" asp-action="Index" class="nav-link @(IsActive("PurchaseOrders") ? "active" : "")" data-title="Purchase Orders">
-                            <i class="bi bi-file-earmark-text"></i><span>Purchase Orders</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a asp-controller="InventoryHealth" asp-action="Index" class="nav-link @(IsActive("InventoryHealth") ? "active" : "")" data-title="Inventory Health">
-                            <i class="bi bi-shield-check"></i><span>Inventory Health</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a asp-controller="StockIns" asp-action="Index" class="nav-link @(IsActive("StockIns") ? "active" : "")" data-title="Stock In">
-                            <i class="bi bi-box-arrow-in-right"></i><span>Stock In</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a asp-controller="InventoryHistory" asp-action="Index" class="nav-link @(IsActive("InventoryHistory") ? "active" : "")" data-title="Inventory History">
-                            <i class="bi bi-clock-history"></i><span>Inventory History</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a asp-controller="Reports" asp-action="Index" class="nav-link @(IsActive("Reports") ? "active" : "")" data-title="Reports">
-                            <i class="bi bi-file-earmark-bar-graph"></i><span>Reports</span>
-                        </a>
-                    </li>
                 </ul>
             </nav>
         </div>
@@ -165,11 +108,6 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <a asp-controller="Notifications" asp-action="Index" class="btn-icon position-relative" title="Notifications">
-                    <i class="bi bi-bell-fill"></i>
-                    <span class="notif-dot" id="notifDot"></span>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="font-size:9px; display:none;">0</span>
-                </a>
                 <div class="dropdown">
                     <button class="btn dropdown-toggle d-flex align-items-center gap-2 bg-transparent border-0" data-bs-toggle="dropdown">
                         <div class="avatar-sm" style="background: rgba(253,126,20,0.15); color: var(--primary); font-weight: 600;">@avatarChar</div>
@@ -193,7 +131,6 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

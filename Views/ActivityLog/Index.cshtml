@@ -10,28 +10,28 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
                 <label class="form-label">Search</label>
-                <input type="text" name="searchString" class="form-control" placeholder="Description or action..." value="@ViewData["CurrentFilter"]" />
+                <input type="text" name="searchString" class="form-control" placeholder="Description or action..." value="@ViewData["CurrentFilter"]" style="min-width:180px;" />
             </div>
-            <div class="col-md-3">
+            <div>
                 <label class="form-label">Module</label>
-                <select name="module" class="form-select" asp-items="ViewBag.Modules">
+                <select name="module" class="form-select" asp-items="ViewBag.Modules" style="min-width:150px;">
                     <option value="">All Modules</option>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div>
                 <label class="form-label">Date From</label>
-                <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" />
+                <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" style="min-width:140px;" />
             </div>
-            <div class="col-md-2">
+            <div>
                 <label class="form-label">Date To</label>
-                <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" />
+                <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" style="min-width:140px;" />
             </div>
-            <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Search</button>
-                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
             </div>
         </form>
     </div>

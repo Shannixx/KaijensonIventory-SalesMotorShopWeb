@@ -328,14 +328,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Staff? staff = await _context.Staff.FindAsync(id);
                 if (staff == null) return NotFound();
 
-                bool hasTransactions = await _context.SalesTransactions.AnyAsync(st => st.StaffId == id) ||
-                                     await _context.ServiceTransactions.AnyAsync(st => st.StaffId == id) ||
-                                     await _context.StockIns.AnyAsync(si => si.StaffId == id) ||
-                                     await _context.PurchaseOrders.AnyAsync(po => po.StaffId == id);
+                bool hasActivity = await _context.ActivityLogs.AnyAsync(al => al.StaffId == id);
 
-                if (hasTransactions)
+                if (hasActivity)
                 {
-                    TempData["ErrorMessage"] = "Cannot delete staff member. This staff has existing transactions.";
+                    TempData["ErrorMessage"] = "Cannot delete staff member. This staff has existing activity records.";
                     return RedirectToAction(nameof(Index));
                 }
 

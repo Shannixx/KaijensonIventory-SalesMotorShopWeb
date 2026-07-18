@@ -1,7 +1,6 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
 using KaijensonIventory_SalesMotorShopWeb.Services;
-using KaijensonIventory_SalesMotorShopWeb.Hubs;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,11 +11,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<HashingService>();
-builder.Services.AddSingleton<PdfExportService>();
-builder.Services.AddScoped<DynamicReorderService>();
-builder.Services.AddHostedService<RecurringRecalculationService>();
-
-builder.Services.AddSignalR();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -93,18 +87,6 @@ using (var scope = app.Services.CreateScope())
 
     db.SaveChanges();
 
-    // Seed walk-in customer (only if none exists by flag)
-    if (!db.Customers.Any(c => c.IsWalkInCustomer))
-    {
-        db.Customers.Add(new Customer
-        {
-            CustomerName = "Walk-in Customer",
-            IsWalkInCustomer = true,
-            Notes = "Default walk-in customer record. All walk-in sales link here."
-        });
-        db.SaveChanges();
-    }
-
     // Seed products (only if none exist)
     if (!db.Products.Any())
     {
@@ -151,26 +133,6 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Create opening balance inventory transactions for seeded products
-    if (db.Products.Any() && !db.InventoryTransactions.Any())
-    {
-        var defaultStaff = db.Staff.FirstOrDefault();
-        foreach (var p in db.Products.Where(p => p.QuantityOnHand > 0))
-        {
-            db.InventoryTransactions.Add(new InventoryTransaction
-            {
-                ProductId = p.ProductId,
-                TransactionType = "Opening Balance",
-                Quantity = p.QuantityOnHand,
-                UnitCost = p.AverageCost,
-                StaffId = defaultStaff?.StaffId,
-                TransactionDate = p.CreatedAt,
-                Remarks = $"Opening balance for {p.ProductName} ({p.QuantityOnHand} units @ {p.AverageCost:N2})"
-            });
-        }
-        db.SaveChanges();
-    }
-
     // Seed services (only if none exist)
     if (!db.Services.Any())
     {
@@ -214,8 +176,6 @@ app.UseRouting();
 app.UseSession();
 
 app.UseAuthorization();
-
-app.MapHub<NotificationHub>("/notificationHub");
 
 app.MapControllerRoute(
     name: "default",

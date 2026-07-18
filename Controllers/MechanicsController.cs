@@ -236,14 +236,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                // Check if mechanic has any service transactions
-                bool hasServiceTransactions = await _context.ServiceTransactions.AnyAsync(st => st.MechanicId == id);
-                if (hasServiceTransactions)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has existing service transactions.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 Mechanic? mechanic = await _context.Mechanics.AsNoTracking().FirstOrDefaultAsync(m => m.MechanicId == id);
                 if (mechanic == null) return NotFound();
 
@@ -270,14 +262,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                // Check if mechanic has any service transactions
-                bool hasServiceTransactions = await _context.ServiceTransactions.AnyAsync(st => st.MechanicId == id);
-                if (hasServiceTransactions)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has existing service transactions.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 Mechanic? mechanic = await _context.Mechanics.FindAsync(id);
                 if (mechanic == null) return NotFound();
 
@@ -306,115 +290,5 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteSelected([FromForm] int[] ids)
-        {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-                return Json(new { success = false, message = "Session expired. Please log in again." });
-
-            if (ids == null || ids.Length == 0)
-                return Json(new { success = false, message = "No items selected." });
-
-            try
-            {
-                var referencedIds = await _context.ServiceTransactions
-                    .Where(st => ids.Contains(st.MechanicId))
-                    .Select(st => st.MechanicId)
-                    .Distinct()
-                    .ToListAsync();
-
-                var validIds = ids.Where(id => !referencedIds.Contains(id)).ToArray();
-                var skipped = referencedIds.Intersect(ids).Count();
-
-                if (validIds.Length == 0)
-                    return Json(new { success = false, message = "All selected mechanics have existing service transactions and cannot be deleted." });
-
-                var mechanics = await _context.Mechanics.Where(m => validIds.Contains(m.MechanicId)).ToListAsync();
-
-                // Log each deletion
-                foreach (var m in mechanics)
-                {
-                    _context.ActivityLogs.Add(new ActivityLog
-                    {
-                        Action = "Delete",
-                        Module = "Mechanics",
-                        Description = $"Deleted mechanic: {m.MechanicName}",
-                        StaffId = staffId,
-                        Timestamp = DateTime.Now
-                    });
-                }
-
-                _context.Mechanics.RemoveRange(mechanics);
-                await _context.SaveChangesAsync();
-
-                string msg = $"{mechanics.Count} mechanic(s) deleted successfully.";
-                if (skipped > 0)
-                    msg += $" {skipped} mechanic(s) skipped (have existing service transactions).";
-
-                return Json(new { success = true, message = msg });
-            }
-            catch
-            {
-                // Log the exception (in a real app, use a proper logger)
-                return Json(new { success = false, message = "An error occurred while deleting mechanics. Please try again." });
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ClearAll()
-        {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-                return Json(new { success = false, message = "Session expired. Please log in again." });
-
-            try
-            {
-                var referencedIds = await _context.ServiceTransactions
-                    .Select(st => st.MechanicId)
-                    .Distinct()
-                    .ToListAsync();
-
-                var toDelete = await _context.Mechanics
-                    .Where(m => !referencedIds.Contains(m.MechanicId))
-                    .ToListAsync();
-
-                var skipped = await _context.Mechanics.CountAsync(m => referencedIds.Contains(m.MechanicId));
-
-                if (toDelete.Count == 0)
-                    return Json(new { success = false, message = "No mechanics can be deleted. All mechanics have existing service transaction references." });
-
-                // Log each deletion
-                foreach (var m in toDelete)
-                {
-                    _context.ActivityLogs.Add(new ActivityLog
-                    {
-                        Action = "Delete",
-                        Module = "Mechanics",
-                        Description = $"Deleted mechanic via Clear All: {m.MechanicName}",
-                        StaffId = staffId,
-                        Timestamp = DateTime.Now
-                    });
-                }
-
-                _context.Mechanics.RemoveRange(toDelete);
-                await _context.SaveChangesAsync();
-
-                string msg = $"All {toDelete.Count} mechanic(s) cleared successfully.";
-                if (skipped > 0)
-                    msg += $" {skipped} mechanic(s) skipped (have existing service transaction references).";
-
-                return Json(new { success = true, message = msg });
-            }
-            catch
-            {
-                // Log the exception (in a real app, use a proper logger)
-                return Json(new { success = false, message = "An error occurred while clearing mechanics. Please try again." });
-            }
-        }
     }
 }

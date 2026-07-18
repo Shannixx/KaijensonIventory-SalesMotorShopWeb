@@ -20,20 +20,20 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label small">Search</label>
-                <input type="text" name="searchString" class="form-control" placeholder="Name, brand, or part number..." value="@ViewData["CurrentFilter"]" />
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Name, brand, or part number..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
             </div>
-            <div class="col-md-4">
-                <label class="form-label small">Category</label>
-                <select name="categoryId" class="form-select" asp-items="ViewBag.Categories">
+            <div>
+                <label class="form-label">Category</label>
+                <select name="categoryId" class="form-select" asp-items="ViewBag.Categories" style="min-width:160px;">
                     <option value="">All Categories</option>
                 </select>
             </div>
-            <div class="col-md-4 d-flex gap-2">
-                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filter</button>
-                <a asp-action="Index" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x-circle"></i> Clear</a>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
             </div>
         </form>
     </div>
@@ -54,7 +54,7 @@
                         <th>Price</th>
                         <th>Stock</th>
                         <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th class="action-cell">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,10 +83,10 @@
                                 else if (item.StockStatus == "Low Stock") { <span class="badge bg-warning text-dark">Low Stock</span> }
                                 else { <span class="badge bg-success">Available</span> }
                             </td>
-                            <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-info" title="Details"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                                <a asp-action="Delete" asp-route-id="@item.ProductId" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+                            <td class="action-cell">
+                                <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-view" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <a asp-action="Delete" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-delete" title="Delete"><i class="bi bi-trash"></i></a>
                             </td>
                         </tr>
                     }

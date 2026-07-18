@@ -30,13 +30,6 @@
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Edit" asp-route-id="@Model.ProductId" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit</a>
-        @if (Model.UseAutoReorder)
-        {
-            <form asp-action="Recalculate" asp-route-id="@Model.ProductId" method="post" style="display:inline">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-info"><i class="bi bi-arrow-repeat"></i> Recalculate</button>
-            </form>
-        }
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
@@ -108,10 +101,7 @@
                         @if (Model.UseAutoReorder) { <span class="badge bg-info ms-1">Auto</span> }
                     </td></tr>
                     <tr><th>Lead Time (Days)</th><td>@Model.LeadTimeDays</td></tr>
-                    <tr><th>Avg Daily Sales (90d)</th><td>@(ViewBag.AverageDailySales?.ToString("N2") ?? "0.00")</td></tr>
-                    <tr><th>Last Sale Date</th><td>@(ViewBag.LastSaleDate?.ToString("MMM dd, yyyy") ?? "-")</td></tr>
-                    <tr><th>Last Stock In Date</th><td>@(ViewBag.LastStockInDate?.ToString("MMM dd, yyyy") ?? "-")</td></tr>
-                    <tr><th>Last Recalculated</th><td>@(Model.LastRecalcDate?.ToString("MMM dd, yyyy") ?? "-")</td></tr>
+
                     <tr><th>Created At</th><td>@Model.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td></tr>
                 </table>
             </div>

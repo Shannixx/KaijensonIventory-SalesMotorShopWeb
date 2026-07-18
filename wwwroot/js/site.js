@@ -143,17 +143,6 @@
     }
 
     /* ───────────────────────────────────
-       NOTIFICATION DOT CHECK
-       ─────────────────────────────────── */
-    function checkNotifications() {
-        var dot = document.getElementById('notifDot');
-        if (!dot) return;
-        // Simple unread check via meta or endpoint
-        var count = parseInt(dot.getAttribute('data-count') || '0');
-        dot.style.display = count > 0 ? 'block' : 'none';
-    }
-
-    /* ───────────────────────────────────
        ACTIVE MENU SCROLL
        ─────────────────────────────────── */
     function scrollActiveIntoView() {
@@ -206,7 +195,6 @@
         scrollActiveIntoView();
         setTimeout(initTooltips, 150);
         setTimeout(animateCountUp, 300);
-        checkNotifications();
     });
 
     /* ───────────────────────────────────
@@ -240,85 +228,6 @@
             }
             window.location.href = href;
         });
-    }
-
-    /* ───────────────────────────────────
-       SIGNALR NOTIFICATION HUB
-       ─────────────────────────────────── */
-    function initSignalR() {
-        if (typeof signalR === 'undefined') return;
-        var connection = new signalR.HubConnectionBuilder()
-            .withUrl('/notificationHub')
-            .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-            .build();
-
-        connection.on('ReceiveNotification', function (message, type) {
-            showToast(message, type);
-            refreshNotifCount();
-        });
-
-        connection.on('DashboardUpdated', function () {
-            if (window.location.pathname.toLowerCase().includes('/dashboard')) {
-                location.reload();
-            }
-        });
-
-        connection.on('StockUpdated', function (productName, newQty, status) {
-            showToast(productName + ' - ' + newQty + ' units (' + status + ')', 'info');
-        });
-
-        connection.start().catch(function (err) {
-            console.warn('SignalR connection failed:', err);
-        });
-    }
-
-    /* ───────────────────────────────────
-       NOTIFICATION COUNT POLLING
-       ─────────────────────────────────── */
-    function refreshNotifCount() {
-        var badge = document.getElementById('notifBadge');
-        var dot = document.getElementById('notifDot');
-        if (!badge) return;
-        fetch('/Notifications/GetUnreadCount')
-            .then(function (r) { return r.json(); })
-            .then(function (count) {
-                if (count > 0) {
-                    badge.textContent = count > 99 ? '99+' : count;
-                    badge.style.display = 'block';
-                    if (dot) dot.style.display = 'block';
-                } else {
-                    badge.style.display = 'none';
-                    if (dot) dot.style.display = 'none';
-                }
-            })
-            .catch(function () { /* ignore */ });
-    }
-
-    /* ───────────────────────────────────
-       TOAST NOTIFICATION SYSTEM
-       ─────────────────────────────────── */
-    function showToast(message, type) {
-        type = type || 'success';
-        var container = document.getElementById('toastContainer');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
-            document.body.appendChild(container);
-        }
-        var icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', warning: 'bi-exclamation-triangle-fill', info: 'bi-info-circle-fill' };
-        var colors = { success: '#10B981', error: '#EF4444', warning: '#F59E0B', info: '#3B82F6' };
-        var el = document.createElement('div');
-        el.className = 'toast-notification';
-        el.style.cssText = 'background:#fff;border-radius:10px;padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.12);display:flex;align-items:center;gap:10px;font-size:13px;animation:slideInRight 0.3s ease;border-left:4px solid ' + (colors[type] || colors.info) + ';max-width:380px;';
-        el.innerHTML = '<i class="bi ' + (icons[type] || icons.info) + '" style="color:' + (colors[type] || colors.info) + ';font-size:18px;"></i><span>' + message + '</span>';
-        container.appendChild(el);
-        setTimeout(function () {
-            el.style.opacity = '0';
-            el.style.transform = 'translateX(100%)';
-            el.style.transition = 'all 0.3s ease';
-            setTimeout(function () { el.remove(); }, 300);
-        }, 4000);
     }
 
     /* ───────────────────────────────────
@@ -361,17 +270,7 @@
         if (mainContent) {
             mainContent.classList.add('page-transition');
         }
-        initSignalR();
         initImagePreview();
-        setTimeout(refreshNotifCount, 500);
-        setInterval(refreshNotifCount, 30000);
     });
-
-    /* ───────────────────────────────────
-       TOAST ANIMATION KEYFRAMES
-       ─────────────────────────────────── */
-    var style = document.createElement('style');
-    style.textContent = '@@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }';
-    document.head.appendChild(style);
 
 })();

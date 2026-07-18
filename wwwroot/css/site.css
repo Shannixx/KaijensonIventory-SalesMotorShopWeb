@@ -428,30 +428,6 @@ a:hover { color: var(--primary-hover); }
 .search-box .form-control::placeholder { color: var(--text-muted); }
 .search-box .form-control:focus { box-shadow: none; }
 
-.btn-icon {
-    background: none;
-    border: none;
-    font-size: 18px;
-    color: var(--text-secondary);
-    padding: 6px 10px;
-    position: relative;
-    cursor: pointer;
-    border-radius: var(--radius);
-    transition: all 0.2s;
-}
-.btn-icon:hover { background: var(--body-bg); color: var(--text-primary); }
-
-.notif-dot {
-    position: absolute;
-    top: 3px;
-    right: 7px;
-    width: 7px;
-    height: 7px;
-    background: var(--danger);
-    border-radius: 50%;
-    border: 2px solid var(--header-bg);
-}
-
 .avatar-sm {
     width: 32px;
     height: 32px;
@@ -649,14 +625,80 @@ a:hover { color: var(--primary-hover); }
 }
 .table tbody tr:hover { background: #F8FAFC; }
 .table tbody tr:last-child td { border-bottom: none; }
-.table .actions {
-    text-align: right;
+.action-cell {
     white-space: nowrap;
+    text-align: right;
+    vertical-align: middle;
 }
-.table .actions .btn {
-    padding: 4px 10px;
-    font-size: 12px;
+.action-cell .btn-icon {
     margin-left: 4px;
+}
+
+/* ─── Icon Buttons for Table Row Actions ─── */
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    border: 1.5px solid;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+.btn-icon i {
+    font-size: 16px;
+    line-height: 1;
+}
+.btn-icon:active {
+    transform: scale(0.92);
+}
+
+.btn-icon-view {
+    color: var(--info);
+    border-color: var(--info);
+}
+.btn-icon-view:hover {
+    background: var(--info);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-icon-edit {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-icon-edit:hover {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 127, 17, 0.3);
+}
+
+.btn-icon-delete {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+.btn-icon-delete:hover {
+    background: var(--danger);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.btn-icon-key {
+    color: var(--warning);
+    border-color: var(--warning);
+}
+.btn-icon-key:hover {
+    background: var(--warning);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
 /* ===================================================================
@@ -1033,307 +1075,7 @@ textarea.form-control { min-height: 80px; resize: vertical; }
 }
 
 /* ===================================================================
-   17. REPORT SYSTEM
-   =================================================================== */
-
-/* ─── Report Stat Cards ─── */
-.report-stat-card {
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    padding: 18px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    transition: all 0.3s var(--ease-out);
-    animation: cardEntrance 0.5s ease-out both;
-    border: 1px solid transparent;
-}
-.report-stat-card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-3px);
-    border-color: var(--primary-subtle);
-}
-.report-stat-card:nth-child(1) { animation-delay: 0.00s; }
-.report-stat-card:nth-child(2) { animation-delay: 0.08s; }
-.report-stat-card:nth-child(3) { animation-delay: 0.16s; }
-.report-stat-card:nth-child(4) { animation-delay: 0.24s; }
-
-.report-stat-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-}
-.report-stat-icon.sales { background: var(--primary-light); color: var(--primary); }
-.report-stat-icon.inventory { background: var(--success-light); color: var(--success); }
-.report-stat-icon.service { background: var(--info-light); color: var(--info); }
-.report-stat-icon.activity { background: var(--warning-light); color: var(--warning); }
-
-.report-stat-info { flex: 1; }
-.report-stat-label {
-    font-family: var(--font-heading);
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0 0 2px;
-}
-.report-stat-value {
-    font-family: var(--font-heading);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
-}
-
-/* ─── Report Cards (Index) ─── */
-.report-card {
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    padding: 28px 24px;
-    text-align: center;
-    transition: all 0.35s var(--ease-out);
-    animation: cardEntrance 0.5s ease-out both;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border: 1px solid transparent;
-    position: relative;
-    overflow: hidden;
-}
-.report-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--primary);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.35s var(--ease-out);
-}
-.report-card:hover::before {
-    transform: scaleX(1);
-}
-.report-card:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-6px);
-    border-color: var(--primary-subtle);
-}
-.report-card:nth-child(1) { animation-delay: 0.00s; }
-.report-card:nth-child(2) { animation-delay: 0.10s; }
-.report-card:nth-child(3) { animation-delay: 0.20s; }
-.report-card:nth-child(4) { animation-delay: 0.30s; }
-
-.report-card-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: var(--primary-light);
-    color: var(--primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-    margin-bottom: 16px;
-    transition: transform 0.3s var(--ease-out);
-}
-.report-card:hover .report-card-icon {
-    transform: scale(1.1) rotate(-3deg);
-}
-
-.report-card-title {
-    font-family: var(--font-heading);
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 8px;
-    letter-spacing: -0.01em;
-}
-.report-card-desc {
-    font-family: var(--font-body);
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin: 0 0 20px;
-    line-height: 1.5;
-    flex: 1;
-}
-
-/* ─── Report Buttons ─── */
-.report-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 20px;
-    font-family: var(--font-heading);
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: var(--radius-md);
-    background: var(--primary);
-    color: #fff;
-    border: 1.5px solid var(--primary);
-    cursor: pointer;
-    transition: all 0.25s var(--ease-out);
-    line-height: 1.4;
-    letter-spacing: 0.01em;
-    text-decoration: none;
-}
-.report-btn:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-    color: #fff;
-    box-shadow: 0 6px 16px rgba(255, 127, 17, 0.35);
-    transform: translateY(-2px);
-}
-.report-btn:active {
-    transform: scale(0.97);
-}
-.report-btn i { font-size: 15px; }
-
-.report-btn-outline {
-    background: transparent;
-    color: var(--primary);
-    border-color: var(--primary);
-}
-.report-btn-outline:hover {
-    background: var(--primary);
-    color: #fff;
-    box-shadow: 0 6px 16px rgba(255, 127, 17, 0.25);
-}
-
-.report-btn-outline-secondary {
-    background: transparent;
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-}
-.report-btn-outline-secondary:hover {
-    background: var(--body-bg);
-    border-color: var(--text-muted);
-    color: var(--text-primary);
-    transform: translateY(-2px);
-    box-shadow: none;
-}
-
-.report-btn-sm {
-    padding: 6px 14px;
-    font-size: 12px;
-    border-radius: var(--radius);
-}
-
-/* ─── Report Pagination ─── */
-.report-pagination .page-link {
-    border-radius: var(--radius) !important;
-    margin: 0 3px;
-    padding: 8px 14px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    border: 1.5px solid var(--border-color);
-    transition: all 0.2s var(--ease-out);
-}
-.report-pagination .page-link:hover {
-    background: var(--primary-light);
-    color: var(--primary);
-    border-color: var(--primary);
-}
-.report-pagination .page-item.active .page-link {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(255, 127, 17, 0.3);
-}
-
-/* ─── Loading Skeleton ─── */
-.skeleton {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-    border-radius: var(--radius);
-}
-@keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-.skeleton-line {
-    height: 14px;
-    margin-bottom: 10px;
-    width: 100%;
-}
-.skeleton-line:last-child { width: 60%; }
-.skeleton-line-sm { height: 10px; width: 40%; }
-.skeleton-line-lg { height: 24px; width: 80%; }
-.skeleton-table {
-    display: block;
-    width: 100%;
-    height: 300px;
-}
-
-/* ─── Page Loading Bar ─── */
-.page-loading-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    z-index: 9999;
-    background: transparent;
-    pointer-events: none;
-}
-.page-loading-bar::after {
-    content: '';
-    display: block;
-    height: 100%;
-    background: var(--primary);
-    width: 0;
-    animation: loadingBar 1s ease-in-out forwards;
-}
-@keyframes loadingBar {
-    0% { width: 0; }
-    50% { width: 70%; }
-    100% { width: 100%; opacity: 0; }
-}
-
-/* ─── Page Transition ─── */
-.page-transition {
-    animation: pageFadeIn 0.4s ease-out both;
-}
-@keyframes pageFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─── Responsive Report Cards ─── */
-@media (max-width: 767px) {
-    .report-card { padding: 20px 16px; }
-    .report-card-icon { width: 48px; height: 48px; font-size: 22px; }
-    .report-card-title { font-size: 14px; }
-    .report-card-desc { font-size: 12px; }
-    .report-stat-card { padding: 14px 16px; gap: 12px; }
-    .report-stat-icon { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
-    .report-stat-value { font-size: 18px; }
-    .report-btn { padding: 8px 16px; font-size: 12px; }
-}
-
-@media (max-width: 575px) {
-    .report-card { padding: 16px 12px; }
-    .report-stat-card { padding: 12px; }
-}
-
-/* ===================================================================
-   18. PRINT
+   17. PRINT
    =================================================================== */
 @media print {
     .sidebar, .top-header, .page-header .btn, .btn, .footer, .card-header .btn { display: none !important; }

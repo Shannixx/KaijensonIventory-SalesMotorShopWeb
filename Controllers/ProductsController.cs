@@ -1,7 +1,6 @@
 using System.Linq;
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
-using KaijensonIventory_SalesMotorShopWeb.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -12,13 +11,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly DynamicReorderService _reorderService;
 
-        public ProductsController(ApplicationDbContext context, IWebHostEnvironment env, DynamicReorderService reorderService)
+        public ProductsController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
             _env = env;
-            _reorderService = reorderService;
         }
 
         public async Task<IActionResult> Index(string? searchString, int? categoryId, int page = 1)
@@ -380,11 +377,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                         _context.Products.Update(product);
 
-                        if (product.UseAutoReorder)
-                        {
-                            await _reorderService.RecalculateProductAsync(id);
-                        }
-
                         _context.ActivityLogs.Add(new ActivityLog
                         {
                             StaffId = staffId,
@@ -411,8 +403,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
                     "SupplierId", "CompanyName", product.SupplierId);
 
-                ViewBag.AverageDailySales = await _reorderService.GetCurrentAverageDailySalesAsync(id);
-
                 return View(product);
         }
 
@@ -435,22 +425,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .FirstOrDefaultAsync(p => p.ProductId == id);
 
                 if (product == null) return NotFound();
-
-                ViewBag.AverageDailySales = await _reorderService.GetCurrentAverageDailySalesAsync(id);
-
-                var lastSale = await _context.SalesItems
-                    .Where(si => si.ProductId == id)
-                    .OrderByDescending(si => si.Transaction!.TransactionDate)
-                    .Select(si => (DateTime?)si.Transaction!.TransactionDate)
-                    .FirstOrDefaultAsync();
-                ViewBag.LastSaleDate = lastSale;
-
-                var lastStockIn = await _context.StockIns
-                    .Where(si => si.ProductId == id)
-                    .OrderByDescending(si => si.DeliveryDate)
-                    .Select(si => (DateTime?)si.DeliveryDate)
-                    .FirstOrDefaultAsync();
-                ViewBag.LastStockInDate = lastStockIn;
 
                 ViewBag.InventoryValue = product.QuantityOnHand * product.AverageCost;
 
@@ -482,17 +456,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .FirstOrDefaultAsync(p => p.ProductId == id);
 
                 if (product == null) return NotFound();
-                
-                // Check if product has any sales or service transactions
-                bool hasSales = await _context.SalesItems.AnyAsync(si => si.ProductId == id);
-                bool hasServiceParts = await _context.ServicePartsUsed.AnyAsync(sp => sp.ProductId == id);
-                bool hasStockIns = await _context.StockIns.AnyAsync(si => si.ProductId == id);
-
-                if (hasSales || hasServiceParts || hasStockIns)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete product. This product has existing transactions.";
-                    return RedirectToAction(nameof(Index));
-                }
 
                 return View(product);
             }
@@ -520,17 +483,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Product? product = await _context.Products.FindAsync(id);
                 if (product == null) return NotFound();
 
-                // Check if product has any sales or service transactions
-                bool hasSales = await _context.SalesItems.AnyAsync(si => si.ProductId == id);
-                bool hasServiceParts = await _context.ServicePartsUsed.AnyAsync(sp => sp.ProductId == id);
-                bool hasStockIns = await _context.StockIns.AnyAsync(si => si.ProductId == id);
-
-                if (hasSales || hasServiceParts || hasStockIns)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete product. This product has existing transactions.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 DeleteImageFile(product.ImagePath);
 
                 _context.Products.Remove(product);
@@ -552,61 +504,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "An error occurred while deleting the product. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Recalculate(int id)
-        {
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-
-            try
-            {
-                await _reorderService.RecalculateProductAsync(id);
-                TempData["Success"] = "Reorder level recalculated successfully.";
-            }
-            catch
-            {
-                TempData["ErrorMessage"] = "An error occurred while recalculating the reorder level.";
-            }
-
-            return RedirectToAction(nameof(Details), new { id });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RecalculateAll()
-        {
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
-
-            string? role = HttpContext.Session.GetString("StaffRole");
-            if (role != "Admin")
-            {
-                TempData["ErrorMessage"] = "Only administrators can perform batch recalculation.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            try
-            {
-                await _reorderService.RecalculateAllAsync();
-                TempData["Success"] = "All auto-reorder products recalculated successfully.";
-            }
-            catch
-            {
-                TempData["ErrorMessage"] = "An error occurred during batch recalculation.";
-            }
-
-            return RedirectToAction(nameof(Index));
         }
 
         private async Task<string?> SaveImageAsync(IFormFile? imageFile)

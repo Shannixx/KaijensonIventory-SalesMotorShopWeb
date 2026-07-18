@@ -23,6 +23,5 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public string? Address { get; set; }
 
         public ICollection<Product> Products { get; set; } = new List<Product>();
-        public ICollection<StockIn> StockIns { get; set; } = new List<StockIn>();
     }
 }
