@@ -58,13 +58,15 @@
                         <th>Country</th>
                         <th>Status</th>
                         <th>Products</th>
-                        <th>Actions</th>
+                        <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
                         var counts = ViewData["ProductCounts"] as Dictionary<string, int>;
+                        var prodCount = counts?.GetValueOrDefault(item.BrandName, 0) ?? 0;
+                        var isInUse = prodCount > 0;
                         <tr>
                             <td>@item.BrandId</td>
                             <td>@item.BrandName</td>
@@ -79,11 +81,23 @@
                                     <span class="badge bg-secondary">Inactive</span>
                                 }
                             </td>
-                            <td>@(counts?.GetValueOrDefault(item.BrandName, 0) ?? 0)</td>
+                            <td>@prodCount</td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-view" title="View Brand Details" aria-label="View @item.BrandName"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-edit" title="Edit Brand" aria-label="Edit @item.BrandName"><i class="bi bi-pencil"></i></a>
-                                <button type="button" class="btn btn-icon btn-icon-delete" title="Delete Brand" aria-label="Delete @item.BrandName" onclick="confirmDelete(@item.BrandId, '@item.BrandName')"><i class="bi bi-trash"></i></button>
+                                <div class="action-buttons">
+                                    <a asp-action="Details" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-view" title="View brand" aria-label="View brand @item.BrandName"><i class="bi bi-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-edit" title="Edit brand" aria-label="Edit brand @item.BrandName"><i class="bi bi-pencil"></i></a>
+                                    @if (isInUse)
+                                    {
+                                        <button type="button" class="btn btn-icon btn-icon-delete disabled" disabled title="This brand cannot be deleted until its products are reassigned." aria-label="Cannot delete brand @item.BrandName because it is in use"><i class="bi bi-trash"></i></button>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@item.BrandId" method="post" class="action-form delete-form" data-record-name="@item.BrandName">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete brand" aria-label="Delete brand @item.BrandName"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }
@@ -101,28 +115,3 @@
 
 <partial name="_Pagination" />
 
-@section Scripts {
-    <script>
-        function confirmDelete(id, name) {
-            if (!confirm('Are you sure you want to delete brand "' + name + '"?')) return;
-
-            const token = document.querySelector('input[name="__RequestVerificationToken"]');
-            const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-            if (token) headers['RequestVerificationToken'] = token.value;
-
-            fetch('@Url.Action("Delete", "Brands")/' + id, {
-                method: 'POST',
-                headers: headers
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert(data.message);
-                }
-            })
-            .catch(() => alert('An error occurred while deleting the brand.'));
-        }
-    </script>
-}

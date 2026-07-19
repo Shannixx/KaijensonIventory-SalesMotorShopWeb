@@ -255,24 +255,17 @@
         });
     }
 
-/* ───────────────────────────────────
-       CONFIRM & DELETE (shared AJAX delete)
+    /* ───────────────────────────────────
+       DELETE-FORM CONFIRMATION (standard POST forms)
        ─────────────────────────────────── */
-    window.confirmAndDelete = function (url, name, token) {
-        if (!confirm('Are you sure you want to delete "' + name + '"?')) return;
-        var headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-        if (token) headers['RequestVerificationToken'] = token;
-        fetch(url, { method: 'POST', headers: headers })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert(data.message);
-                }
-            })
-            .catch(function () { alert('An error occurred while deleting.'); });
-    };
+    document.addEventListener('submit', function (e) {
+        var form = e.target.closest('.delete-form');
+        if (!form) return;
+        var name = form.getAttribute('data-record-name') || 'this item';
+        if (!confirm('Are you sure you want to delete "' + name + '"?')) {
+            e.preventDefault();
+        }
+    });
 
     /* ───────────────────────────────────
        PAGE LOADING BAR

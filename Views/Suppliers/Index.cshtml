@@ -44,7 +44,7 @@
                         <th>Company Name</th>
                         <th>Contact Person</th>
                         <th>Contact No.</th>
-                        <th>Actions</th>
+                        <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,12 +56,14 @@
                             <td>@item.ContactPerson</td>
                             <td>@item.ContactNumber</td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-view" title="View Supplier Details" aria-label="View @item.CompanyName"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-edit" title="Edit Supplier" aria-label="Edit @item.CompanyName"><i class="bi bi-pencil"></i></a>
-                                <form asp-action="Delete" asp-route-id="@item.SupplierId" method="post" style="display:inline" onsubmit="return confirm('Delete supplier &quot;@item.CompanyName&quot;?')">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Supplier" aria-label="Delete @item.CompanyName"><i class="bi bi-trash"></i></button>
-                                </form>
+                                <div class="action-buttons">
+                                    <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-view" title="View Supplier Details" aria-label="View @item.CompanyName"><i class="bi bi-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-edit" title="Edit Supplier" aria-label="Edit @item.CompanyName"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Delete" asp-route-id="@item.SupplierId" method="post" class="action-form delete-form" data-record-name="@item.CompanyName">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Supplier" aria-label="Delete @item.CompanyName"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }

@@ -36,7 +36,7 @@
                         <th>Name</th>
                         <th>Specialization</th>
                         <th>Contact</th>
-                        <th>Actions</th>
+                        <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,12 +48,14 @@
                             <td>@item.Specialization</td>
                             <td>@item.ContactNumber</td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-view" title="View Mechanic Details" aria-label="View @item.MechanicName"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-edit" title="Edit Mechanic" aria-label="Edit @item.MechanicName"><i class="bi bi-pencil"></i></a>
-                                <form asp-action="Delete" asp-route-id="@item.MechanicId" method="post" style="display:inline" onsubmit="return confirm('Delete mechanic &quot;@item.MechanicName&quot;?')">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Mechanic" aria-label="Delete @item.MechanicName"><i class="bi bi-trash"></i></button>
-                                </form>
+                                <div class="action-buttons">
+                                    <a asp-action="Details" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-view" title="View Mechanic Details" aria-label="View @item.MechanicName"><i class="bi bi-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-edit" title="Edit Mechanic" aria-label="Edit @item.MechanicName"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Delete" asp-route-id="@item.MechanicId" method="post" class="action-form delete-form" data-record-name="@item.MechanicName">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Mechanic" aria-label="Delete @item.MechanicName"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }

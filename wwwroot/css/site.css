@@ -625,13 +625,92 @@ a:hover { color: var(--primary-hover); }
 }
 .table tbody tr:hover { background: #F8FAFC; }
 .table tbody tr:last-child td { border-bottom: none; }
-.action-cell {
-    white-space: nowrap;
-    text-align: right;
+/* ─── Actions Column (Management Tables) ─── */
+.actions-column {
+    width: 132px;
+    min-width: 132px;
+    text-align: center;
     vertical-align: middle;
 }
-.action-cell .btn-icon {
-    margin-left: 4px;
+
+.action-cell {
+    width: 132px;
+    min-width: 132px;
+    padding-left: 8px;
+    padding-right: 8px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.action-buttons {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.action-buttons .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    text-decoration: none;
+}
+
+.action-buttons .btn-icon i {
+    display: block;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+.action-buttons .action-form,
+.action-buttons form {
+    display: inline-flex;
+    margin: 0;
+    padding: 0;
+}
+
+.action-buttons .btn-icon:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.actions-column.actions-column-wide,
+.action-cell.action-cell-wide {
+    width: 164px;
+    min-width: 164px;
+}
+
+@media (max-width: 768px) {
+    .actions-column,
+    .action-cell {
+        width: 120px;
+        min-width: 120px;
+    }
+
+    .action-buttons {
+        gap: 0;
+    }
+
+    .action-buttons .btn-icon {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+    }
 }
 
 /* ─── Icon Buttons for Table Row Actions ─── */

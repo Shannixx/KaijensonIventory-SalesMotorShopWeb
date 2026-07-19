@@ -15,7 +15,7 @@
         </form>
     </div>
 </div>
-<div class="card"><div class="card-body p-0"><div class="table-container"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Contact</th><th>Role</th><th class="action-cell">Actions</th></tr></thead><tbody>
+<div class="card"><div class="card-body p-0"><div class="table-container"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Contact</th><th>Role</th><th class="actions-column actions-column-wide">Actions</th></tr></thead><tbody>
 @foreach (var item in Model) {
     bool isYou = (ViewData["CurrentStaffId"] as int?) == item.StaffId;
     <tr class="@(isYou ? "table-warning" : "")">
@@ -30,14 +30,16 @@
         <td>@item.UserName</td>
         <td>@item.ContactNumber</td>
         <td><span class="badge @(item.Role == "Admin" ? "bg-primary" : "bg-secondary")">@item.Role</span></td>
-        <td class="action-cell">
-            <a asp-action="Details" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-view" title="View Staff Details" aria-label="View @item.StaffName"><i class="bi bi-eye"></i></a>
-            <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-edit" title="Edit Staff" aria-label="Edit @item.StaffName"><i class="bi bi-pencil"></i></a>
-            <a asp-action="ChangePassword" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-key" title="Change Password" aria-label="Change password for @item.StaffName"><i class="bi bi-key"></i></a>
-            <form asp-action="Delete" asp-route-id="@item.StaffId" method="post" style="display:inline" onsubmit="return confirm('Delete staff member &quot;@item.StaffName&quot;?')">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Staff" aria-label="Delete @item.StaffName"><i class="bi bi-trash"></i></button>
-            </form>
+        <td class="action-cell action-cell-wide">
+            <div class="action-buttons">
+                <a asp-action="Details" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-view" title="View Staff Details" aria-label="View @item.StaffName"><i class="bi bi-eye"></i></a>
+                <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-edit" title="Edit Staff" aria-label="Edit @item.StaffName"><i class="bi bi-pencil"></i></a>
+                <a asp-action="ChangePassword" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-key" title="Change Password" aria-label="Change password for @item.StaffName"><i class="bi bi-key"></i></a>
+                <form asp-action="Delete" asp-route-id="@item.StaffId" method="post" class="action-form delete-form" data-record-name="@item.StaffName">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Staff" aria-label="Delete @item.StaffName"><i class="bi bi-trash"></i></button>
+                </form>
+            </div>
         </td>
     </tr>
 }
