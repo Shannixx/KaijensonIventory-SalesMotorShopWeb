@@ -22,10 +22,36 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
+// ---------------------------------------------------------------------------
+// SAFETY: Database migrations are NOT applied automatically.
+//
+// To apply migrations in a Development environment only, set the
+// configuration key "ApplyMigrationsOnStartup" to "true" AND run in
+// Development mode. This is OFF by default.
+//
+//   appsettings.Development.json:
+//     { "ApplyMigrationsOnStartup": true }
+//
+//   Environment variable (any environment):
+//     ApplyMigrationsOnStartup=true
+//
+// Production deployments must apply migrations via an offline script.
+// Never enable this flag in Production.
+// ---------------------------------------------------------------------------
+if (app.Environment.IsDevelopment())
+{
+    bool applyMigrations = builder.Configuration.GetValue<bool>("ApplyMigrationsOnStartup");
+    if (applyMigrations)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+    }
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
 
     if (!db.Staff.Any())
     {
