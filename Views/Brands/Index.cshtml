@@ -57,12 +57,14 @@
                         <th>Brand Name</th>
                         <th>Country</th>
                         <th>Status</th>
+                        <th>Products</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
+                        var counts = ViewData["ProductCounts"] as Dictionary<string, int>;
                         <tr>
                             <td>@item.BrandId</td>
                             <td>@item.BrandName</td>
@@ -77,17 +79,18 @@
                                     <span class="badge bg-secondary">Inactive</span>
                                 }
                             </td>
+                            <td>@(counts?.GetValueOrDefault(item.BrandName, 0) ?? 0)</td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-view" title="View Brand Details"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-edit" title="Edit Brand"><i class="bi bi-pencil"></i></a>
-                                <button type="button" class="btn btn-icon btn-icon-delete" title="Delete Brand" onclick="confirmDelete(@item.BrandId, '@item.BrandName')"><i class="bi bi-trash"></i></button>
+                                <a asp-action="Details" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-view" title="View Brand Details" aria-label="View @item.BrandName"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-edit" title="Edit Brand" aria-label="Edit @item.BrandName"><i class="bi bi-pencil"></i></a>
+                                <button type="button" class="btn btn-icon btn-icon-delete" title="Delete Brand" aria-label="Delete @item.BrandName" onclick="confirmDelete(@item.BrandId, '@item.BrandName')"><i class="bi bi-trash"></i></button>
                             </td>
                         </tr>
                     }
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">No brands found.</td>
+                            <td colspan="6" class="text-center py-4 text-muted">No brands found.</td>
                         </tr>
                     }
                 </tbody>

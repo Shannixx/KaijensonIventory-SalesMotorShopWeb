@@ -88,14 +88,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                ViewBag.Categories = new SelectList(
-                    await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                    "CategoryId", "CategoryName");
-
-                ViewBag.Suppliers = new SelectList(
-                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                    "SupplierId", "CompanyName");
-
+                await PopulateProductFormOptionsAsync();
                 return View(new Product { UseAutoReorder = true, LeadTimeDays = 30 });
             }
             catch
@@ -150,6 +143,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ModelState.AddModelError("SupplierId", "Please select a supplier.");
                 }
 
+                if (!string.IsNullOrWhiteSpace(product.Brand))
+                {
+                    bool brandExists = await _context.Brands.AnyAsync(b => b.BrandName == product.Brand && b.Status == "Active");
+                    if (!brandExists)
+                    {
+                        ModelState.AddModelError("Brand", "The selected brand is not valid or is inactive.");
+                    }
+                }
+
                 if (ModelState.IsValid)
                 {
                     // Check duplicate product name
@@ -157,12 +159,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     if (nameExists)
                     {
                         ModelState.AddModelError("ProductName", "A product with this name already exists.");
-                        ViewBag.Categories = new SelectList(
-                            await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                            "CategoryId", "CategoryName", product.CategoryId);
-                        ViewBag.Suppliers = new SelectList(
-                            await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                            "SupplierId", "CompanyName", product.SupplierId);
+                        await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                         return View(product);
                     }
 
@@ -173,12 +170,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         if (partExists)
                         {
                             ModelState.AddModelError("PartNumber", "A product with this part number already exists.");
-                            ViewBag.Categories = new SelectList(
-                                await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                                "CategoryId", "CategoryName", product.CategoryId);
-                            ViewBag.Suppliers = new SelectList(
-                                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                                "SupplierId", "CompanyName", product.SupplierId);
+                            await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                             return View(product);
                         }
                     }
@@ -215,27 +207,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     }
                 }
 
-                ViewBag.Categories = new SelectList(
-                    await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                    "CategoryId", "CategoryName", product.CategoryId);
-
-                ViewBag.Suppliers = new SelectList(
-                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                    "SupplierId", "CompanyName", product.SupplierId);
-
+                await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                 return View(product);
             }
             catch
             {
                 TempData["ErrorMessage"] = "An error occurred while creating the product. Please try again.";
-                ViewBag.Categories = new SelectList(
-                    await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                    "CategoryId", "CategoryName", product.CategoryId);
-
-                ViewBag.Suppliers = new SelectList(
-                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                    "SupplierId", "CompanyName", product.SupplierId);
-
+                await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                 return View(product);
             }
         }
@@ -255,14 +233,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Product? product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == id);
                 if (product == null) return NotFound();
 
-                ViewBag.Categories = new SelectList(
-                    await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                    "CategoryId", "CategoryName", product.CategoryId);
-
-                ViewBag.Suppliers = new SelectList(
-                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                    "SupplierId", "CompanyName", product.SupplierId);
-
+                await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                 return View(product);
             }
             catch
@@ -317,6 +288,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ModelState.AddModelError("SupplierId", "Please select a supplier.");
             }
 
+            if (!string.IsNullOrWhiteSpace(product.Brand))
+            {
+                bool brandExists = await _context.Brands.AnyAsync(b => b.BrandName == product.Brand && b.Status == "Active");
+                if (!brandExists)
+                {
+                    ModelState.AddModelError("Brand", "The selected brand is not valid or is inactive.");
+                }
+            }
+
             if (ModelState.IsValid)
                 {
                     // Check duplicate product name (exclude self)
@@ -324,12 +304,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     if (nameExists)
                     {
                         ModelState.AddModelError("ProductName", "A product with this name already exists.");
-                        ViewBag.Categories = new SelectList(
-                            await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                            "CategoryId", "CategoryName", product.CategoryId);
-                        ViewBag.Suppliers = new SelectList(
-                            await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                            "SupplierId", "CompanyName", product.SupplierId);
+                        await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                         return View(product);
                     }
 
@@ -340,12 +315,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         if (partExists)
                         {
                             ModelState.AddModelError("PartNumber", "A product with this part number already exists.");
-                            ViewBag.Categories = new SelectList(
-                                await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                                "CategoryId", "CategoryName", product.CategoryId);
-                            ViewBag.Suppliers = new SelectList(
-                                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                                "SupplierId", "CompanyName", product.SupplierId);
+                            await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                             return View(product);
                         }
                     }
@@ -395,15 +365,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     }
                 }
 
-            ViewBag.Categories = new SelectList(
-                await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
-                "CategoryId", "CategoryName", product.CategoryId);
-
-                ViewBag.Suppliers = new SelectList(
-                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                    "SupplierId", "CompanyName", product.SupplierId);
-
-                return View(product);
+            await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
+            return View(product);
         }
 
         public async Task<IActionResult> Details(int id)
@@ -504,6 +467,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "An error occurred while deleting the product. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        private async Task PopulateProductFormOptionsAsync(int? categoryId = null, int? supplierId = null, string? brand = null)
+        {
+            ViewBag.Categories = new SelectList(
+                await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(),
+                "CategoryId", "CategoryName", categoryId);
+
+            ViewBag.Suppliers = new SelectList(
+                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
+                "SupplierId", "CompanyName", supplierId);
+
+            var brands = await _context.Brands.AsNoTracking()
+                .OrderBy(b => b.Status == "Active" ? 0 : 1)
+                .ThenBy(b => b.BrandName)
+                .ToListAsync();
+
+            ViewBag.Brands = new SelectList(brands, "BrandName", "BrandName", brand);
         }
 
         private async Task<string?> SaveImageAsync(IFormFile? imageFile)

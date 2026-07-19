@@ -251,6 +251,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Mechanic? mechanic = await _context.Mechanics.AsNoTracking().FirstOrDefaultAsync(m => m.MechanicId == id);
                 if (mechanic == null) return NotFound();
 
+                bool hasServices = await _context.Services.AnyAsync(s => s.MechanicId == id);
+                if (hasServices)
+                {
+                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service records.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 return View(mechanic);
             }
             catch
@@ -276,6 +283,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 Mechanic? mechanic = await _context.Mechanics.FindAsync(id);
                 if (mechanic == null) return NotFound();
+
+                bool hasServices = await _context.Services.AnyAsync(s => s.MechanicId == id);
+                if (hasServices)
+                {
+                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service records.";
+                    return RedirectToAction(nameof(Index));
+                }
 
                 string name = mechanic.MechanicName;
 

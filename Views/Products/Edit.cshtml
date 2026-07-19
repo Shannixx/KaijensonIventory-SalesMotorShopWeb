@@ -14,27 +14,10 @@
                     <span asp-validation-for="ProductName" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
-                    <label asp-for="Brand" class="form-label"></label>
-                    <input asp-for="Brand" class="form-control" list="brandList" placeholder="e.g. Honda" />
-                    <datalist id="brandList">
-                        <option value="Honda"></option>
-                        <option value="Yamaha"></option>
-                        <option value="Suzuki"></option>
-                        <option value="Kawasaki"></option>
-                        <option value="Kymco"></option>
-                        <option value="SYM"></option>
-                        <option value="Rusi"></option>
-                        <option value="Motorstar"></option>
-                        <option value="Skygo"></option>
-                        <option value="Bajaj"></option>
-                        <option value="CFMoto"></option>
-                        <option value="Benelli"></option>
-                        <option value="TVS"></option>
-                        <option value="BMW"></option>
-                        <option value="KTM"></option>
-                        <option value="Harley-Davidson"></option>
-                        <option value="Ducati"></option>
-                    </datalist>
+                    <label asp-for="Brand" class="form-label">Brand <a asp-action="Create" asp-controller="Brands" target="_blank" class="small" title="Add new brand">+ New</a></label>
+                    <select asp-for="Brand" class="form-select" asp-items="ViewBag.Brands">
+                        <option value="">-- Select Brand --</option>
+                    </select>
                     <span asp-validation-for="Brand" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
@@ -66,7 +49,7 @@
                     <span asp-validation-for="ModelCompatibility" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
-                    <label asp-for="CategoryId" class="form-label"></label>
+                    <label asp-for="CategoryId" class="form-label">Category <a asp-action="Create" asp-controller="Categories" target="_blank" class="small" title="Add new category">+ New</a></label>
                     <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories">
                         <option value="">-- Select Category --</option>
                     </select>

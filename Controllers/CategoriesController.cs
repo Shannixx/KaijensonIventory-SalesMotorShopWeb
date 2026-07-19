@@ -65,6 +65,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Take(pageSize)
                     .ToListAsync();
 
+                var categoryIds = categories.Select(c => c.CategoryId).ToList();
+
+                ViewData["ProductCounts"] = await _context.Products
+                    .Where(p => categoryIds.Contains(p.CategoryId))
+                    .GroupBy(p => p.CategoryId)
+                    .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(k => k.CategoryId, v => v.Count);
+
+                ViewData["ServiceCounts"] = await _context.Services
+                    .Where(s => categoryIds.Contains(s.CategoryId))
+                    .GroupBy(s => s.CategoryId)
+                    .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(k => k.CategoryId, v => v.Count);
+
                 ViewData["CurrentFilter"] = searchString;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
@@ -247,6 +261,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (category == null)
                 {
                     return Json(new { success = false, message = "Category not found." });
+                }
+
+                int productCount = await _context.Products.CountAsync(p => p.CategoryId == id);
+                if (productCount > 0)
+                {
+                    return Json(new { success = false, message = $"Cannot delete category '{category.CategoryName}': {productCount} product(s) reference this category. Please reassign or delete those products first." });
+                }
+
+                int serviceCount = await _context.Services.CountAsync(s => s.CategoryId == id);
+                if (serviceCount > 0)
+                {
+                    return Json(new { success = false, message = $"Cannot delete category '{category.CategoryName}': {serviceCount} service(s) reference this category. Please reassign or delete those services first." });
                 }
 
                 string name = category.CategoryName;

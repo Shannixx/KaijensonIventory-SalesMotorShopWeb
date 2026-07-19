@@ -50,9 +50,12 @@
                             <td>@item.Category?.CategoryName</td>
                             <td>@item.Mechanic?.MechanicName</td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-view" title="View Service Details"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-edit" title="Edit Service"><i class="bi bi-pencil"></i></a>
-                                <a asp-action="Delete" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-delete" title="Delete Service"><i class="bi bi-trash"></i></a>
+                                <a asp-action="Details" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-view" title="View Service Details" aria-label="View @item.ServiceName"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-edit" title="Edit Service" aria-label="Edit @item.ServiceName"><i class="bi bi-pencil"></i></a>
+                                <form asp-action="Delete" asp-route-id="@item.ServiceId" method="post" style="display:inline" onsubmit="return confirm('Delete service &quot;@item.ServiceName&quot;?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Service" aria-label="Delete @item.ServiceName"><i class="bi bi-trash"></i></button>
+                                </form>
                             </td>
                         </tr>
                     }

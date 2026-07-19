@@ -300,6 +300,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
                 if (staff == null) return NotFound();
 
+                if (string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(staff.Role, "Owner", StringComparison.OrdinalIgnoreCase))
+                {
+                    int adminCount = await _context.Staff.CountAsync(s =>
+                        s.Role == "Admin" || s.Role == "Owner");
+                    if (adminCount <= 1)
+                    {
+                        TempData["ErrorMessage"] = "Cannot delete the last administrator account.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                }
+
                 return View(staff);
             }
             catch (Exception ex)
@@ -327,6 +339,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 Staff? staff = await _context.Staff.FindAsync(id);
                 if (staff == null) return NotFound();
+
+                if (string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(staff.Role, "Owner", StringComparison.OrdinalIgnoreCase))
+                {
+                    int adminCount = await _context.Staff.CountAsync(s =>
+                        s.Role == "Admin" || s.Role == "Owner");
+                    if (adminCount <= 1)
+                    {
+                        TempData["ErrorMessage"] = "Cannot delete the last administrator account.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                }
 
                 bool hasActivity = await _context.ActivityLogs.AnyAsync(al => al.StaffId == id);
 

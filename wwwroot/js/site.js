@@ -255,6 +255,25 @@
         });
     }
 
+/* ───────────────────────────────────
+       CONFIRM & DELETE (shared AJAX delete)
+       ─────────────────────────────────── */
+    window.confirmAndDelete = function (url, name, token) {
+        if (!confirm('Are you sure you want to delete "' + name + '"?')) return;
+        var headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+        if (token) headers['RequestVerificationToken'] = token;
+        fetch(url, { method: 'POST', headers: headers })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(function () { alert('An error occurred while deleting.'); });
+    };
+
     /* ───────────────────────────────────
        PAGE LOADING BAR
        ─────────────────────────────────── */

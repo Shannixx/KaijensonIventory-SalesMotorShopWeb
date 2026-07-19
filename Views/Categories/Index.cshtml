@@ -42,26 +42,32 @@
                     <tr>
                         <th>ID</th>
                         <th>Category Name</th>
+                        <th>Products</th>
+                        <th>Services</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
+                        var prodCounts = ViewData["ProductCounts"] as Dictionary<int, int>;
+                        var servCounts = ViewData["ServiceCounts"] as Dictionary<int, int>;
                         <tr>
                             <td>@item.CategoryId</td>
                             <td>@item.CategoryName</td>
+                            <td>@(prodCounts?.GetValueOrDefault(item.CategoryId, 0) ?? 0)</td>
+                            <td>@(servCounts?.GetValueOrDefault(item.CategoryId, 0) ?? 0)</td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-view" title="View Category Details"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-edit" title="Edit Category"><i class="bi bi-pencil"></i></a>
-                                <button type="button" class="btn btn-icon btn-icon-delete" title="Delete Category" onclick="confirmDelete(@item.CategoryId, '@item.CategoryName')"><i class="bi bi-trash"></i></button>
+                                <a asp-action="Details" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-view" title="View Category Details" aria-label="View @item.CategoryName"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-edit" title="Edit Category" aria-label="Edit @item.CategoryName"><i class="bi bi-pencil"></i></a>
+                                <button type="button" class="btn btn-icon btn-icon-delete" title="Delete Category" aria-label="Delete @item.CategoryName" onclick="confirmDelete(@item.CategoryId, '@item.CategoryName')"><i class="bi bi-trash"></i></button>
                             </td>
                         </tr>
                     }
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="3" class="text-center py-4 text-muted">No categories found.</td>
+                            <td colspan="5" class="text-center py-4 text-muted">No categories found.</td>
                         </tr>
                     }
                 </tbody>

@@ -74,6 +74,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Take(pageSize)
                     .ToListAsync();
 
+                var brandNames = brands.Select(b => b.BrandName).ToList();
+
+                var productCounts = await _context.Products
+                    .Where(p => p.Brand != null && brandNames.Contains(p.Brand))
+                    .GroupBy(p => p.Brand!)
+                    .Select(g => new { Brand = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                ViewData["ProductCounts"] = productCounts.ToDictionary(k => k.Brand, v => v.Count);
+
                 ViewData["CurrentFilter"] = searchString;
                 ViewData["StatusFilter"] = statusFilter;
                 ViewData["Page"] = page;
@@ -277,6 +287,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (brand == null)
                 {
                     return Json(new { success = false, message = "Brand not found." });
+                }
+
+                int productCount = await _context.Products.CountAsync(p => p.Brand == brand.BrandName);
+                if (productCount > 0)
+                {
+                    return Json(new { success = false, message = $"Cannot delete brand '{brand.BrandName}': {productCount} product(s) use this brand. Please reassign those products first." });
                 }
 
                 string name = brand.BrandName;

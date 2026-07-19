@@ -56,9 +56,12 @@
                             <td>@item.ContactPerson</td>
                             <td>@item.ContactNumber</td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-view" title="View Supplier Details"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-edit" title="Edit Supplier"><i class="bi bi-pencil"></i></a>
-                                <a asp-action="Delete" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-delete" title="Delete Supplier"><i class="bi bi-trash"></i></a>
+                                <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-view" title="View Supplier Details" aria-label="View @item.CompanyName"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-edit" title="Edit Supplier" aria-label="Edit @item.CompanyName"><i class="bi bi-pencil"></i></a>
+                                <form asp-action="Delete" asp-route-id="@item.SupplierId" method="post" style="display:inline" onsubmit="return confirm('Delete supplier &quot;@item.CompanyName&quot;?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Supplier" aria-label="Delete @item.CompanyName"><i class="bi bi-trash"></i></button>
+                                </form>
                             </td>
                         </tr>
                     }

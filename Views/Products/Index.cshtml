@@ -75,9 +75,12 @@
                                 else { <span class="badge bg-success">Available</span> }
                             </td>
                             <td class="action-cell">
-                                <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-view" title="View Product Details"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product"><i class="bi bi-pencil"></i></a>
-                                <a asp-action="Delete" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-delete" title="Delete Product"><i class="bi bi-trash"></i></a>
+                                <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-view" title="View Product Details" aria-label="View @item.ProductName"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product" aria-label="Edit @item.ProductName"><i class="bi bi-pencil"></i></a>
+                                <form asp-action="Delete" asp-route-id="@item.ProductId" method="post" style="display:inline" onsubmit="return confirm('Delete product &quot;@item.ProductName&quot;?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Product" aria-label="Delete @item.ProductName"><i class="bi bi-trash"></i></button>
+                                </form>
                             </td>
                         </tr>
                     }
