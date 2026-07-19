@@ -8,7 +8,8 @@
     string? staffName = Context.Session.GetString("StaffName");
     string? staffRole = Context.Session.GetString("StaffRole");
     string avatarChar = !string.IsNullOrEmpty(staffName) ? staffName[..1].ToUpper() : "K";
-    bool isAdmin = string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase);
+    bool isAdmin = string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(staffRole, "Owner", StringComparison.OrdinalIgnoreCase);
 }
 
 <!DOCTYPE html>
@@ -49,6 +50,16 @@
 
                 <div class="nav-section">Management</div>
                 <ul class="nav-list">
+                    <li class="nav-item">
+                        <a asp-controller="Categories" asp-action="Index" class="nav-link @(IsActive("Categories") ? "active" : "")" data-title="Category">
+                            <i class="bi bi-tags"></i><span>Category</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-controller="Brands" asp-action="Index" class="nav-link @(IsActive("Brands") ? "active" : "")" data-title="Brand">
+                            <i class="bi bi-award"></i><span>Brand</span>
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a asp-controller="Mechanics" asp-action="Index" class="nav-link @(IsActive("Mechanics") ? "active" : "")" data-title="Mechanic">
                             <i class="bi bi-tools"></i><span>Mechanic</span>

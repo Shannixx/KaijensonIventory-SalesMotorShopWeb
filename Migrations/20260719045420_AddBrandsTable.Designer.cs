@@ -4,6 +4,7 @@ using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260719045420_AddBrandsTable")]
+    partial class AddBrandsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -70,14 +73,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("CountryOrigin")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Description")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
                     b.HasKey("BrandId");
 
@@ -85,43 +83,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .IsUnique();
 
                     b.ToTable("Brands");
-
-                    b.HasData(
-                        new
-                        {
-                            BrandId = 1,
-                            BrandName = "Honda",
-                            CountryOrigin = "Japan",
-                            Status = "Active"
-                        },
-                        new
-                        {
-                            BrandId = 2,
-                            BrandName = "Yamaha",
-                            CountryOrigin = "Japan",
-                            Status = "Active"
-                        },
-                        new
-                        {
-                            BrandId = 3,
-                            BrandName = "Suzuki",
-                            CountryOrigin = "Japan",
-                            Status = "Active"
-                        },
-                        new
-                        {
-                            BrandId = 4,
-                            BrandName = "Kawasaki",
-                            CountryOrigin = "Japan",
-                            Status = "Active"
-                        },
-                        new
-                        {
-                            BrandId = 5,
-                            BrandName = "Kymco",
-                            CountryOrigin = "Taiwan",
-                            Status = "Active"
-                        });
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Category", b =>
@@ -143,23 +104,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .IsUnique();
 
                     b.ToTable("Categories");
-
-                    b.HasData(
-                        new
-                        {
-                            CategoryId = 1,
-                            CategoryName = "Lubricant"
-                        },
-                        new
-                        {
-                            CategoryId = 2,
-                            CategoryName = "Accessories"
-                        },
-                        new
-                        {
-                            CategoryId = 3,
-                            CategoryName = "SpareParts"
-                        });
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Mechanic", b =>
@@ -397,7 +341,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Product", b =>
                 {
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Category", "Category")
-                        .WithMany()
+                        .WithMany("Products")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -430,6 +374,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Navigation("Category");
 
                     b.Navigation("Mechanic");
+                });
+
+            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Category", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Supplier", b =>

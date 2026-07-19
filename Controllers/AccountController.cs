@@ -85,11 +85,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public IActionResult Register()
         {
-            // Admin only
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            // Admin/Owner only
+            if (!IsAdminOrOwner())
             {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
+                TempData["ErrorMessage"] = "Access denied. Admin or Owner privileges required.";
                 return RedirectToAction("Login");
             }
             return View();
@@ -98,11 +97,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
-            // Admin only
-            string? staffRole = HttpContext.Session.GetString("StaffRole");
-            if (!string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            // Admin/Owner only
+            if (!IsAdminOrOwner())
             {
-                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
+                TempData["ErrorMessage"] = "Access denied. Admin or Owner privileges required.";
                 return RedirectToAction("Login");
             }
 
@@ -189,6 +187,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "You have been logged out successfully.";
                 return RedirectToAction("Login");
             }
+        }
+
+        private bool IsAdminOrOwner()
+        {
+            string? role = HttpContext.Session.GetString("StaffRole");
+            return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

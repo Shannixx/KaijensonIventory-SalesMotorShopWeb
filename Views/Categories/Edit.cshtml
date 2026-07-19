@@ -8,7 +8,7 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card" style="max-width:600px; margin:0 auto;">
     <div class="card-body">
         <form asp-action="Edit">
             <input asp-for="CategoryId" type="hidden" />
@@ -16,12 +16,12 @@
 
             <div class="mb-3">
                 <label asp-for="CategoryName" class="form-label"></label>
-                <input asp-for="CategoryName" class="form-control" />
+                <input asp-for="CategoryName" class="form-control" placeholder="e.g. Lubricant" required />
                 <span asp-validation-for="CategoryName" class="text-danger"></span>
             </div>
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Update</button>
                 <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
             </div>
         </form>

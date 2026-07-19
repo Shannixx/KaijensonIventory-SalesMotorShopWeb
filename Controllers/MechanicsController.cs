@@ -114,6 +114,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
+            // Server-side validation
+            if (string.IsNullOrWhiteSpace(mechanic.MechanicName))
+            {
+                ModelState.AddModelError("MechanicName", "Mechanic name is required.");
+            }
+
             if (ModelState.IsValid)
             {
                 try
@@ -123,8 +129,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
-                        Action = "Create",
-                        Module = "Mechanics",
+                        Action = "Create Mechanic",
+                        Module = "Mechanic",
                         Description = $"Created mechanic: {mechanic.MechanicName}",
                         StaffId = staffId,
                         Timestamp = DateTime.Now
@@ -184,6 +190,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             if (id != mechanic.MechanicId) return NotFound();
 
+            // Server-side validation
+            if (string.IsNullOrWhiteSpace(mechanic.MechanicName))
+            {
+                ModelState.AddModelError("MechanicName", "Mechanic name is required.");
+            }
+
             if (ModelState.IsValid)
             {
                 try
@@ -193,8 +205,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
-                        Action = "Edit",
-                        Module = "Mechanics",
+                        Action = "Edit Mechanic",
+                        Module = "Mechanic",
                         Description = $"Edited mechanic: {mechanic.MechanicName}",
                         StaffId = staffId,
                         Timestamp = DateTime.Now
@@ -272,8 +284,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Delete",
-                    Module = "Mechanics",
+                    Action = "Delete Mechanic",
+                    Module = "Mechanic",
                     Description = $"Deleted mechanic: {name}",
                     StaffId = staffId,
                     Timestamp = DateTime.Now

@@ -31,10 +31,10 @@
         <td>@item.ContactNumber</td>
         <td><span class="badge @(item.Role == "Admin" ? "bg-primary" : "bg-secondary")">@item.Role</span></td>
         <td class="action-cell">
-            <a asp-action="Details" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-view" title="Details"><i class="bi bi-eye"></i></a>
-            <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+            <a asp-action="Details" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-view" title="View Staff Details"><i class="bi bi-eye"></i></a>
+            <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-edit" title="Edit Staff"><i class="bi bi-pencil"></i></a>
             <a asp-action="ChangePassword" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-key" title="Change Password"><i class="bi bi-key"></i></a>
-            <a asp-action="Delete" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-delete" title="Delete"><i class="bi bi-trash"></i></a>
+            <a asp-action="Delete" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-delete" title="Delete Staff"><i class="bi bi-trash"></i></a>
         </td>
     </tr>
 }

@@ -1,0 +1,47 @@
+@model KaijensonIventory_SalesMotorShopWeb.Models.Brand
+@{ ViewData["Title"] = "Create Brand"; }
+
+<div class="page-header">
+    <div>
+        <h1>Create Brand</h1>
+        <p>Add a new product brand.</p>
+    </div>
+</div>
+
+<div class="card" style="max-width:600px; margin:0 auto;">
+    <div class="card-body">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="BrandName" class="form-label"></label>
+                <input asp-for="BrandName" class="form-control" placeholder="e.g. Honda" required />
+                <span asp-validation-for="BrandName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="CountryOrigin" class="form-label"></label>
+                <input asp-for="CountryOrigin" class="form-control" placeholder="e.g. Japan" required />
+                <span asp-validation-for="CountryOrigin" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label"></label>
+                <select asp-for="Status" class="form-select" required>
+                    <option value="Active" selected>Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create</button>
+                <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

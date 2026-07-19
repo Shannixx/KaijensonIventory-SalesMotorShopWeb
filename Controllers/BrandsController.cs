@@ -5,11 +5,11 @@ using KaijensonIventory_SalesMotorShopWeb.Models;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
-    public class CategoriesController : Controller
+    public class BrandsController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public CategoriesController(ApplicationDbContext context)
+        public BrandsController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -42,7 +42,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return null;
         }
 
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
@@ -50,30 +50,40 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 int pageSize = 10;
-                IQueryable<Category> query = _context.Categories.AsNoTracking();
+                IQueryable<Brand> query = _context.Brands.AsNoTracking();
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
-                    query = query.Where(c => c.CategoryName.Contains(searchString));
+                    string s = searchString.ToLower();
+                    query = query.Where(b => b.BrandName.ToLower().Contains(s) ||
+                                             b.CountryOrigin.ToLower().Contains(s));
+                }
+
+                if (!string.IsNullOrWhiteSpace(statusFilter) &&
+                    (statusFilter == "Active" || statusFilter == "Inactive"))
+                {
+                    query = query.Where(b => b.Status == statusFilter);
                 }
 
                 int total = await query.CountAsync();
 
-                List<Category> categories = await query
-                    .OrderBy(c => c.CategoryName)
+                List<Brand> brands = await query
+                    .OrderBy(b => b.Status == "Active" ? 0 : 1)
+                    .ThenBy(b => b.BrandName)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();
 
                 ViewData["CurrentFilter"] = searchString;
+                ViewData["StatusFilter"] = statusFilter;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
-                return View(categories);
+                return View(brands);
             }
             catch
             {
-                TempData["ErrorMessage"] = "An error occurred while loading categories. Please try again.";
-                return View(new List<Category>());
+                TempData["ErrorMessage"] = "An error occurred while loading brands. Please try again.";
+                return View(new List<Brand>());
             }
         }
 
@@ -86,13 +96,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.CategoryId == id);
-                if (category == null) return NotFound();
-                return View(category);
+                var brand = await _context.Brands.AsNoTracking().FirstOrDefaultAsync(b => b.BrandId == id);
+                if (brand == null) return NotFound();
+                return View(brand);
             }
             catch
             {
-                TempData["ErrorMessage"] = "An error occurred while loading category details. Please try again.";
+                TempData["ErrorMessage"] = "An error occurred while loading brand details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -107,49 +117,59 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Category category)
+        public async Task<IActionResult> Create(Brand brand)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
             try
             {
-                if (string.IsNullOrWhiteSpace(category.CategoryName))
+                if (string.IsNullOrWhiteSpace(brand.BrandName))
                 {
-                    ModelState.AddModelError("CategoryName", "Category name is required.");
+                    ModelState.AddModelError("BrandName", "Brand name is required.");
+                }
+
+                if (string.IsNullOrWhiteSpace(brand.CountryOrigin))
+                {
+                    ModelState.AddModelError("CountryOrigin", "Country of origin is required.");
+                }
+
+                if (brand.Status != "Active" && brand.Status != "Inactive")
+                {
+                    ModelState.AddModelError("Status", "Status must be 'Active' or 'Inactive'.");
                 }
 
                 if (ModelState.IsValid)
                 {
-                    bool exists = await _context.Categories.AnyAsync(c => c.CategoryName == category.CategoryName);
+                    bool exists = await _context.Brands.AnyAsync(b => b.BrandName == brand.BrandName);
                     if (exists)
                     {
-                        ModelState.AddModelError("CategoryName", "A category with this name already exists.");
-                        return View(category);
+                        ModelState.AddModelError("BrandName", "A brand with this name already exists.");
+                        return View(brand);
                     }
 
-                    _context.Categories.Add(category);
+                    _context.Brands.Add(brand);
                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
                         StaffId = GetStaffId(),
                         Action = "Add",
-                        Module = "Category",
-                        Description = $"Added category: {category.CategoryName}",
+                        Module = "Brand",
+                        Description = $"Added brand: {brand.BrandName} ({brand.CountryOrigin}, {brand.Status})",
                         Timestamp = DateTime.UtcNow
                     });
                     await _context.SaveChangesAsync();
 
-                    TempData["SuccessMessage"] = $"Category '{category.CategoryName}' created successfully.";
+                    TempData["SuccessMessage"] = $"Brand '{brand.BrandName}' created successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                return View(category);
+                return View(brand);
             }
             catch
             {
-                TempData["ErrorMessage"] = "An error occurred while creating the category. Please try again.";
-                return View(category);
+                TempData["ErrorMessage"] = "An error occurred while creating the brand. Please try again.";
+                return View(brand);
             }
         }
 
@@ -162,73 +182,83 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var category = await _context.Categories.FindAsync(id);
-                if (category == null) return NotFound();
-                return View(category);
+                var brand = await _context.Brands.FindAsync(id);
+                if (brand == null) return NotFound();
+                return View(brand);
             }
             catch
             {
-                TempData["ErrorMessage"] = "An error occurred while loading the category for editing. Please try again.";
+                TempData["ErrorMessage"] = "An error occurred while loading the brand for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Category category)
+        public async Task<IActionResult> Edit(int id, Brand brand)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            if (id != category.CategoryId) return NotFound();
+            if (id != brand.BrandId) return NotFound();
 
-            if (string.IsNullOrWhiteSpace(category.CategoryName))
+            if (string.IsNullOrWhiteSpace(brand.BrandName))
             {
-                ModelState.AddModelError("CategoryName", "Category name is required.");
+                ModelState.AddModelError("BrandName", "Brand name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(brand.CountryOrigin))
+            {
+                ModelState.AddModelError("CountryOrigin", "Country of origin is required.");
+            }
+
+            if (brand.Status != "Active" && brand.Status != "Inactive")
+            {
+                ModelState.AddModelError("Status", "Status must be 'Active' or 'Inactive'.");
             }
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    bool exists = await _context.Categories.AnyAsync(c => c.CategoryName == category.CategoryName && c.CategoryId != id);
+                    bool exists = await _context.Brands.AnyAsync(b => b.BrandName == brand.BrandName && b.BrandId != id);
                     if (exists)
                     {
-                        ModelState.AddModelError("CategoryName", "A category with this name already exists.");
-                        return View(category);
+                        ModelState.AddModelError("BrandName", "A brand with this name already exists.");
+                        return View(brand);
                     }
 
-                    _context.Categories.Update(category);
+                    _context.Brands.Update(brand);
                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
                         StaffId = GetStaffId(),
                         Action = "Edit",
-                        Module = "Category",
-                        Description = $"Edited category: {category.CategoryName}",
+                        Module = "Brand",
+                        Description = $"Edited brand: {brand.BrandName} ({brand.CountryOrigin}, {brand.Status})",
                         Timestamp = DateTime.UtcNow
                     });
                     await _context.SaveChangesAsync();
 
-                    TempData["SuccessMessage"] = $"Category '{category.CategoryName}' updated successfully.";
+                    TempData["SuccessMessage"] = $"Brand '{brand.BrandName}' updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await _context.Categories.AnyAsync(c => c.CategoryId == category.CategoryId))
+                    if (!await _context.Brands.AnyAsync(b => b.BrandId == brand.BrandId))
                         return NotFound();
 
-                    TempData["ErrorMessage"] = "The category was modified by another user. Please try again.";
-                    return View(category);
+                    TempData["ErrorMessage"] = "The brand was modified by another user. Please try again.";
+                    return View(brand);
                 }
                 catch
                 {
-                    TempData["ErrorMessage"] = "An error occurred while updating the category. Please try again.";
-                    return View(category);
+                    TempData["ErrorMessage"] = "An error occurred while updating the brand. Please try again.";
+                    return View(brand);
                 }
             }
-            return View(category);
+            return View(brand);
         }
 
         [HttpPost]
@@ -243,32 +273,32 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var category = await _context.Categories.FindAsync(id);
-                if (category == null)
+                var brand = await _context.Brands.FindAsync(id);
+                if (brand == null)
                 {
-                    return Json(new { success = false, message = "Category not found." });
+                    return Json(new { success = false, message = "Brand not found." });
                 }
 
-                string name = category.CategoryName;
+                string name = brand.BrandName;
 
-                _context.Categories.Remove(category);
+                _context.Brands.Remove(brand);
                 await _context.SaveChangesAsync();
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     StaffId = GetStaffId(),
                     Action = "Delete",
-                    Module = "Category",
-                    Description = $"Deleted category: {name}",
+                    Module = "Brand",
+                    Description = $"Deleted brand: {name}",
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = $"Category '{name}' deleted successfully." });
+                return Json(new { success = true, message = $"Brand '{name}' deleted successfully." });
             }
             catch
             {
-                return Json(new { success = false, message = "An error occurred while deleting the category." });
+                return Json(new { success = false, message = "An error occurred while deleting the brand." });
             }
         }
     }

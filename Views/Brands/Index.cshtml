@@ -1,0 +1,125 @@
+@model IEnumerable<KaijensonIventory_SalesMotorShopWeb.Models.Brand>
+@{ ViewData["Title"] = "Brands"; }
+
+<div class="page-header">
+    <div>
+        <h1>Brands</h1>
+        <p>Manage product brands.</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Brand</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label small">Search</label>
+                <input type="text" name="searchString" class="form-control" placeholder="Search by name or country..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
+            </div>
+            <div>
+                <label class="form-label small">Status</label>
+                <select name="statusFilter" class="form-select" style="min-width:140px;">
+                    <option value="">All</option>
+                    <option value="Active" selected="@(ViewData["StatusFilter"]?.ToString() == "Active")">Active</option>
+                    <option value="Inactive" selected="@(ViewData["StatusFilter"]?.ToString() == "Inactive")">Inactive</option>
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Brand Name</th>
+                        <th>Country</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.BrandId</td>
+                            <td>@item.BrandName</td>
+                            <td>@item.CountryOrigin</td>
+                            <td>
+                                @if (item.Status == "Active")
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactive</span>
+                                }
+                            </td>
+                            <td class="action-cell">
+                                <a asp-action="Details" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-view" title="View Brand Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Edit" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-edit" title="Edit Brand"><i class="bi bi-pencil"></i></a>
+                                <button type="button" class="btn btn-icon btn-icon-delete" title="Delete Brand" onclick="confirmDelete(@item.BrandId, '@item.BrandName')"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">No brands found.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            if (!confirm('Are you sure you want to delete brand "' + name + '"?')) return;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            if (token) headers['RequestVerificationToken'] = token.value;
+
+            fetch('@Url.Action("Delete", "Brands")/' + id, {
+                method: 'POST',
+                headers: headers
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(() => alert('An error occurred while deleting the brand.'));
+        }
+    </script>
+}

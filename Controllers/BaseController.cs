@@ -17,7 +17,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         protected bool IsAdmin()
         {
-            return string.Equals(HttpContext.Session.GetString("StaffRole"), "Admin", StringComparison.OrdinalIgnoreCase);
+            string? role = HttpContext.Session.GetString("StaffRole");
+            return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase);
         }
 
         protected int GetCurrentStaffId()

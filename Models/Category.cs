@@ -7,10 +7,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Key]
         public int CategoryId { get; set; }
 
-        [Required, StringLength(100)]
-        [Display(Name = "Category Name")]
+        [Required(ErrorMessage = "Category name is required")]
+        [StringLength(100)]
         public string CategoryName { get; set; } = string.Empty;
-
-        public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

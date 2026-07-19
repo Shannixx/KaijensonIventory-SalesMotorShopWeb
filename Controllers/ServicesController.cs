@@ -125,6 +125,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
+            // Server-side validation
+            if (string.IsNullOrWhiteSpace(service.ServiceName))
+            {
+                ModelState.AddModelError("ServiceName", "Service name is required.");
+            }
+            if (service.ServicePrice < 0)
+            {
+                ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
+            }
+            if (service.CategoryId <= 0)
+            {
+                ModelState.AddModelError("CategoryId", "Please select a category.");
+            }
+            if (service.MechanicId <= 0)
+            {
+                ModelState.AddModelError("MechanicId", "Please select a mechanic.");
+            }
+
             if (ModelState.IsValid)
             {
                 try
@@ -134,8 +152,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
-                        Action = "Create",
-                        Module = "Services",
+                        Action = "Create Service",
+                        Module = "Service",
                         Description = $"Created service: {service.ServiceName}",
                         StaffId = staffId,
                         Timestamp = DateTime.Now
@@ -198,6 +216,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             if (id != service.ServiceId) return NotFound();
 
+            // Server-side validation
+            if (string.IsNullOrWhiteSpace(service.ServiceName))
+            {
+                ModelState.AddModelError("ServiceName", "Service name is required.");
+            }
+            if (service.ServicePrice < 0)
+            {
+                ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
+            }
+            if (service.CategoryId <= 0)
+            {
+                ModelState.AddModelError("CategoryId", "Please select a category.");
+            }
+            if (service.MechanicId <= 0)
+            {
+                ModelState.AddModelError("MechanicId", "Please select a mechanic.");
+            }
+
             if (ModelState.IsValid)
             {
                 try
@@ -207,8 +243,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
-                        Action = "Edit",
-                        Module = "Services",
+                        Action = "Edit Service",
+                        Module = "Service",
                         Description = $"Edited service: {service.ServiceName}",
                         StaffId = staffId,
                         Timestamp = DateTime.Now
@@ -302,8 +338,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Delete",
-                    Module = "Services",
+                    Action = "Delete Service",
+                    Module = "Service",
                     Description = $"Deleted service: {name}",
                     StaffId = staffId,
                     Timestamp = DateTime.Now
