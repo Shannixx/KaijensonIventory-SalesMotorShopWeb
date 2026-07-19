@@ -9,30 +9,17 @@
     <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Category</a>
 </div>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+@{
+    var searchModel = new SearchToolbarViewModel
+    {
+        ControllerName = "Categories",
+        QueryValue = ViewData["CurrentFilter"] as string,
+        Placeholder = "Search by name...",
+        AriaLabel = "Search categories",
+        InputId = "searchCategories"
+    };
 }
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<div class="card mb-3">
-    <div class="card-body">
-        <form asp-action="Index" method="get" class="d-flex flex-wrap gap-2 align-items-end">
-            <input type="text" name="searchString" class="form-control" placeholder="Search by name..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
-            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
-            <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
-        </form>
-    </div>
-</div>
+<partial name="_SearchToolbar" model="searchModel" />
 
 <div class="card">
     <div class="card-body p-0">
@@ -66,13 +53,15 @@
                                     <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-edit" title="Edit category" aria-label="Edit category @item.CategoryName"><i class="bi bi-pencil"></i></a>
                                     @if (isInUse)
                                     {
-                                        <button type="button" class="btn btn-icon btn-icon-delete disabled" disabled title="This category cannot be deleted until its products and services are reassigned." aria-label="Cannot delete category @item.CategoryName because it is in use"><i class="bi bi-trash"></i></button>
+                                        <span class="d-inline-flex" tabindex="0" title="This category cannot be deleted until its products and services are reassigned." aria-label="Cannot delete category @item.CategoryName because it is in use">
+                                            <button type="button" class="btn btn-icon btn-icon-delete" disabled aria-hidden="true" tabindex="-1"><i class="bi bi-trash"></i></button>
+                                        </span>
                                     }
                                     else
                                     {
-                                        <form asp-action="Delete" asp-route-id="@item.CategoryId" method="post" class="action-form delete-form" data-record-name="@item.CategoryName">
+                                        <form asp-action="Delete" asp-route-id="@item.CategoryId" method="post" id="delete-category-@item.CategoryId" class="action-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete category" aria-label="Delete category @item.CategoryName"><i class="bi bi-trash"></i></button>
+                                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-category-@item.CategoryId" data-delete-record-name="@item.CategoryName" data-delete-entity-name="category" title="Delete category" aria-label="Delete category @item.CategoryName"><i class="bi bi-trash"></i></button>
                                         </form>
                                     }
                                 </div>

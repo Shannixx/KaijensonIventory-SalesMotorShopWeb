@@ -5,7 +5,7 @@ using KaijensonIventory_SalesMotorShopWeb.Models;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
-    public class BrandsController : Controller
+    public class BrandsController : BaseController
     {
         private readonly ApplicationDbContext _context;
 
@@ -278,7 +278,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null)
             {
-                return Json(new { success = false, message = "Access denied." });
+                return accessCheck;
             }
 
             try
@@ -286,13 +286,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 var brand = await _context.Brands.FindAsync(id);
                 if (brand == null)
                 {
-                    return Json(new { success = false, message = "Brand not found." });
+                    TempData["ErrorMessage"] = "The brand could not be found.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 int productCount = await _context.Products.CountAsync(p => p.Brand == brand.BrandName);
                 if (productCount > 0)
                 {
-                    return Json(new { success = false, message = $"Cannot delete brand '{brand.BrandName}': {productCount} product(s) use this brand. Please reassign those products first." });
+                    TempData["ErrorMessage"] = "This brand cannot be deleted because products are assigned to it.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 string name = brand.BrandName;
@@ -310,11 +312,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 });
                 await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = $"Brand '{name}' deleted successfully." });
+                TempData["SuccessMessage"] = $"Brand '{name}' deleted successfully.";
+                return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return Json(new { success = false, message = "An error occurred while deleting the brand." });
+                TempData["ErrorMessage"] = "The brand could not be deleted because it is still referenced by other records.";
+                return RedirectToAction(nameof(Index));
             }
         }
     }

@@ -5,7 +5,7 @@ using KaijensonIventory_SalesMotorShopWeb.Models;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
-    public class CategoriesController : Controller
+    public class CategoriesController : BaseController
     {
         private readonly ApplicationDbContext _context;
 
@@ -252,7 +252,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null)
             {
-                return Json(new { success = false, message = "Access denied." });
+                return accessCheck;
             }
 
             try
@@ -260,19 +260,22 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 var category = await _context.Categories.FindAsync(id);
                 if (category == null)
                 {
-                    return Json(new { success = false, message = "Category not found." });
+                    TempData["ErrorMessage"] = "The category could not be found.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 int productCount = await _context.Products.CountAsync(p => p.CategoryId == id);
                 if (productCount > 0)
                 {
-                    return Json(new { success = false, message = $"Cannot delete category '{category.CategoryName}': {productCount} product(s) reference this category. Please reassign or delete those products first." });
+                    TempData["ErrorMessage"] = "This category cannot be deleted because products or services are assigned to it.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 int serviceCount = await _context.Services.CountAsync(s => s.CategoryId == id);
                 if (serviceCount > 0)
                 {
-                    return Json(new { success = false, message = $"Cannot delete category '{category.CategoryName}': {serviceCount} service(s) reference this category. Please reassign or delete those services first." });
+                    TempData["ErrorMessage"] = "This category cannot be deleted because products or services are assigned to it.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 string name = category.CategoryName;
@@ -290,11 +293,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 });
                 await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = $"Category '{name}' deleted successfully." });
+                TempData["SuccessMessage"] = $"Category '{name}' deleted successfully.";
+                return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return Json(new { success = false, message = "An error occurred while deleting the category." });
+                TempData["ErrorMessage"] = "The category could not be deleted because it is still referenced by other records.";
+                return RedirectToAction(nameof(Index));
             }
         }
     }

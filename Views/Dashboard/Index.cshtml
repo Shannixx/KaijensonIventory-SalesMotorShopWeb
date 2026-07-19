@@ -8,114 +8,144 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon primary"><i class="bi bi-box-seam"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Total Products</p>
-                <h3 class="metric-value" data-countup="@Model.TotalProducts">0</h3>
-            </div>
+<div class="dashboard-metrics">
+    <div class="metric-card">
+        <div class="metric-icon primary"><i class="bi bi-box-seam"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Total Products</p>
+            <h3 class="metric-value" data-countup="@Model.TotalProducts">0</h3>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Low Stock Products</p>
-                <h3 class="metric-value" data-countup="@Model.LowStockCount">0</h3>
-            </div>
+    <div class="metric-card">
+        <div class="metric-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Low Stock</p>
+            <h3 class="metric-value" data-countup="@Model.LowStockCount">0</h3>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon danger"><i class="bi bi-x-octagon"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Out of Stock</p>
-                <h3 class="metric-value" data-countup="@Model.OutOfStockCount">0</h3>
-            </div>
+    <div class="metric-card">
+        <div class="metric-icon danger"><i class="bi bi-x-octagon"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Out of Stock</p>
+            <h3 class="metric-value" data-countup="@Model.OutOfStockCount">0</h3>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon danger"><i class="bi bi-arrow-repeat"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Below Reorder Level</p>
-                <h3 class="metric-value" data-countup="@Model.LowStockRequireReorder">0</h3>
-            </div>
+    <div class="metric-card">
+        <div class="metric-icon secondary"><i class="bi bi-arrow-repeat"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Below Reorder</p>
+            <h3 class="metric-value" data-countup="@Model.LowStockRequireReorder">0</h3>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon info"><i class="bi bi-currency-dollar"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Inventory Value</p>
-                <h3 class="metric-value" data-countup="@Model.TotalInventoryValue" data-decimals="2" data-prefix="₱">₱0.00</h3>
-            </div>
+    <div class="metric-card">
+        <div class="metric-icon info"><i class="bi bi-currency-dollar"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Inventory Value</p>
+            <h3 class="metric-value" data-countup="@Model.TotalInventoryValue" data-decimals="2" data-prefix="₱">₱0.00</h3>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon accent"><i class="bi bi-tags"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Categories</p>
+            <h3 class="metric-value" data-countup="@Model.TotalCategories">0</h3>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon primary-light"><i class="bi bi-building"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Suppliers</p>
+            <h3 class="metric-value" data-countup="@Model.TotalSuppliers">0</h3>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon warning-light"><i class="bi bi-tools"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Mechanics</p>
+            <h3 class="metric-value" data-countup="@Model.TotalMechanics">0</h3>
         </div>
     </div>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">Products by Category</div>
-            <div class="card-body">
-                <canvas id="categoryChart" height="200"></canvas>
+<div class="dashboard-panels">
+    <div class="dashboard-chart-card">
+        <div class="dashboard-card-header">Products by Category</div>
+        <div class="dashboard-card-body" id="categoryChartContainer">
+            <canvas id="categoryChart" height="220"></canvas>
+        </div>
+    </div>
+    <div class="dashboard-table-card">
+        <div class="dashboard-card-header">Low Stock Alerts</div>
+        <div class="dashboard-card-body p-0">
+            <div class="table-container">
+                <table class="table">
+                    <thead><tr><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in Model.RecentLowStockProducts)
+                        {
+                            <tr>
+                                <td><a asp-controller="Products" asp-action="Details" asp-route-id="@p.ProductId">@p.ProductName</a></td>
+                                <td class="text-danger fw-semibold">@p.QuantityOnHand</td>
+                                <td>@p.ReorderLevel</td>
+                            </tr>
+                        }
+                        @if (!Model.RecentLowStockProducts.Any())
+                        {
+                            <tr><td colspan="3" class="text-center py-4 text-muted">No low stock items.</td></tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
-
-<div class="row g-3">
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">Low Stock Alerts</div>
-            <div class="card-body p-0">
-                <div class="table-container">
-                    <table class="table">
-                        <thead><tr><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
-                        <tbody>
-                            @foreach (var p in Model.RecentLowStockProducts)
-                            {
-                                <tr>
-                                    <td><a asp-controller="Products" asp-action="Details" asp-route-id="@p.ProductId">@p.ProductName</a></td>
-                                    <td class="text-danger fw-semibold">@p.QuantityOnHand</td>
-                                    <td>@p.ReorderLevel</td>
-                                </tr>
-                            }
-                            @if (!Model.RecentLowStockProducts.Any())
-                            {
-                                <tr><td colspan="3" class="text-center py-4 text-muted">No low stock items.</td></tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
 
 @section Scripts {
     <script>
-        const catCtx = document.getElementById('categoryChart').getContext('2d');
-        const catColors = ['rgba(255,127,17,0.8)', 'rgba(16,185,129,0.8)', 'rgba(59,130,246,0.8)', 'rgba(239,68,68,0.8)', 'rgba(245,158,11,0.8)', 'rgba(139,92,246,0.8)', 'rgba(236,72,153,0.8)'];
-        new Chart(catCtx, {
-            type: 'doughnut',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.CategoryLabels)),
-                datasets: [{
-                    data: @Html.Raw(Json.Serialize(Model.CategoryCounts)),
-                    backgroundColor: catColors.slice(0, @Model.CategoryLabels.Count),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+        (function () {
+            var container = document.getElementById('categoryChartContainer');
+            var canvas = document.getElementById('categoryChart');
+
+            if (!canvas) {
+                if (container) container.innerHTML = '<div class="text-center py-4 text-muted">Chart container not found.</div>';
+                return;
             }
-        });
+
+            if (typeof Chart === 'undefined') {
+                container.innerHTML = '<div class="text-center py-4 text-muted">Chart library is not available.</div>';
+                return;
+            }
+
+            var labels = @Html.Raw(Json.Serialize(Model.CategoryLabels));
+            var counts = @Html.Raw(Json.Serialize(Model.CategoryCounts));
+
+            if (!labels || !counts || labels.length === 0 || counts.length === 0) {
+                container.innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-pie-chart fs-3 d-block mb-2"></i>No product data to display.</div>';
+                return;
+            }
+
+            var catColors = ['rgba(255,127,17,0.8)', 'rgba(16,185,129,0.8)', 'rgba(59,130,246,0.8)', 'rgba(239,68,68,0.8)', 'rgba(245,158,11,0.8)', 'rgba(139,92,246,0.8)', 'rgba(236,72,153,0.8)'];
+
+            try {
+                new Chart(canvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: catColors.slice(0, labels.length),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+                    }
+                });
+            } catch (e) {
+                container.innerHTML = '<div class="text-center py-4 text-muted">An error occurred while rendering the chart.</div>';
+                console.error('Chart initialization error:', e);
+            }
+        })();
     </script>
 }

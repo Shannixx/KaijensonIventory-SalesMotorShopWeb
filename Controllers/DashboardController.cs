@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
-    public class DashboardController : Controller
+    public class DashboardController : BaseController
     {
         private readonly ApplicationDbContext _context;
 
@@ -35,9 +35,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 var viewModel = new DashboardViewModel
                 {
                     TotalProducts = await _context.Products.CountAsync(),
-                    TotalCategories = await _context.Categories.CountAsync(),
-                    TotalSuppliers = await _context.Suppliers.CountAsync(),
-                    TotalMechanics = await _context.Mechanics.CountAsync(),
                     LowStockCount = await _context.Products
                         .CountAsync(p => p.QuantityOnHand <= p.ReorderLevel && p.QuantityOnHand > 0),
                     OutOfStockCount = await _context.Products
@@ -46,6 +43,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         .CountAsync(p => p.QuantityOnHand <= p.ReorderLevel),
                     TotalInventoryValue = await _context.Products
                         .SumAsync(p => (decimal?)(p.Price * p.QuantityOnHand)) ?? 0,
+                    TotalCategories = await _context.Categories.CountAsync(),
+                    TotalSuppliers = await _context.Suppliers.CountAsync(),
+                    TotalMechanics = await _context.Mechanics.CountAsync(),
                     RecentLowStockProducts = await _context.Products
                         .Where(p => p.QuantityOnHand <= p.ReorderLevel && p.QuantityOnHand > 0)
                         .OrderBy(p => p.QuantityOnHand)

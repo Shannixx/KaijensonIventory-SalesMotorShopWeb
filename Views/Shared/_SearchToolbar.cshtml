@@ -1,0 +1,34 @@
+@model KaijensonIventory_SalesMotorShopWeb.ViewModels.SearchToolbarViewModel
+
+<div class="search-toolbar-card">
+    <form asp-action="@Model.ActionName"
+          asp-controller="@Model.ControllerName"
+          method="get"
+          class="search-toolbar-form">
+
+        <div class="search-toolbar-field">
+            <label class="visually-hidden" for="@Model.InputId">@Model.AriaLabel</label>
+            <input type="search"
+                   id="@Model.InputId"
+                   name="@Model.QueryParameterName"
+                   value="@Model.QueryValue"
+                   class="form-control search-toolbar-input"
+                   placeholder="@Model.Placeholder"
+                   aria-label="@Model.AriaLabel"
+                   autocomplete="off" />
+        </div>
+
+        <div class="search-toolbar-actions">
+            <button type="submit" class="btn btn-search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <span>Search</span>
+            </button>
+            <a asp-action="@Model.ClearActionName"
+               asp-controller="@Model.ClearControllerName"
+               class="btn btn-clear">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                <span>Clear</span>
+            </a>
+        </div>
+    </form>
+</div>

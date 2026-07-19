@@ -8,33 +8,31 @@
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
-            <div>
-                <label class="form-label">Search</label>
-                <input type="text" name="searchString" class="form-control" placeholder="Description or action..." value="@ViewData["CurrentFilter"]" style="min-width:180px;" />
-            </div>
-            <div>
-                <label class="form-label">Module</label>
-                <select name="module" class="form-select" asp-items="ViewBag.Modules" style="min-width:150px;">
-                    <option value="">All Modules</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-label">Date From</label>
-                <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" style="min-width:140px;" />
-            </div>
-            <div>
-                <label class="form-label">Date To</label>
-                <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" style="min-width:140px;" />
-            </div>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
-                <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
-            </div>
-        </form>
-    </div>
+<div class="search-toolbar-card">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <div>
+            <label class="form-label small">Search</label>
+            <input type="text" name="searchString" class="form-control search-toolbar-input" placeholder="Description or action..." value="@ViewData["CurrentFilter"]" />
+        </div>
+        <div>
+            <label class="form-label small">Module</label>
+            <select name="module" class="form-select" asp-items="ViewBag.Modules">
+                <option value="">All Modules</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label small">Date From</label>
+            <input type="date" name="dateFrom" class="form-control" value="@ViewData["DateFrom"]" />
+        </div>
+        <div>
+            <label class="form-label small">Date To</label>
+            <input type="date" name="dateTo" class="form-control" value="@ViewData["DateTo"]" />
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-search"><i class="bi bi-search"></i> Search</button>
+            <a asp-action="Index" class="btn-clear"><i class="bi bi-x-lg"></i> Clear</a>
+        </div>
+    </form>
 </div>
 
 <div class="card">

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
-    public class ActivityLogController : Controller
+    public class ActivityLogController : BaseController
     {
         private readonly ApplicationDbContext _context;
 

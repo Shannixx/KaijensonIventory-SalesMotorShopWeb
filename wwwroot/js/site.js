@@ -24,8 +24,9 @@
 
     function toggleSidebar() {
         if (isMobile()) {
-            sidebar.classList.toggle('show');
+            var isShow = sidebar.classList.toggle('show');
             if (overlay) overlay.classList.toggle('show');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', isShow ? 'true' : 'false');
         } else {
             var collapsed = sidebar.classList.toggle('collapsed');
             setStoredState(collapsed ? 'collapsed' : 'expanded');
@@ -50,6 +51,7 @@
     function closeMobileDrawer() {
         sidebar.classList.remove('show');
         if (overlay) overlay.classList.remove('show');
+        if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
     }
 
     /* ───────────────────────────────────
@@ -178,7 +180,9 @@
         resizeTimer = setTimeout(function () {
             if (isMobile()) {
                 sidebar.classList.remove('collapsed');
-                closeMobileDrawer();
+                sidebar.classList.remove('show');
+                if (overlay) overlay.classList.remove('show');
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
                 tooltipInstances.forEach(function (t) { t.dispose(); });
                 tooltipInstances = [];
             } else {
@@ -256,15 +260,80 @@
     }
 
     /* ───────────────────────────────────
-       DELETE-FORM CONFIRMATION (standard POST forms)
+       SHARED DELETE CONFIRMATION MODAL
        ─────────────────────────────────── */
-    document.addEventListener('submit', function (e) {
-        var form = e.target.closest('.delete-form');
-        if (!form) return;
-        var name = form.getAttribute('data-record-name') || 'this item';
-        if (!confirm('Are you sure you want to delete "' + name + '"?')) {
-            e.preventDefault();
+    document.addEventListener("DOMContentLoaded", function () {
+        var modalElement = document.getElementById("deleteConfirmationModal");
+        var modalTitle = document.getElementById("deleteConfirmationModalLabel");
+        var recordNameElement = document.getElementById("deleteConfirmationRecordName");
+        var confirmButton = document.getElementById("confirmDeleteButton");
+
+        if (!modalElement || !modalTitle || !recordNameElement || !confirmButton || typeof bootstrap === "undefined") {
+            return;
         }
+
+        var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        var pendingForm = null;
+        var pendingTrigger = null;
+        var isSubmitting = false;
+
+        document.addEventListener("click", function (event) {
+            var trigger = event.target.closest("[data-delete-trigger]");
+            if (!trigger || trigger.disabled) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var formId = trigger.getAttribute("data-delete-form-id");
+            var recordName = trigger.getAttribute("data-delete-record-name") || "this record";
+            var entityName = trigger.getAttribute("data-delete-entity-name") || "record";
+            var form = document.getElementById(formId);
+
+            if (!form) {
+                console.error("Delete form '" + formId + "' could not be found.");
+                return;
+            }
+
+            pendingForm = form;
+            pendingTrigger = trigger;
+            isSubmitting = false;
+
+            modalTitle.textContent = "Delete " + entityName;
+            recordNameElement.textContent = '"' + recordName + '"';
+            confirmButton.disabled = false;
+
+            modal.show();
+        });
+
+        confirmButton.addEventListener("click", function () {
+            if (!pendingForm || isSubmitting) {
+                return;
+            }
+
+            isSubmitting = true;
+            confirmButton.disabled = true;
+
+            HTMLFormElement.prototype.submit.call(pendingForm);
+        });
+
+        modalElement.addEventListener("shown.bs.modal", function () {
+            confirmButton.focus();
+        });
+
+        modalElement.addEventListener("hidden.bs.modal", function () {
+            if (!isSubmitting && pendingTrigger) {
+                pendingTrigger.focus();
+            }
+
+            pendingForm = null;
+            pendingTrigger = null;
+            isSubmitting = false;
+
+            confirmButton.disabled = false;
+            modalTitle.textContent = "Confirm deletion";
+            recordNameElement.textContent = "";
+        });
     });
 
     /* ───────────────────────────────────

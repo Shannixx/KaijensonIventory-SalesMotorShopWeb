@@ -4,17 +4,17 @@
     <div><h1>Staff</h1><p>Manage staff accounts.</p></div>
     <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create Staff</a>
 </div>
-@if (TempData["SuccessMessage"] != null) { <div class="alert alert-success mb-3">@TempData["SuccessMessage"]</div> }
-@if (TempData["ErrorMessage"] != null) { <div class="alert alert-danger mb-3">@TempData["ErrorMessage"]</div> }
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
-            <input type="text" name="searchString" class="form-control" placeholder="Search by name or username..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
-            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
-            <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
-        </form>
-    </div>
-</div>
+@{
+    var searchModel = new SearchToolbarViewModel
+    {
+        ControllerName = "Staff",
+        QueryValue = ViewData["CurrentFilter"] as string,
+        Placeholder = "Search by name or username...",
+        AriaLabel = "Search staff",
+        InputId = "searchStaff"
+    };
+}
+<partial name="_SearchToolbar" model="searchModel" />
 <div class="card"><div class="card-body p-0"><div class="table-container"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Contact</th><th>Role</th><th class="actions-column actions-column-wide">Actions</th></tr></thead><tbody>
 @foreach (var item in Model) {
     bool isYou = (ViewData["CurrentStaffId"] as int?) == item.StaffId;
@@ -35,9 +35,9 @@
                 <a asp-action="Details" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-view" title="View Staff Details" aria-label="View @item.StaffName"><i class="bi bi-eye"></i></a>
                 <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-edit" title="Edit Staff" aria-label="Edit @item.StaffName"><i class="bi bi-pencil"></i></a>
                 <a asp-action="ChangePassword" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-key" title="Change Password" aria-label="Change password for @item.StaffName"><i class="bi bi-key"></i></a>
-                <form asp-action="Delete" asp-route-id="@item.StaffId" method="post" class="action-form delete-form" data-record-name="@item.StaffName">
+                <form asp-action="Delete" asp-route-id="@item.StaffId" method="post" id="delete-staff-@item.StaffId" class="action-form">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Staff" aria-label="Delete @item.StaffName"><i class="bi bi-trash"></i></button>
+                    <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-staff-@item.StaffId" data-delete-record-name="@item.StaffName" data-delete-entity-name="staff" title="Delete staff" aria-label="Delete staff @item.StaffName"><i class="bi bi-trash"></i></button>
                 </form>
             </div>
         </td>

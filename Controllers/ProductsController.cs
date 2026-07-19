@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
-    public class ProductsController : Controller
+    public class ProductsController : BaseController
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
@@ -198,7 +198,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         });
                         await _context.SaveChangesAsync();
 
-                        TempData["Success"] = "Product created successfully.";
+                        TempData["SuccessMessage"] = "Product created successfully.";
                         return RedirectToAction(nameof(Index));
                     }
                     catch
@@ -322,41 +322,50 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     try
                     {
-                        Product? existing = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == id);
+                        Product? existing = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == id);
                         if (existing == null) return NotFound();
+
+                        existing.ProductName = product.ProductName;
+                        existing.Brand = product.Brand;
+                        existing.PartNumber = product.PartNumber;
+                        existing.CategoryId = product.CategoryId;
+                        existing.SupplierId = product.SupplierId;
+                        existing.ModelCompatibility = product.ModelCompatibility;
+                        existing.Description = product.Description;
+                        existing.Price = product.Price;
+                        existing.QuantityOnHand = product.QuantityOnHand;
+                        existing.AverageCost = product.AverageCost;
+                        existing.LeadTimeDays = product.LeadTimeDays;
+                        existing.UseAutoReorder = product.UseAutoReorder;
+
+                        if (product.UseAutoReorder)
+                        {
+                            existing.ReorderLevel = product.ReorderLevel;
+                            existing.LastRecalcDate = product.LastRecalcDate;
+                        }
+                        else
+                        {
+                            existing.ReorderLevel = product.ReorderLevel;
+                        }
+
+                        existing.StockStatus = CalculateStockStatus(existing.QuantityOnHand, existing.ReorderLevel);
 
                         if (imageFile != null)
                         {
                             DeleteImageFile(existing.ImagePath);
-                            product.ImagePath = await SaveImageAsync(imageFile);
+                            existing.ImagePath = await SaveImageAsync(imageFile);
                         }
-                        else
-                        {
-                            product.ImagePath = existing.ImagePath;
-                        }
-
-                        product.CreatedAt = existing.CreatedAt;
-
-                        if (product.UseAutoReorder)
-                        {
-                            product.ReorderLevel = existing.ReorderLevel;
-                            product.LastRecalcDate = existing.LastRecalcDate;
-                        }
-
-                        product.StockStatus = CalculateStockStatus(product.QuantityOnHand, product.ReorderLevel);
-
-                        _context.Products.Update(product);
 
                         _context.ActivityLogs.Add(new ActivityLog
                         {
                             StaffId = staffId,
                             Action = "Edit Product",
                             Module = "Product",
-                            Description = $"Product {product.ProductName} - Qty: {product.QuantityOnHand}, Price: {product.Price}"
+                            Description = $"Product {existing.ProductName} - Qty: {existing.QuantityOnHand}, Price: {existing.Price}"
                         });
 
                         await _context.SaveChangesAsync();
-                        TempData["Success"] = "Product updated successfully.";
+                        TempData["SuccessMessage"] = "Product updated successfully.";
                         return RedirectToAction(nameof(Index));
                     }
                     catch
@@ -459,7 +468,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 });
 
                 await _context.SaveChangesAsync();
-                TempData["Success"] = "Product deleted successfully.";
+                TempData["SuccessMessage"] = "Product deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch

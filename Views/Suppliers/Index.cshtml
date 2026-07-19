@@ -9,30 +9,17 @@
     <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Supplier</a>
 </div>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+@{
+    var searchModel = new SearchToolbarViewModel
+    {
+        ControllerName = "Suppliers",
+        QueryValue = ViewData["CurrentFilter"] as string,
+        Placeholder = "Search by company, contact person or number...",
+        AriaLabel = "Search suppliers",
+        InputId = "searchSuppliers"
+    };
 }
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<div class="card mb-3">
-    <div class="card-body">
-        <form asp-action="Index" method="get" class="d-flex flex-wrap gap-2 align-items-end">
-            <input type="text" name="searchString" class="form-control" placeholder="Search by company, contact person or number..." value="@ViewData["CurrentFilter"]" style="min-width:250px;" />
-            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
-            <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
-        </form>
-    </div>
-</div>
+<partial name="_SearchToolbar" model="searchModel" />
 
 <div class="card">
     <div class="card-body p-0">
@@ -59,9 +46,9 @@
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-view" title="View Supplier Details" aria-label="View @item.CompanyName"><i class="bi bi-eye"></i></a>
                                     <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-edit" title="Edit Supplier" aria-label="Edit @item.CompanyName"><i class="bi bi-pencil"></i></a>
-                                    <form asp-action="Delete" asp-route-id="@item.SupplierId" method="post" class="action-form delete-form" data-record-name="@item.CompanyName">
+                                    <form asp-action="Delete" asp-route-id="@item.SupplierId" method="post" id="delete-supplier-@item.SupplierId" class="action-form">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-icon btn-icon-delete" title="Delete Supplier" aria-label="Delete @item.CompanyName"><i class="bi bi-trash"></i></button>
+                                        <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-supplier-@item.SupplierId" data-delete-record-name="@item.CompanyName" data-delete-entity-name="supplier" title="Delete supplier" aria-label="Delete supplier @item.CompanyName"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </div>
                             </td>

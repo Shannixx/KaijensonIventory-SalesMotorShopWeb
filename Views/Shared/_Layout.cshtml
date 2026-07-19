@@ -4,6 +4,7 @@
     bool IsActive(string c, string a = "") =>
         string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) &&
         (string.IsNullOrEmpty(a) || string.Equals(action, a, StringComparison.OrdinalIgnoreCase));
+    string? ActiveAttr(string c, string a = "") => IsActive(c, a) ? "page" : null;
 
     string? staffName = Context.Session.GetString("StaffName");
     string? staffRole = Context.Session.GetString("StaffRole");
@@ -28,13 +29,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <aside class="sidebar" id="sidebar">
+    <a href="#main-content" class="visually-hidden-focusable" style="position:absolute;z-index:9999;padding:0.5rem 1rem;background:var(--primary);color:#fff;text-decoration:none;">Skip to main content</a>
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
         <div class="sidebar-header">
             <a asp-controller="Dashboard" asp-action="Index" class="sidebar-brand">
                 <i class="bi bi-wrench"></i>
                 <span class="brand-text">Kaijenson<br /><small>Motor Shop</small></span>
             </a>
-            <button class="sidebar-close d-lg-none" id="sidebarClose">
+            <button class="sidebar-close d-lg-none" id="sidebarClose" aria-label="Close navigation menu">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
@@ -42,7 +44,7 @@
             <nav class="sidebar-nav">
                 <ul class="nav-list">
                     <li class="nav-item">
-                        <a asp-controller="Dashboard" asp-action="Index" class="nav-link @(IsActive("Dashboard") ? "active" : "")" data-title="Dashboard">
+                        <a asp-controller="Dashboard" asp-action="Index" class="nav-link @(IsActive("Dashboard") ? "active" : "")" data-title="Dashboard" aria-current="@ActiveAttr("Dashboard")">
                             <i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span>
                         </a>
                     </li>
@@ -51,39 +53,39 @@
                 <div class="nav-section">Management</div>
                 <ul class="nav-list">
                     <li class="nav-item">
-                        <a asp-controller="Categories" asp-action="Index" class="nav-link @(IsActive("Categories") ? "active" : "")" data-title="Category">
+                        <a asp-controller="Categories" asp-action="Index" class="nav-link @(IsActive("Categories") ? "active" : "")" data-title="Category" aria-current="@ActiveAttr("Categories")">
                             <i class="bi bi-tags"></i><span>Category</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a asp-controller="Brands" asp-action="Index" class="nav-link @(IsActive("Brands") ? "active" : "")" data-title="Brand">
+                        <a asp-controller="Brands" asp-action="Index" class="nav-link @(IsActive("Brands") ? "active" : "")" data-title="Brand" aria-current="@ActiveAttr("Brands")">
                             <i class="bi bi-award"></i><span>Brand</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a asp-controller="Mechanics" asp-action="Index" class="nav-link @(IsActive("Mechanics") ? "active" : "")" data-title="Mechanic">
+                        <a asp-controller="Mechanics" asp-action="Index" class="nav-link @(IsActive("Mechanics") ? "active" : "")" data-title="Mechanic" aria-current="@ActiveAttr("Mechanics")">
                             <i class="bi bi-tools"></i><span>Mechanic</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a asp-controller="Suppliers" asp-action="Index" class="nav-link @(IsActive("Suppliers") ? "active" : "")" data-title="Supplier">
+                        <a asp-controller="Suppliers" asp-action="Index" class="nav-link @(IsActive("Suppliers") ? "active" : "")" data-title="Supplier" aria-current="@ActiveAttr("Suppliers")">
                             <i class="bi bi-truck"></i><span>Supplier</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a asp-controller="Products" asp-action="Index" class="nav-link @(IsActive("Products") ? "active" : "")" data-title="Product">
+                        <a asp-controller="Products" asp-action="Index" class="nav-link @(IsActive("Products") ? "active" : "")" data-title="Product" aria-current="@ActiveAttr("Products")">
                             <i class="bi bi-box-seam-fill"></i><span>Product</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a asp-controller="Services" asp-action="Index" class="nav-link @(IsActive("Services") ? "active" : "")" data-title="Service">
+                        <a asp-controller="Services" asp-action="Index" class="nav-link @(IsActive("Services") ? "active" : "")" data-title="Service" aria-current="@ActiveAttr("Services")">
                             <i class="bi bi-gear"></i><span>Service</span>
                         </a>
                     </li>
                     @if (isAdmin)
                     {
                         <li class="nav-item">
-                            <a asp-controller="Staff" asp-action="Index" class="nav-link @(IsActive("Staff") ? "active" : "")" data-title="Staff">
+                            <a asp-controller="Staff" asp-action="Index" class="nav-link @(IsActive("Staff") ? "active" : "")" data-title="Staff" aria-current="@ActiveAttr("Staff")">
                                 <i class="bi bi-people-fill"></i><span>Staff</span>
                             </a>
                         </li>
@@ -93,7 +95,7 @@
                 <div class="nav-section">System</div>
                 <ul class="nav-list">
                     <li class="nav-item">
-                        <a asp-controller="ActivityLog" asp-action="Index" class="nav-link @(IsActive("ActivityLog") ? "active" : "")" data-title="Activity Log">
+                        <a asp-controller="ActivityLog" asp-action="Index" class="nav-link @(IsActive("ActivityLog") ? "active" : "")" data-title="Activity Log" aria-current="@ActiveAttr("ActivityLog")">
                             <i class="bi bi-clock-history"></i><span>Activity Log</span>
                         </a>
                     </li>
@@ -110,17 +112,17 @@
     <div class="main-wrapper">
         <header class="top-header">
             <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-sidebar" id="sidebarToggle" title="Toggle Sidebar">
+                <button class="btn btn-sidebar" id="sidebarToggle" title="Toggle Sidebar" aria-label="Toggle navigation menu" aria-expanded="false">
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="search-box d-none d-md-flex">
                     <i class="bi bi-search"></i>
-                    <input type="text" class="form-control" placeholder="Search products..." id="globalSearch" />
+                    <input type="text" class="form-control" placeholder="Search products..." id="globalSearch" aria-label="Search products" />
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <div class="dropdown">
-                    <button class="btn dropdown-toggle d-flex align-items-center gap-2 bg-transparent border-0" data-bs-toggle="dropdown">
+                    <button class="btn dropdown-toggle d-flex align-items-center gap-2 bg-transparent border-0" data-bs-toggle="dropdown" aria-label="User menu">
                         <div class="avatar-sm" style="background: rgba(253,126,20,0.15); color: var(--primary); font-weight: 600;">@avatarChar</div>
                         <div class="d-none d-md-block text-start">
                             <div class="small fw-medium" style="line-height:1.2">@(staffName ?? "User")</div>
@@ -135,7 +137,8 @@
             </div>
         </header>
 
-        <main class="main-content">
+        <main class="main-content" id="main-content">
+            <partial name="_Alerts" />
             @RenderBody()
         </main>
     </div>
@@ -144,5 +147,7 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+
+    <partial name="_DeleteConfirmationModal" />
 </body>
 </html>
