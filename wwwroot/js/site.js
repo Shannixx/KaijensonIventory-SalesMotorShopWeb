@@ -209,12 +209,6 @@
     if (overlay) overlay.addEventListener('click', closeMobileDrawer);
     window.addEventListener('resize', handleResize);
 
-    // Global search
-    document.getElementById('globalSearch')?.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && this.value.trim()) {
-            window.location.href = '/Products?searchString=' + encodeURIComponent(this.value.trim());
-        }
-    });
 
     /* ───────────────────────────────────
        REPORT EXPORT BUTTONS

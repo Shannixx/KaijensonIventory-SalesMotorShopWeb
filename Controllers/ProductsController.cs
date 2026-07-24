@@ -89,7 +89,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 await PopulateProductFormOptionsAsync();
-                return View(new Product { UseAutoReorder = true, LeadTimeDays = 30 });
+                return View(new Product());
             }
             catch
             {
@@ -112,6 +112,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
+                product.LeadTimeDays = 30;
+                product.AverageCost = 0;
+                product.ReorderLevel = 0;
+                ModelState.ClearValidationState("LeadTimeDays");
+                ModelState.ClearValidationState("AverageCost");
+                ModelState.ClearValidationState("ReorderLevel");
+
                 // Validate required fields
                 if (string.IsNullOrWhiteSpace(product.ProductName))
                 {
@@ -126,11 +133,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (product.QuantityOnHand < 0)
                 {
                     ModelState.AddModelError("QuantityOnHand", "Quantity cannot be negative.");
-                }
-
-                if (!product.UseAutoReorder && product.ReorderLevel < 0)
-                {
-                    ModelState.AddModelError("ReorderLevel", "Reorder level cannot be negative.");
                 }
 
                 if (product.CategoryId <= 0)
@@ -175,16 +177,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         }
                     }
 
-                    if (product.UseAutoReorder)
-                    {
-                        product.ReorderLevel = 1;
-                        product.LastRecalcDate = DateTime.Now;
-                    }
-
                     try
                     {
                         product.ImagePath = await SaveImageAsync(imageFile);
-                        product.StockStatus = CalculateStockStatus(product.QuantityOnHand, product.ReorderLevel);
+                        product.StockStatus = CalculateStockStatus(product.QuantityOnHand, 0);
                         product.CreatedAt = DateTime.Now;
                         _context.Products.Add(product);
                         await _context.SaveChangesAsync();
@@ -257,6 +253,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             if (id != product.ProductId) return NotFound();
 
+            ModelState.ClearValidationState("LeadTimeDays");
+            ModelState.ClearValidationState("AverageCost");
+
             // Validate required fields
             if (string.IsNullOrWhiteSpace(product.ProductName))
             {
@@ -271,11 +270,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (product.QuantityOnHand < 0)
             {
                 ModelState.AddModelError("QuantityOnHand", "Quantity cannot be negative.");
-            }
-
-            if (!product.UseAutoReorder && product.ReorderLevel < 0)
-            {
-                ModelState.AddModelError("ReorderLevel", "Reorder level cannot be negative.");
             }
 
             if (product.CategoryId <= 0)
@@ -334,21 +328,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         existing.Description = product.Description;
                         existing.Price = product.Price;
                         existing.QuantityOnHand = product.QuantityOnHand;
-                        existing.AverageCost = product.AverageCost;
-                        existing.LeadTimeDays = product.LeadTimeDays;
-                        existing.UseAutoReorder = product.UseAutoReorder;
 
-                        if (product.UseAutoReorder)
-                        {
-                            existing.ReorderLevel = product.ReorderLevel;
-                            existing.LastRecalcDate = product.LastRecalcDate;
-                        }
-                        else
-                        {
-                            existing.ReorderLevel = product.ReorderLevel;
-                        }
-
-                        existing.StockStatus = CalculateStockStatus(existing.QuantityOnHand, existing.ReorderLevel);
+                        existing.StockStatus = CalculateStockStatus(existing.QuantityOnHand, 0);
 
                         if (imageFile != null)
                         {
@@ -397,8 +378,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .FirstOrDefaultAsync(p => p.ProductId == id);
 
                 if (product == null) return NotFound();
-
-                ViewBag.InventoryValue = product.QuantityOnHand * product.AverageCost;
 
                 return View(product);
             }

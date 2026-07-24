@@ -9,18 +9,9 @@
         "Available" => "bg-success",
         _ => "bg-success"
     };
-    string statusLabel = Model.StockStatus switch
-    {
-        "Out of Stock" => "Out of Stock",
-        "Low Stock" => "Low Stock",
-        "Available" when Model.QuantityOnHand > Model.ReorderLevel * 2 => "Healthy",
-        "Available" => "Low Stock",
-        _ => Model.StockStatus
-    };
+    string statusLabel = Model.StockStatus;
     if (Model.QuantityOnHand <= 0) { statusLabel = "Out of Stock"; badgeClass = "bg-danger"; }
-    else if (Model.QuantityOnHand <= Model.ReorderLevel / 2) { statusLabel = "Critical"; badgeClass = "bg-danger"; }
-    else if (Model.QuantityOnHand <= Model.ReorderLevel) { statusLabel = "Low Stock"; badgeClass = "bg-warning text-dark"; }
-    else { statusLabel = "Healthy"; badgeClass = "bg-success"; }
+    else { statusLabel = "Available"; badgeClass = "bg-success"; }
 }
 
 <div class="page-header">
@@ -44,33 +35,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon warning"><i class="bi bi-arrow-repeat"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Reorder Level</p>
-                <h3 class="metric-value">@Model.ReorderLevel</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon info"><i class="bi bi-clock"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Lead Time</p>
-                <h3 class="metric-value">@Model.LeadTimeDays days</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon success"><i class="bi bi-currency-dollar"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Inventory Value</p>
-                <h3 class="metric-value" data-prefix="₱">₱@ViewBag.InventoryValue?.ToString("N2")</h3>
-            </div>
-        </div>
-    </div>
+
 </div>
 
 <div class="card">
@@ -94,13 +59,7 @@
                     <tr><th>Category</th><td>@Model.Category?.CategoryName</td></tr>
                     <tr><th>Supplier</th><td><a asp-controller="Suppliers" asp-action="Details" asp-route-id="@Model.SupplierId">@Model.Supplier?.CompanyName</a> &middot; @Model.Supplier?.ContactNumber</td></tr>
                     <tr><th>Price</th><td class="fw-semibold fs-5">@Model.Price.ToString("N2")</td></tr>
-                    <tr><th>Average Cost</th><td>@Model.AverageCost.ToString("N2")</td></tr>
                     <tr><th>Current Stock</th><td>@Model.QuantityOnHand <span class="badge @badgeClass ms-2">@statusLabel</span></td></tr>
-                    <tr><th>Reorder Level</th><td>
-                        @Model.ReorderLevel
-                        @if (Model.UseAutoReorder) { <span class="badge bg-info ms-1">Auto</span> }
-                    </td></tr>
-                    <tr><th>Lead Time (Days)</th><td>@Model.LeadTimeDays</td></tr>
 
                     <tr><th>Created At</th><td>@Model.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td></tr>
                 </table>
