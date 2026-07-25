@@ -15,6 +15,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<Service> Services => Set<Service>();
         public DbSet<Staff> Staff => Set<Staff>();
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+        public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+        public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -43,6 +45,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
 
             modelBuilder.Entity<ActivityLog>()
                 .HasOne(l => l.Staff).WithMany().HasForeignKey(l => l.StaffId).OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<PurchaseOrder>()
+                .HasOne(p => p.Supplier).WithMany(s => s.PurchaseOrders).HasForeignKey(p => p.SupplierId).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseOrder>()
+                .HasOne(p => p.Staff).WithMany().HasForeignKey(p => p.CreatedBy).OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseOrder>()
+                .HasIndex(p => p.PurchaseOrderNumber).IsUnique();
+
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .HasOne(i => i.PurchaseOrder).WithMany(po => po.Items).HasForeignKey(i => i.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .HasOne(i => i.Product).WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Category>().HasData(
                 new Category { CategoryId = 1, CategoryName = "Lubricant" },

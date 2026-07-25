@@ -11,6 +11,8 @@
     string avatarChar = !string.IsNullOrEmpty(staffName) ? staffName[..1].ToUpper() : "K";
     bool isAdmin = string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(staffRole, "Owner", StringComparison.OrdinalIgnoreCase);
+    bool isOwnerOrManager = isAdmin ||
+                   string.Equals(staffRole, "Manager", StringComparison.OrdinalIgnoreCase);
 }
 
 <!DOCTYPE html>
@@ -77,6 +79,14 @@
                             <i class="bi bi-box-seam-fill"></i><span>Product</span>
                         </a>
                     </li>
+                    @if (isOwnerOrManager)
+                    {
+                        <li class="nav-item">
+                            <a asp-controller="PurchaseOrders" asp-action="Index" class="nav-link @(IsActive("PurchaseOrders") ? "active" : "")" data-title="Purchase Order" aria-current="@ActiveAttr("PurchaseOrders")">
+                                <i class="bi bi-cart-check"></i><span>Purchase Order</span>
+                            </a>
+                        </li>
+                    }
                     <li class="nav-item">
                         <a asp-controller="Services" asp-action="Index" class="nav-link @(IsActive("Services") ? "active" : "")" data-title="Service" aria-current="@ActiveAttr("Services")">
                             <i class="bi bi-gear"></i><span>Service</span>

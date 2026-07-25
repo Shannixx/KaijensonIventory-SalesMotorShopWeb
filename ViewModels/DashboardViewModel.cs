@@ -12,7 +12,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public int TotalSuppliers { get; set; }
         public int TotalMechanics { get; set; }
         public int LowStockRequireReorder { get; set; }
+        public int PendingPOCount { get; set; }
         public List<Product> RecentLowStockProducts { get; set; } = new();
+        public List<PurchaseOrder> RecentPurchaseOrders { get; set; } = new();
         public List<string> CategoryLabels { get; set; } = new();
         public List<int> CategoryCounts { get; set; } = new();
     }

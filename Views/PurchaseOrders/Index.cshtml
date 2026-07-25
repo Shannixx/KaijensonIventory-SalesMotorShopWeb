@@ -1,0 +1,94 @@
+@model IEnumerable<KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrder>
+@{ ViewData["Title"] = "Purchase Orders"; }
+
+<div class="page-header">
+    <div>
+        <h1>Purchase Orders</h1>
+        <p>Manage purchase orders.</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Purchase Order</a>
+</div>
+
+<div class="search-toolbar-card">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <div>
+            <label class="form-label small">Search</label>
+            <input type="text" name="searchString" class="form-control" placeholder="PO number or supplier..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
+        </div>
+        <div>
+            <label class="form-label small">Status</label>
+            <select name="statusFilter" class="form-select" style="min-width:150px;">
+                <option value="">All Status</option>
+                <option value="Pending" selected="@(ViewData["StatusFilter"]?.ToString() == "Pending")">Pending</option>
+                <option value="Approved" selected="@(ViewData["StatusFilter"]?.ToString() == "Approved")">Approved</option>
+                <option value="Delivered" selected="@(ViewData["StatusFilter"]?.ToString() == "Delivered")">Delivered</option>
+                <option value="Cancelled" selected="@(ViewData["StatusFilter"]?.ToString() == "Cancelled")">Cancelled</option>
+            </select>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-search"><i class="bi bi-search"></i> Filter</button>
+            <a asp-action="Index" class="btn-clear"><i class="bi bi-x-lg"></i> Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>PO Number</th>
+                        <th>Supplier</th>
+                        <th>Order Date</th>
+                        <th>Expected Delivery</th>
+                        <th>Status</th>
+                        <th>Total Amount</th>
+                        <th class="actions-column actions-column-wide">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><span class="fw-medium">@item.PurchaseOrderNumber</span></td>
+                            <td>@item.Supplier?.CompanyName</td>
+                            <td>@item.OrderDate.ToString("MMM dd, yyyy")</td>
+                            <td>@(item.ExpectedDeliveryDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+                            <td>
+                                @if (item.Status == "Pending") { <span class="badge bg-warning">Pending</span> }
+                                else if (item.Status == "Approved") { <span class="badge bg-primary">Approved</span> }
+                                else if (item.Status == "Delivered") { <span class="badge bg-success">Delivered</span> }
+                                else if (item.Status == "Cancelled") { <span class="badge bg-danger">Cancelled</span> }
+                            </td>
+                            <td class="fw-semibold">@item.TotalAmount.ToString("N2")</td>
+                            <td class="action-cell action-cell-wide">
+                                <div class="action-buttons">
+                                    <a asp-action="Details" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-view" title="View Purchase Order" aria-label="View @item.PurchaseOrderNumber"><i class="bi bi-eye"></i></a>
+                                    @if (item.Status == "Pending")
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-edit" title="Edit Purchase Order" aria-label="Edit @item.PurchaseOrderNumber"><i class="bi bi-pencil"></i></a>
+                                    }
+                                    <a asp-action="Print" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon" style="color:var(--text-secondary);border-color:var(--border-color);" title="Print Purchase Order" aria-label="Print @item.PurchaseOrderNumber" target="_blank"><i class="bi bi-printer"></i></a>
+                                    @if (item.Status == "Pending")
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-po-@item.PurchaseOrderId" data-delete-record-name="@item.PurchaseOrderNumber" data-delete-entity-name="purchase order" title="Delete purchase order" aria-label="Delete purchase order @item.PurchaseOrderNumber"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No purchase orders found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pagination" />

@@ -65,6 +65,13 @@
             <h3 class="metric-value" data-countup="@Model.TotalMechanics">0</h3>
         </div>
     </div>
+    <div class="metric-card">
+        <div class="metric-icon warning"><i class="bi bi-cart-check"></i></div>
+        <div class="metric-info">
+            <p class="metric-label">Pending POs</p>
+            <h3 class="metric-value" data-countup="@Model.PendingPOCount">0</h3>
+        </div>
+    </div>
 </div>
 
 <div class="dashboard-panels">
@@ -92,6 +99,42 @@
                         @if (!Model.RecentLowStockProducts.Any())
                         {
                             <tr><td colspan="3" class="text-center py-4 text-muted">No low stock items.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-panels" style="margin-top:1.25rem;">
+    <div class="dashboard-table-card">
+        <div class="dashboard-card-header d-flex justify-content-between align-items-center">
+            <span>Recent Purchase Orders</span>
+            <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="dashboard-card-body p-0">
+            <div class="table-container">
+                <table class="table">
+                    <thead><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Total</th></tr></thead>
+                    <tbody>
+                        @foreach (var po in Model.RecentPurchaseOrders)
+                        {
+                            <tr>
+                                <td><a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@po.PurchaseOrderId">@po.PurchaseOrderNumber</a></td>
+                                <td>@po.Supplier?.CompanyName</td>
+                                <td>
+                                    @if (po.Status == "Pending") { <span class="badge bg-warning">Pending</span> }
+                                    else if (po.Status == "Approved") { <span class="badge bg-primary">Approved</span> }
+                                    else if (po.Status == "Delivered") { <span class="badge bg-success">Delivered</span> }
+                                    else if (po.Status == "Cancelled") { <span class="badge bg-danger">Cancelled</span> }
+                                </td>
+                                <td class="fw-semibold">@po.TotalAmount.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (!Model.RecentPurchaseOrders.Any())
+                        {
+                            <tr><td colspan="4" class="text-center py-4 text-muted">No purchase orders yet.</td></tr>
                         }
                     </tbody>
                 </table>

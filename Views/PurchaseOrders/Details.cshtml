@@ -1,0 +1,181 @@
+@model PurchaseOrderViewModel
+@{
+    ViewData["Title"] = "Purchase Order Details";
+    string badgeClass = Model.Status switch
+    {
+        "Pending" => "bg-warning",
+        "Approved" => "bg-primary",
+        "Delivered" => "bg-success",
+        "Cancelled" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+
+<div class="page-header">
+    <div>
+        <h1>@Model.PurchaseOrderNumber</h1>
+        <p>Purchase order details.</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (Model.Status == "Pending")
+        {
+            <a asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" class="btn btn-warning"><i class="bi bi-pencil"></i> Edit</a>
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Approved" />
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Approve</button>
+            </form>
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Cancelled" />
+                <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg"></i> Cancel</button>
+            </form>
+        }
+        @if (Model.Status == "Approved")
+        {
+            <form asp-action="UpdateStatus" asp-route-id="@Model.PurchaseOrderId" method="post" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="Delivered" />
+                <button type="submit" class="btn btn-success"><i class="bi bi-check-all"></i> Mark as Delivered</button>
+            </form>
+        }
+        <a asp-action="Print" asp-route-id="@Model.PurchaseOrderId" class="btn btn-secondary" target="_blank"><i class="bi bi-printer"></i> Print</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon primary"><i class="bi bi-receipt"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Status</p>
+                <span class="badge @badgeClass" style="font-size:14px;padding:4px 14px;">@Model.Status</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon info"><i class="bi bi-currency-dollar"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Total Amount</p>
+                <h3 class="metric-value">@Model.TotalAmount.ToString("N2")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon accent"><i class="bi bi-box-seam"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Items</p>
+                <h3 class="metric-value">@Model.Items.Count</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <div class="metric-icon warning-light"><i class="bi bi-calendar"></i></div>
+            <div class="metric-info">
+                <p class="metric-label">Order Date</p>
+                <h3 class="metric-value" style="font-size:1.1rem;">@Model.OrderDate.ToString("MMM dd, yyyy")</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Supplier Information</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-2">Company</dt>
+            <dd class="col-sm-4">@Model.SupplierName</dd>
+            <dt class="col-sm-2">Contact Person</dt>
+            <dd class="col-sm-4">@(Model.ContactPerson ?? "N/A")</dd>
+            <dt class="col-sm-2">Contact Number</dt>
+            <dd class="col-sm-4">@(Model.ContactNumber ?? "N/A")</dd>
+            <dt class="col-sm-2">Address</dt>
+            <dd class="col-sm-4">@(Model.SupplierAddress ?? "N/A")</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Products</span>
+        <span class="fw-bold">Grand Total: @Model.TotalAmount.ToString("N2")</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-container">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Product</th>
+                                <th>Brand</th>
+                                <th>Stock</th>
+                                <th>Price</th>
+                                <th>Qty</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int idx = 1;
+                                foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>@idx</td>
+                                        <td>
+                                            <span class="fw-medium">@item.ProductName</span>
+                                        </td>
+                                        <td>@(item.Brand ?? "")</td>
+                                        <td>@item.CurrentStock</td>
+                                        <td>@item.Price.ToString("N2")</td>
+                                        <td>@item.Quantity</td>
+                                        <td class="text-end fw-semibold">@item.Subtotal.ToString("N2")</td>
+                                    </tr>
+                                    idx++;
+                                }
+                            }
+                            @if (!Model.Items.Any())
+                            {
+                                <tr><td colspan="7" class="text-center py-3 text-muted">No items.</td></tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-active">
+                                <td colspan="6" class="text-end fw-bold">Grand Total</td>
+                                <td class="text-end fw-bold fs-5">@Model.TotalAmount.ToString("N2")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Remarks))
+{
+    <div class="card mb-4">
+        <div class="card-header">Remarks</div>
+        <div class="card-body">
+            <p class="mb-0">@Model.Remarks</p>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">Audit Information</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-2">Created By</dt>
+            <dd class="col-sm-4">@(Model.CreatedByName ?? "N/A")</dd>
+            <dt class="col-sm-2">Created Date</dt>
+            <dd class="col-sm-4">@(Model.CreatedDate?.ToString("MMM dd, yyyy h:mm tt") ?? "N/A")</dd>
+            @if (Model.UpdatedDate.HasValue)
+            {
+                <dt class="col-sm-2">Last Updated</dt>
+                <dd class="col-sm-4">@Model.UpdatedDate.Value.ToString("MMM dd, yyyy h:mm tt")</dd>
+            }
+        </dl>
+    </div>
+</div>

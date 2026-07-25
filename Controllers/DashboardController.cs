@@ -46,9 +46,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TotalCategories = await _context.Categories.CountAsync(),
                     TotalSuppliers = await _context.Suppliers.CountAsync(),
                     TotalMechanics = await _context.Mechanics.CountAsync(),
+                    PendingPOCount = await _context.PurchaseOrders
+                        .CountAsync(p => p.Status == "Pending"),
                     RecentLowStockProducts = await _context.Products
                         .Where(p => p.QuantityOnHand <= p.ReorderLevel && p.QuantityOnHand > 0)
                         .OrderBy(p => p.QuantityOnHand)
+                        .Take(5)
+                        .AsNoTracking()
+                        .ToListAsync(),
+                    RecentPurchaseOrders = await _context.PurchaseOrders
+                        .Include(p => p.Supplier)
+                        .OrderByDescending(p => p.CreatedDate)
                         .Take(5)
                         .AsNoTracking()
                         .ToListAsync(),
