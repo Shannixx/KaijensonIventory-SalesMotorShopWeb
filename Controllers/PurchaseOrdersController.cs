@@ -13,10 +13,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class PurchaseOrdersController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<PurchaseOrdersController> _logger;
 
-        public PurchaseOrdersController(ApplicationDbContext context)
+        public PurchaseOrdersController(ApplicationDbContext context, ILogger<PurchaseOrdersController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         private bool IsOwnerOrManager()
@@ -85,8 +87,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(orders);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading purchase orders");
                 TempData["ErrorMessage"] = "An error occurred while loading purchase orders. Please try again.";
                 return View(new List<PurchaseOrder>());
             }
@@ -111,8 +114,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(new PurchaseOrderViewModel());
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading purchase order create form");
                 TempData["ErrorMessage"] = "An error occurred while loading the form. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -158,6 +162,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             ModelState.AddModelError($"Items[{i}].Quantity", "Quantity must be greater than 0.");
                         }
                     }
+                }
+
+                if (viewModel.ExpectedDeliveryDate.HasValue && viewModel.ExpectedDeliveryDate < viewModel.OrderDate)
+                {
+                    ModelState.AddModelError("ExpectedDeliveryDate", "Expected delivery date must be on or after the order date.");
                 }
 
                 if (ModelState.IsValid)
@@ -221,8 +230,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return RedirectToAction(nameof(Index));
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating purchase order");
                 TempData["ErrorMessage"] = "An error occurred while creating the purchase order. Please try again.";
             }
 
@@ -287,8 +297,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(viewModel);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading purchase order details for {Id}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading purchase order details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -350,8 +361,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(viewModel);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error loading purchase order {Id} for editing", id);
                 TempData["ErrorMessage"] = "An error occurred while loading the purchase order for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -413,6 +425,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     }
                 }
 
+                if (viewModel.ExpectedDeliveryDate.HasValue && viewModel.ExpectedDeliveryDate < viewModel.OrderDate)
+                {
+                    ModelState.AddModelError("ExpectedDeliveryDate", "Expected delivery date must be on or after the order date.");
+                }
+
                 if (ModelState.IsValid)
                 {
                     order.SupplierId = viewModel.SupplierId;
@@ -468,8 +485,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return RedirectToAction(nameof(Details), new { id = order.PurchaseOrderId });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating purchase order {Id}", id);
                 TempData["ErrorMessage"] = "An error occurred while updating the purchase order. Please try again.";
             }
 
@@ -529,8 +547,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = $"Purchase Order {poNumber} deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error deleting purchase order {Id}", id);
                 TempData["ErrorMessage"] = "An error occurred while deleting the purchase order. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -617,8 +636,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = $"Purchase Order {order.PurchaseOrderNumber} status updated to '{status}'.";
                 return RedirectToAction(nameof(Details), new { id });
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating status for purchase order {Id}", id);
                 TempData["ErrorMessage"] = "An error occurred while updating the purchase order status. Please try again.";
                 return RedirectToAction(nameof(Details), new { id });
             }
@@ -690,8 +710,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return File(pdfBytes, "application/pdf", $"PO-{order.PurchaseOrderNumber}.pdf");
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error printing purchase order {Id}", id);
                 TempData["ErrorMessage"] = "An error occurred while generating the PDF. Please try again.";
                 return RedirectToAction(nameof(Details), new { id });
             }

@@ -817,6 +817,16 @@ a:hover { color: var(--primary-hover); }
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
+.btn-icon-print {
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+.btn-icon-print:hover {
+    background: var(--text-secondary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
 /* ===================================================================
    7. BUTTONS
    =================================================================== */
@@ -1112,6 +1122,11 @@ a:hover { color: var(--primary-hover); }
 
 .form-card-narrow {
     max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-card-wide {
+    max-width: 960px;
     margin: 0 auto;
 }
 

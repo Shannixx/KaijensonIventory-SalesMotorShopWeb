@@ -50,7 +50,7 @@
             <div class="metric-icon primary"><i class="bi bi-receipt"></i></div>
             <div class="metric-info">
                 <p class="metric-label">Status</p>
-                <span class="badge @badgeClass" style="font-size:14px;padding:4px 14px;">@Model.Status</span>
+                <h3 class="metric-value"><span class="badge @badgeClass" style="font-size:14px;padding:4px 14px;">@Model.Status</span></h3>
             </div>
         </div>
     </div>
@@ -106,49 +106,49 @@
     </div>
     <div class="card-body p-0">
         <div class="table-container">
-                    <table class="table mb-0">
-                        <thead>
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Brand</th>
+                        <th>Stock</th>
+                        <th>Price</th>
+                        <th>Qty</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int idx = 1;
+                        foreach (var item in Model.Items)
+                        {
                             <tr>
-                                <th>#</th>
-                                <th>Product</th>
-                                <th>Brand</th>
-                                <th>Stock</th>
-                                <th>Price</th>
-                                <th>Qty</th>
-                                <th class="text-end">Subtotal</th>
+                                <td>@idx</td>
+                                <td>
+                                    <span class="fw-medium">@item.ProductName</span>
+                                </td>
+                                <td>@(item.Brand ?? "")</td>
+                                <td>@item.CurrentStock</td>
+                                <td>@item.Price.ToString("N2")</td>
+                                <td>@item.Quantity</td>
+                                <td class="text-end fw-semibold">@item.Subtotal.ToString("N2")</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @{
-                                int idx = 1;
-                                foreach (var item in Model.Items)
-                                {
-                                    <tr>
-                                        <td>@idx</td>
-                                        <td>
-                                            <span class="fw-medium">@item.ProductName</span>
-                                        </td>
-                                        <td>@(item.Brand ?? "")</td>
-                                        <td>@item.CurrentStock</td>
-                                        <td>@item.Price.ToString("N2")</td>
-                                        <td>@item.Quantity</td>
-                                        <td class="text-end fw-semibold">@item.Subtotal.ToString("N2")</td>
-                                    </tr>
-                                    idx++;
-                                }
-                            }
-                            @if (!Model.Items.Any())
-                            {
-                                <tr><td colspan="7" class="text-center py-3 text-muted">No items.</td></tr>
-                            }
-                        </tbody>
-                        <tfoot>
-                            <tr class="table-active">
-                                <td colspan="6" class="text-end fw-bold">Grand Total</td>
-                                <td class="text-end fw-bold fs-5">@Model.TotalAmount.ToString("N2")</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            idx++;
+                        }
+                    }
+                    @if (!Model.Items.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-3 text-muted">No items.</td></tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <td colspan="6" class="text-end fw-bold">Grand Total</td>
+                        <td class="text-end fw-bold fs-5">@Model.TotalAmount.ToString("N2")</td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     </div>
 </div>

@@ -8,7 +8,7 @@
     </div>
 </div>
 
-<div class="card form-card form-card-wide" style="max-width:960px;">
+<div class="card form-card form-card-wide">
     <div class="card-body">
         <form asp-action="Edit" id="poForm">
             <input type="hidden" asp-for="PurchaseOrderId" />
@@ -130,7 +130,6 @@
                 row.querySelector('.price-display').textContent = selectedOption ? parseFloat(selectedOption.getAttribute('data-price') || 0).toFixed(2) : '0.00';
                 updateRowSubtotal(row);
                 updateGrandTotal();
-                updateSupplierInfo();
             });
 
             var qty = row.querySelector('.item-qty');
