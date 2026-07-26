@@ -96,19 +96,49 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        var products = @Html.Raw(Json.Serialize(ViewBag.Products));
+        var products = [];
         var existingItems = @Html.Raw(Json.Serialize(Model.Items));
         var itemIndex = 0;
 
-        function addItemRow(data) {
-            var container = document.getElementById('itemsContainer');
-            var row = document.createElement('tr');
-
+        function buildProductOptions(data) {
             var options = '<option value="">-- Select Product --</option>';
             products.forEach(function (p) {
                 var selected = (data && data.productId == p.productId) ? 'selected' : '';
                 options += '<option value="' + p.productId + '" data-brand="' + (p.brand || '') + '" data-stock="' + p.quantityOnHand + '" data-price="' + p.price + '" ' + selected + '>' + p.productName + '</option>';
             });
+            return options;
+        }
+
+        function refreshAllProductOptions() {
+            document.querySelectorAll('.product-select').forEach(function (sel) {
+                var currentVal = sel.value;
+                sel.innerHTML = buildProductOptions({ productId: currentVal ? parseInt(currentVal) : 0 });
+            });
+        }
+
+        function loadProducts(supplierId) {
+            if (!supplierId) {
+                products = [];
+                refreshAllProductOptions();
+                return;
+            }
+            fetch('/PurchaseOrders/GetProductsBySupplier/' + supplierId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    products = data;
+                    refreshAllProductOptions();
+                })
+                .catch(function () {
+                    products = [];
+                    refreshAllProductOptions();
+                });
+        }
+
+        function addItemRow(data) {
+            var container = document.getElementById('itemsContainer');
+            var row = document.createElement('tr');
+
+            var options = buildProductOptions(data);
 
             row.innerHTML =
                 '<td><select name="Items[' + itemIndex + '].ProductId" class="form-select form-select-sm product-select">' + options + '</select></td>' +
@@ -136,6 +166,7 @@
             qty.addEventListener('input', function () { updateRowSubtotal(row); updateGrandTotal(); });
 
             row.querySelector('.remove-item').addEventListener('click', function () {
+                if (!confirm('Remove this product from the order?')) return;
                 row.remove();
                 updateGrandTotal();
             });
@@ -170,8 +201,10 @@
             var infoDiv = document.getElementById('supplierInfo');
             if (!supplierId) {
                 infoDiv.classList.add('d-none');
+                loadProducts(0);
                 return;
             }
+            loadProducts(supplierId);
             fetch('/PurchaseOrders/GetSupplierInfo/' + supplierId)
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -188,7 +221,21 @@
 
         // Load existing items
         if (existingItems && existingItems.length > 0) {
-            existingItems.forEach(function (item) { addItemRow(item); });
+            // Load products for the current supplier first, then populate rows
+            var supplierId = document.getElementById('supplierSelect').value;
+            if (supplierId) {
+                fetch('/PurchaseOrders/GetProductsBySupplier/' + supplierId)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        products = data;
+                        existingItems.forEach(function (item) { addItemRow(item); });
+                    })
+                    .catch(function () {
+                        existingItems.forEach(function (item) { addItemRow(item); });
+                    });
+            } else {
+                existingItems.forEach(function (item) { addItemRow(item); });
+            }
         } else {
             addItemRow();
         }

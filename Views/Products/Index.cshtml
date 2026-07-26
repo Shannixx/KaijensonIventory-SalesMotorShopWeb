@@ -37,6 +37,7 @@
                         <th style="width:50px;">Image</th>
                         <th>ID</th>
                         <th>Name</th>
+                        <th>Supplier</th>
                         <th>Brand</th>
                         <th>Part #</th>
                         <th>Category</th>
@@ -62,6 +63,7 @@
                             </td>
                             <td>@item.ProductId</td>
                             <td><span class="fw-medium">@item.ProductName</span></td>
+                            <td>@item.Supplier?.CompanyName</td>
                             <td>@(item.Brand ?? "-")</td>
                             <td><span class="small">@(item.PartNumber ?? "-")</span></td>
                             <td>@item.Category?.CategoryName</td>
@@ -86,7 +88,7 @@
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="10" class="text-center py-4 text-muted">No products found.</td></tr>
+                        <tr><td colspan="11" class="text-center py-4 text-muted">No products found.</td></tr>
                     }
                 </tbody>
             </table>

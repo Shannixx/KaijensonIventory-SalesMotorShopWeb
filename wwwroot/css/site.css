@@ -1381,9 +1381,8 @@ textarea.form-control { min-height: 80px; resize: vertical; }
    17. PRINT
    =================================================================== */
 @media print {
-    .sidebar, .top-header, .page-header .btn, .btn, .footer, .card-header .btn { display: none !important; }
-    .main-wrapper { margin-left: 0 !important; }
-    .main-content { padding: 0 !important; }
-    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
     body { background: #fff !important; }
+    body * { visibility: hidden; }
+    .print-preview-wrapper, .print-preview-wrapper * { visibility: visible; }
+    .print-preview-wrapper { position: absolute; left: 0; top: 0; width: 100%; padding: 20px 40px; }
 }

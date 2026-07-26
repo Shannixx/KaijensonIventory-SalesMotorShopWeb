@@ -30,6 +30,10 @@
                 <input type="hidden" name="status" value="Cancelled" />
                 <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg"></i> Cancel</button>
             </form>
+            <form asp-action="Delete" asp-route-id="@Model.PurchaseOrderId" method="post" id="delete-po-@Model.PurchaseOrderId" class="action-form" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <button type="button" class="btn btn-outline-danger" data-delete-trigger data-delete-form-id="delete-po-@Model.PurchaseOrderId" data-delete-record-name="@Model.PurchaseOrderNumber" data-delete-entity-name="purchase order"><i class="bi bi-trash"></i> Delete</button>
+            </form>
         }
         @if (Model.Status == "Approved")
         {
@@ -39,7 +43,7 @@
                 <button type="submit" class="btn btn-success"><i class="bi bi-check-all"></i> Mark as Delivered</button>
             </form>
         }
-        <a asp-action="Print" asp-route-id="@Model.PurchaseOrderId" class="btn btn-secondary" target="_blank"><i class="bi bi-printer"></i> Print</a>
+        <button type="button" class="btn btn-secondary" onclick="openPrintPreview(@Model.PurchaseOrderId, '@Model.PurchaseOrderNumber')"><i class="bi bi-printer"></i> Print</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
     </div>
 </div>

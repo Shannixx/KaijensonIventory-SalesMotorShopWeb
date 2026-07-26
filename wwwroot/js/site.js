@@ -338,8 +338,8 @@
     document.body.appendChild(loadingBar);
 
     /* ───────────────────────────────────
-       SMOOTH PAGE TRANSITION
-       ─────────────────────────────────── */
+        SMOOTH PAGE TRANSITION
+        ─────────────────────────────────── */
     document.addEventListener('DOMContentLoaded', function () {
         var mainContent = document.querySelector('.main-content');
         if (mainContent) {
@@ -348,4 +348,46 @@
         initImagePreview();
     });
 
+    /* ───────────────────────────────────
+       PRINT PREVIEW MODAL
+       ─────────────────────────────────── */
+    window.openPrintPreview = function (poId, poNumber) {
+        var modalEl = document.getElementById('printPreviewModal');
+        if (!modalEl) return;
+
+        var bodyEl = document.getElementById('printPreviewBody');
+        var poNumberEl = document.getElementById('printPreviewPONumber');
+        var printBtn = document.getElementById('printPreviewBtn');
+
+        poNumberEl.textContent = poNumber;
+
+        bodyEl.innerHTML =
+            '<div class="text-center py-5">' +
+            '<div class="spinner-border text-primary" role="status">' +
+            '<span class="visually-hidden">Loading...</span></div>' +
+            '<p class="mt-2 text-muted">Loading print preview...</p></div>';
+
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        fetch('/PurchaseOrders/PrintPreviewHtml/' + poId)
+            .then(function (r) {
+                if (!r.ok) throw new Error('Failed to load print preview');
+                return r.text();
+            })
+            .then(function (html) {
+                bodyEl.innerHTML = html;
+            })
+            .catch(function () {
+                bodyEl.innerHTML = '<div class="alert alert-danger mb-0">Failed to load print preview. Please try again.</div>';
+            });
+
+        printBtn.onclick = function () {
+            window.print();
+        };
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            bodyEl.innerHTML = '';
+        }, { once: true });
+    };
 })();

@@ -1,0 +1,125 @@
+@model PurchaseOrderViewModel
+@{
+    string statusBadgeClass = Model.Status switch
+    {
+        "Pending" => "bg-warning",
+        "Approved" => "bg-primary",
+        "Delivered" => "bg-success",
+        "Cancelled" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+<div class="print-preview-wrapper">
+    <div class="print-preview-header d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="print-shop-name mb-0">KAIJENSON MOTOR SHOP</h1>
+            <p class="print-po-title mb-0">Purchase Order</p>
+        </div>
+        <div class="text-end">
+            <div class="print-po-number fw-bold fs-5">PO #: @Model.PurchaseOrderNumber</div>
+            <div class="print-po-date">Date: @Model.OrderDate.ToString("MMM dd, yyyy")</div>
+            @if (Model.ExpectedDeliveryDate.HasValue)
+            {
+                <div class="print-po-delivery">Expected Delivery: @Model.ExpectedDeliveryDate.Value.ToString("MMM dd, yyyy")</div>
+            }
+            <div class="print-po-status">Status: <span class="badge @statusBadgeClass">@Model.Status</span></div>
+        </div>
+    </div>
+
+    <hr class="my-3" />
+
+    <div class="print-supplier-section mb-4">
+        <h5 class="fw-bold mb-2">Supplier Information</h5>
+        <table class="table table-sm table-borderless mb-0 print-supplier-table">
+            <tr><td style="width:120px;" class="fw-semibold">Company:</td><td>@Model.SupplierName</td></tr>
+            <tr><td class="fw-semibold">Contact:</td><td>@(Model.ContactPerson ?? "N/A")</td></tr>
+            <tr><td class="fw-semibold">Phone:</td><td>@(Model.ContactNumber ?? "N/A")</td></tr>
+            <tr><td class="fw-semibold">Address:</td><td>@(Model.SupplierAddress ?? "N/A")</td></tr>
+        </table>
+    </div>
+
+    <hr class="my-3" />
+
+    <div class="print-items-section mb-4">
+        <table class="table table-bordered print-items-table mb-0">
+            <thead>
+                <tr class="print-table-header">
+                    <th style="width:40px;" class="text-center">#</th>
+                    <th>Product</th>
+                    <th>Brand</th>
+                    <th style="width:90px;" class="text-end">Price</th>
+                    <th style="width:70px;" class="text-center">Qty</th>
+                    <th style="width:110px;" class="text-end">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int idx = 1;
+                    foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-center">@idx</td>
+                            <td>@item.ProductName</td>
+                            <td>@(item.Brand ?? "")</td>
+                            <td class="text-end">@item.Price.ToString("N2")</td>
+                            <td class="text-center">@item.Quantity</td>
+                            <td class="text-end fw-semibold">@item.Subtotal.ToString("N2")</td>
+                        </tr>
+                        idx++;
+                    }
+                }
+                @if (!Model.Items.Any())
+                {
+                    <tr><td colspan="6" class="text-center py-3 text-muted">No items.</td></tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="print-total-row">
+                    <td colspan="5" class="text-end fw-bold fs-5">Total Amount:</td>
+                    <td class="text-end fw-bold fs-5">@Model.TotalAmount.ToString("N2")</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Remarks))
+    {
+        <div class="print-remarks-section mb-4">
+            <h5 class="fw-bold mb-1">Remarks:</h5>
+            <p class="mb-0">@Model.Remarks</p>
+        </div>
+    }
+
+    <hr class="my-3" />
+
+    <div class="print-signatures row mt-4">
+        <div class="col-5">
+            <p class="fw-bold mb-5">Prepared By:</p>
+            <p class="mb-0">@(Model.CreatedByName ?? "________________________")</p>
+            <hr class="m-0" />
+        </div>
+        <div class="col-2"></div>
+        <div class="col-5">
+            <p class="fw-bold mb-5">Approved By:</p>
+            <p class="mb-0">________________________</p>
+            <hr class="m-0" />
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        body * { visibility: hidden; }
+        .print-preview-wrapper, .print-preview-wrapper * { visibility: visible; }
+        .print-preview-wrapper { position: absolute; left: 0; top: 0; width: 100%; padding: 20px 40px; }
+        .print-shop-name { font-size: 22px; font-weight: 800; }
+        .print-po-title { font-size: 16px; }
+        .print-table-header th { background-color: #FF7F11 !important; color: #fff !important; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-total-row td { border-top: 2px solid #000; }
+        .print-items-table { border-collapse: collapse; width: 100%; }
+        .print-items-table th, .print-items-table td { border: 1px solid #dee2e6; padding: 6px 10px; font-size: 11px; }
+        .print-supplier-table td { font-size: 12px; padding: 2px 0; }
+        .print-signatures hr { border-top: 1px solid #000; }
+        .print-preview-actions { display: none !important; }
+    }
+</style>

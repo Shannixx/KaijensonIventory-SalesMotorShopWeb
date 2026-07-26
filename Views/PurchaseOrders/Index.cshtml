@@ -69,7 +69,7 @@
                                     {
                                         <a asp-action="Edit" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-edit" title="Edit Purchase Order" aria-label="Edit @item.PurchaseOrderNumber"><i class="bi bi-pencil"></i></a>
                                     }
-                                    <a asp-action="Print" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-print" title="Print Purchase Order" aria-label="Print @item.PurchaseOrderNumber" target="_blank"><i class="bi bi-printer"></i></a>
+                                    <button type="button" class="btn btn-icon btn-icon-print" title="Print Purchase Order" aria-label="Print @item.PurchaseOrderNumber" onclick="openPrintPreview(@item.PurchaseOrderId, '@item.PurchaseOrderNumber')"><i class="bi bi-printer"></i></button>
                                     @if (item.Status == "Pending")
                                     {
                                         <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form">

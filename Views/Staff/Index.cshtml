@@ -11,7 +11,9 @@
         QueryValue = ViewData["CurrentFilter"] as string,
         Placeholder = "Search by name or username...",
         AriaLabel = "Search staff",
-        InputId = "searchStaff"
+        InputId = "searchStaff",
+        ClearActionName = "Index",
+        ClearControllerName = "Staff"
     };
 }
 <partial name="_SearchToolbar" model="searchModel" />

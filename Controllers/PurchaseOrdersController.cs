@@ -673,6 +673,82 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             });
         }
 
+        [HttpGet]
+        public async Task<JsonResult> GetProductsBySupplier(int supplierId)
+        {
+            var products = await _context.Products
+                .AsNoTracking()
+                .Where(p => p.SupplierId == supplierId)
+                .OrderBy(p => p.ProductName)
+                .Select(p => new
+                {
+                    p.ProductId,
+                    p.ProductName,
+                    p.Brand,
+                    p.QuantityOnHand,
+                    p.Price
+                })
+                .ToListAsync();
+
+            return Json(products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PrintPreviewHtml(int id)
+        {
+            var accessCheck = CheckAccess();
+            if (accessCheck != null) return accessCheck;
+
+            try
+            {
+                var order = await _context.PurchaseOrders
+                    .Include(p => p.Supplier)
+                    .Include(p => p.Staff)
+                    .Include(p => p.Items).ThenInclude(i => i.Product)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
+
+                if (order == null) return NotFound();
+
+                var viewModel = new PurchaseOrderViewModel
+                {
+                    PurchaseOrderId = order.PurchaseOrderId,
+                    PurchaseOrderNumber = order.PurchaseOrderNumber,
+                    SupplierId = order.SupplierId,
+                    SupplierName = order.Supplier?.CompanyName,
+                    ContactPerson = order.Supplier?.ContactPerson,
+                    ContactNumber = order.Supplier?.ContactNumber,
+                    SupplierAddress = order.Supplier?.Address,
+                    OrderDate = order.OrderDate,
+                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+                    Status = order.Status,
+                    TotalAmount = order.TotalAmount,
+                    Remarks = order.Remarks,
+                    CreatedByName = order.Staff?.StaffName,
+                    CreatedDate = order.CreatedDate,
+                    UpdatedDate = order.UpdatedDate,
+                    Items = order.Items.Select(i => new PurchaseOrderItemViewModel
+                    {
+                        PurchaseOrderItemId = i.PurchaseOrderItemId,
+                        ProductId = i.ProductId,
+                        ProductName = i.Product?.ProductName,
+                        Brand = i.Product?.Brand,
+                        CurrentStock = i.Product?.QuantityOnHand ?? 0,
+                        Quantity = i.Quantity,
+                        Price = i.Price,
+                        Subtotal = i.Subtotal
+                    }).ToList()
+                };
+
+                return PartialView("_PrintPreview", viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading print preview for purchase order {Id}", id);
+                return StatusCode(500, "An error occurred while loading the print preview.");
+            }
+        }
+
         public async Task<IActionResult> Print(int id)
         {
             var accessCheck = CheckAccess();

@@ -16,7 +16,9 @@
         QueryValue = ViewData["CurrentFilter"] as string,
         Placeholder = "Search by company, contact person or number...",
         AriaLabel = "Search suppliers",
-        InputId = "searchSuppliers"
+        InputId = "searchSuppliers",
+        ClearActionName = "Index",
+        ClearControllerName = "Suppliers"
     };
 }
 <partial name="_SearchToolbar" model="searchModel" />
