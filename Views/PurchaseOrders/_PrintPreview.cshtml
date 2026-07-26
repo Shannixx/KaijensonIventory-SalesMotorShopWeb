@@ -55,18 +55,18 @@
             <tbody>
                 @{
                     int idx = 1;
-                    foreach (var item in Model.Items)
-                    {
-                        <tr>
-                            <td class="text-center">@idx</td>
-                            <td>@item.ProductName</td>
-                            <td>@(item.Brand ?? "")</td>
-                            <td class="text-end">@item.Price.ToString("N2")</td>
-                            <td class="text-center">@item.Quantity</td>
-                            <td class="text-end fw-semibold">@item.Subtotal.ToString("N2")</td>
-                        </tr>
-                        idx++;
-                    }
+                }
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td class="text-center">@idx</td>
+                        <td>@item.ProductName</td>
+                        <td>@(item.Brand ?? "")</td>
+                        <td class="text-end">@item.Price.ToString("N2")</td>
+                        <td class="text-center">@item.Quantity</td>
+                        <td class="text-end fw-semibold">@item.Subtotal.ToString("N2")</td>
+                    </tr>
+                    idx++;
                 }
                 @if (!Model.Items.Any())
                 {
