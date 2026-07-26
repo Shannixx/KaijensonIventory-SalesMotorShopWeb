@@ -312,12 +312,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (order == null) return NotFound();
 
-                if (order.Status != "Pending")
-                {
-                    TempData["ErrorMessage"] = "Only pending purchase orders can be edited.";
-                    return RedirectToAction(nameof(Details), new { id });
-                }
-
                 var viewModel = new PurchaseOrderViewModel
                 {
                     PurchaseOrderId = order.PurchaseOrderId,
@@ -377,12 +371,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
 
                 if (order == null) return NotFound();
-
-                if (order.Status != "Pending")
-                {
-                    TempData["ErrorMessage"] = "Only pending purchase orders can be edited.";
-                    return RedirectToAction(nameof(Details), new { id });
-                }
 
                 if (viewModel.SupplierId <= 0)
                 {
@@ -513,12 +501,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     TempData["ErrorMessage"] = "The purchase order could not be found.";
                     return RedirectToAction(nameof(Index));
-                }
-
-                if (order.Status != "Pending")
-                {
-                    TempData["ErrorMessage"] = "Only pending purchase orders can be deleted.";
-                    return RedirectToAction(nameof(Details), new { id });
                 }
 
                 string poNumber = order.PurchaseOrderNumber;

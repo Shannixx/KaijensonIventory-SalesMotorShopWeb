@@ -1381,8 +1381,87 @@ textarea.form-control { min-height: 80px; resize: vertical; }
    17. PRINT
    =================================================================== */
 @media print {
+    @page { margin: 12mm; size: auto; }
+
     body { background: #fff !important; }
     body * { visibility: hidden; }
     .print-preview-wrapper, .print-preview-wrapper * { visibility: visible; }
-    .print-preview-wrapper { position: absolute; left: 0; top: 0; width: 100%; padding: 20px 40px; }
+    .print-preview-wrapper {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
+        font-size: 10pt;
+        line-height: 1.4;
+    }
+    .print-preview-wrapper .print-shop-name {
+        font-size: 18pt;
+        font-weight: 800;
+        margin: 0;
+    }
+    .print-preview-wrapper .print-po-title {
+        font-size: 12pt;
+        margin: 0;
+    }
+
+    .print-preview-header { page-break-after: avoid; }
+    .print-supplier-section { page-break-inside: avoid; page-break-after: avoid; }
+
+    .print-items-table { width: 100%; border-collapse: collapse; }
+    .print-items-table th,
+    .print-items-table td {
+        border: 1px solid #dee2e6;
+        padding: 4px 6px;
+        font-size: 9pt;
+    }
+    .print-items-table th {
+        background-color: #FF7F11 !important;
+        color: #fff !important;
+        font-weight: 700;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .print-items-table tbody tr { page-break-inside: avoid; }
+    .print-items-table tfoot { page-break-inside: avoid; }
+    .print-items-table tfoot td {
+        border-top: 2px solid #000;
+        font-size: 11pt;
+    }
+
+    .print-supplier-table td {
+        font-size: 9pt;
+        padding: 1px 0;
+    }
+
+    .print-signatures { page-break-inside: avoid; margin-top: 20mm; }
+    .print-signatures hr { border-top: 1px solid #000; }
+
+    .modal {
+        position: static !important;
+        overflow: visible !important;
+    }
+    .modal-dialog,
+    .modal-dialog-scrollable {
+        position: static !important;
+        margin: 0 !important;
+        max-height: none !important;
+    }
+    .modal-content {
+        overflow: visible !important;
+        max-height: none !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .modal-body {
+        overflow: visible !important;
+        padding: 0 !important;
+    }
+    .modal-header,
+    .modal-footer {
+        display: none !important;
+    }
+    .modal-backdrop {
+        display: none !important;
+    }
 }
