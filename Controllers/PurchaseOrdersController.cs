@@ -674,11 +674,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         }
 
         [HttpGet]
-        public async Task<JsonResult> GetProductsBySupplier(int supplierId)
+        public async Task<JsonResult> GetProductsBySupplier(int id)
         {
             var products = await _context.Products
                 .AsNoTracking()
-                .Where(p => p.SupplierId == supplierId)
+                .Where(p => p.SupplierId == id)
                 .OrderBy(p => p.ProductName)
                 .Select(p => new
                 {
