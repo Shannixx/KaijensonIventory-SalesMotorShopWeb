@@ -9,20 +9,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class DashboardController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<DashboardController> _logger;
 
-        public DashboardController(ApplicationDbContext context)
+        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index()
         {
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -66,8 +65,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(viewModel);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading the dashboard.");
                 TempData["ErrorMessage"] = "An error occurred while loading the dashboard. Please try again.";
                 return View(new DashboardViewModel());
             }

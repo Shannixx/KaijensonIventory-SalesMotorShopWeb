@@ -8,18 +8,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class CategoriesController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<CategoriesController> _logger;
 
-        public CategoriesController(ApplicationDbContext context)
+        public CategoriesController(ApplicationDbContext context, ILogger<CategoriesController> logger)
         {
             _context = context;
-        }
-
-        private bool IsOwnerOrManager()
-        {
-            string? role = HttpContext.Session.GetString("StaffRole");
-            return string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
+            _logger = logger;
         }
 
         private int? GetStaffId()
@@ -84,8 +78,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 return View(categories);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading categories.");
                 TempData["ErrorMessage"] = "An error occurred while loading categories. Please try again.";
                 return View(new List<Category>());
             }
@@ -104,8 +99,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (category == null) return NotFound();
                 return View(category);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading category details. CategoryId: {CategoryId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading category details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -160,8 +156,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
                 return View(category);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while creating category.");
                 TempData["ErrorMessage"] = "An error occurred while creating the category. Please try again.";
                 return View(category);
             }
@@ -180,8 +177,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (category == null) return NotFound();
                 return View(category);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading category for editing. CategoryId: {CategoryId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading the category for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -228,16 +226,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["SuccessMessage"] = $"Category '{category.CategoryName}' updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateConcurrencyException ex)
                 {
+                    _logger.LogWarning(ex, "Concurrency conflict while updating category. CategoryId: {CategoryId}", id);
                     if (!await _context.Categories.AnyAsync(c => c.CategoryId == category.CategoryId))
                         return NotFound();
 
                     TempData["ErrorMessage"] = "The category was modified by another user. Please try again.";
                     return View(category);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Error occurred while updating category. CategoryId: {CategoryId}", id);
                     TempData["ErrorMessage"] = "An error occurred while updating the category. Please try again.";
                     return View(category);
                 }
@@ -296,8 +296,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = $"Category '{name}' deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while deleting category. CategoryId: {CategoryId}", id);
                 TempData["ErrorMessage"] = "The category could not be deleted because it is still referenced by other records.";
                 return RedirectToAction(nameof(Index));
             }

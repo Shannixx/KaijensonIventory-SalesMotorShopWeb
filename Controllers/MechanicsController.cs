@@ -8,21 +8,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class MechanicsController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<MechanicsController> _logger;
 
-        public MechanicsController(ApplicationDbContext context)
+        public MechanicsController(ApplicationDbContext context, ILogger<MechanicsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index(string? searchString, int page = 1)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -55,9 +53,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanics);
             }
-            catch
+            catch (Exception ex)
             {
-                // Log the exception in a real application
+                _logger.LogError(ex, "Error occurred while loading mechanics.");
                 TempData["ErrorMessage"] = "An error occurred while loading mechanics. Please try again.";
                 return View(new List<Mechanic>());
             }
@@ -65,13 +63,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Details(int? id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id == null) return NotFound();
 
@@ -82,8 +76,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanic);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading mechanic details. MechanicId: {MechanicId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading mechanic details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -91,13 +86,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public IActionResult Create()
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             return View();
         }
@@ -106,13 +97,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("MechanicName,Specialization,ContactNumber,Address")] Mechanic mechanic)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             // Server-side validation
             if (string.IsNullOrWhiteSpace(mechanic.MechanicName))
@@ -132,7 +119,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         Action = "Create Mechanic",
                         Module = "Mechanic",
                         Description = $"Created mechanic: {mechanic.MechanicName}",
-                        StaffId = staffId,
+                        StaffId = GetCurrentStaffId(),
                         Timestamp = DateTime.Now
                     });
                     await _context.SaveChangesAsync();
@@ -140,8 +127,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["SuccessMessage"] = "Mechanic created successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Error occurred while creating mechanic.");
                     TempData["ErrorMessage"] = "An error occurred while creating the mechanic. Please try again.";
                     return View(mechanic);
                 }
@@ -152,13 +140,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Edit(int? id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id == null) return NotFound();
 
@@ -169,8 +153,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanic);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading mechanic for editing. MechanicId: {MechanicId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading mechanic for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -180,13 +165,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("MechanicId,MechanicName,Specialization,ContactNumber,Address")] Mechanic mechanic)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id != mechanic.MechanicId) return NotFound();
 
@@ -208,7 +189,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         Action = "Edit Mechanic",
                         Module = "Mechanic",
                         Description = $"Edited mechanic: {mechanic.MechanicName}",
-                        StaffId = staffId,
+                        StaffId = GetCurrentStaffId(),
                         Timestamp = DateTime.Now
                     });
                     await _context.SaveChangesAsync();
@@ -216,16 +197,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["SuccessMessage"] = "Mechanic updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateConcurrencyException ex)
                 {
+                    _logger.LogWarning(ex, "Concurrency conflict while updating mechanic. MechanicId: {MechanicId}", id);
                     if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == id))
                         return NotFound();
 
                     TempData["ErrorMessage"] = "The mechanic was modified by another user. Please try again.";
                     return View(mechanic);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Error occurred while updating mechanic. MechanicId: {MechanicId}", id);
                     TempData["ErrorMessage"] = "An error occurred while updating the mechanic. Please try again.";
                     return View(mechanic);
                 }
@@ -236,13 +219,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Delete(int? id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id == null) return NotFound();
 
@@ -260,8 +239,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(mechanic);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading mechanic for deletion. MechanicId: {MechanicId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading mechanic for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -271,13 +251,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -301,7 +277,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     Action = "Delete Mechanic",
                     Module = "Mechanic",
                     Description = $"Deleted mechanic: {name}",
-                    StaffId = staffId,
+                    StaffId = GetCurrentStaffId(),
                     Timestamp = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
@@ -309,8 +285,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Mechanic deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while deleting mechanic. MechanicId: {MechanicId}", id);
                 TempData["ErrorMessage"] = "An error occurred while deleting the mechanic. Please try again.";
                 return RedirectToAction(nameof(Index));
             }

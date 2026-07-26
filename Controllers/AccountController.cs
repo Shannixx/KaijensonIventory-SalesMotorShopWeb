@@ -157,7 +157,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             try
             {
@@ -173,7 +173,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         Module = "Auth",
                         Description = $"Staff {staffName} logged out."
                     });
-                    _context.SaveChanges();
+                    await _context.SaveChangesAsync();
                 }
 
                 HttpContext.Session.Clear();

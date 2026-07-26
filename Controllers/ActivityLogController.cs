@@ -9,21 +9,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class ActivityLogController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<ActivityLogController> _logger;
 
-        public ActivityLogController(ApplicationDbContext context)
+        public ActivityLogController(ApplicationDbContext context, ILogger<ActivityLogController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index(string? searchString, string? module, DateTime? dateFrom, DateTime? dateTo, int page = 1)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -33,7 +31,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .AsNoTracking();
 
                 if (!string.IsNullOrWhiteSpace(searchString))
-                    query = query.Where(l => l.Description!.Contains(searchString) || l.Action.Contains(searchString));
+                    query = query.Where(l => (l.Description != null && l.Description.Contains(searchString)) || l.Action.Contains(searchString));
 
                 if (!string.IsNullOrWhiteSpace(module))
                     query = query.Where(l => l.Module == module);
@@ -63,8 +61,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(logs);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while retrieving activity logs.");
                 TempData["ErrorMessage"] = "An error occurred while loading activity logs. Please try again.";
                 return View(new List<ActivityLog>());
             }

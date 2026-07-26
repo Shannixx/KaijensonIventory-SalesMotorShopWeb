@@ -21,14 +21,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _logger = logger;
         }
 
-        private bool IsOwnerOrManager()
-        {
-            string? role = HttpContext.Session.GetString("StaffRole");
-            return string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
-        }
-
         private IActionResult? CheckAccess()
         {
             if (!IsSessionValid())

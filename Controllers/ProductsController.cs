@@ -11,22 +11,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(ApplicationDbContext context, IWebHostEnvironment env)
+        public ProductsController(ApplicationDbContext context, IWebHostEnvironment env, ILogger<ProductsController> logger)
         {
             _context = context;
             _env = env;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index(string? searchString, int? categoryId, int page = 1)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -69,8 +67,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(products);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading products.");
                 TempData["ErrorMessage"] = "An error occurred while loading products. Please try again.";
                 return View(new List<Product>());
             }
@@ -78,21 +77,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Create()
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
                 await PopulateProductFormOptionsAsync();
                 return View(new Product());
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading the product creation form.");
                 TempData["ErrorMessage"] = "An error occurred while loading the product creation form. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -102,13 +98,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Product product, IFormFile? imageFile)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -187,7 +179,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                         _context.ActivityLogs.Add(new ActivityLog
                         {
-                            StaffId = staffId,
+                            StaffId = GetCurrentStaffId(),
                             Action = "Create Product",
                             Module = "Product",
                             Description = $"Product {product.ProductName} - Qty: {product.QuantityOnHand}, Price: {product.Price}"
@@ -197,8 +189,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         TempData["SuccessMessage"] = "Product created successfully.";
                         return RedirectToAction(nameof(Index));
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        _logger.LogError(ex, "Error occurred during product creation save.");
                         TempData["ErrorMessage"] = "An error occurred while creating the product. Please try again.";
                     }
                 }
@@ -206,8 +199,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                 return View(product);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while creating a product.");
                 TempData["ErrorMessage"] = "An error occurred while creating the product. Please try again.";
                 await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                 return View(product);
@@ -216,13 +210,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -232,8 +222,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 await PopulateProductFormOptionsAsync(product.CategoryId, product.SupplierId, product.Brand);
                 return View(product);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading product for editing.");
                 TempData["ErrorMessage"] = "An error occurred while loading the product for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -243,13 +234,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Product product, IFormFile? imageFile)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id != product.ProductId) return NotFound();
 
@@ -339,7 +326,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                         _context.ActivityLogs.Add(new ActivityLog
                         {
-                            StaffId = staffId,
+                            StaffId = GetCurrentStaffId(),
                             Action = "Edit Product",
                             Module = "Product",
                             Description = $"Product {existing.ProductName} - Qty: {existing.QuantityOnHand}, Price: {existing.Price}"
@@ -349,8 +336,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         TempData["SuccessMessage"] = "Product updated successfully.";
                         return RedirectToAction(nameof(Index));
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        _logger.LogError(ex, "Error occurred while updating product.");
                         TempData["ErrorMessage"] = "An error occurred while updating the product. Please try again.";
                     }
                 }
@@ -361,13 +349,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -381,8 +365,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(product);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading product details.");
                 TempData["ErrorMessage"] = "An error occurred while loading product details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -390,13 +375,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Delete(int id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -410,8 +391,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(product);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading the product for deletion.");
                 TempData["ErrorMessage"] = "An error occurred while loading the product for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -421,13 +403,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -440,7 +418,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    StaffId = staffId,
+                    StaffId = GetCurrentStaffId(),
                     Action = "Delete Product",
                     Module = "Product",
                     Description = $"Product {product.ProductName} deleted"
@@ -450,8 +428,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = "Product deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while deleting the product.");
                 TempData["ErrorMessage"] = "An error occurred while deleting the product. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -508,9 +487,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return "~/uploads/products/" + fileName;
             }
-            catch
+            catch (Exception ex)
             {
-                // Log the exception in a real application
+                _logger.LogError(ex, "Failed to save image file.");
                 throw new InvalidOperationException("Failed to save image file. Please try again.");
             }
         }

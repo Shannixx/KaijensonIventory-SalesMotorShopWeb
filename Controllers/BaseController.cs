@@ -22,6 +22,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                    string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase);
         }
 
+        protected bool IsOwnerOrManager()
+        {
+            string? role = HttpContext.Session.GetString("StaffRole");
+            return string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
+        }
+
         protected int GetCurrentStaffId()
         {
             return HttpContext.Session.GetInt32("StaffId") ?? 0;

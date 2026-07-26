@@ -9,21 +9,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class SuppliersController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<SuppliersController> _logger;
 
-        public SuppliersController(ApplicationDbContext context)
+        public SuppliersController(ApplicationDbContext context, ILogger<SuppliersController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index(string? searchString, int page = 1)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -33,8 +31,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
                     query = query.Where(s => s.CompanyName.Contains(searchString) ||
-                                             s.ContactPerson!.Contains(searchString) ||
-                                             s.ContactNumber!.Contains(searchString));
+                                             (s.ContactPerson != null && s.ContactPerson.Contains(searchString)) ||
+                                             (s.ContactNumber != null && s.ContactNumber.Contains(searchString)));
                 }
 
                 int total = await query.CountAsync();
@@ -50,8 +48,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 return View(suppliers);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading suppliers.");
                 TempData["ErrorMessage"] = "An error occurred while loading suppliers. Please try again.";
                 return View(new List<Supplier>());
             }
@@ -59,13 +58,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Details(int? id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id == null) return NotFound();
 
@@ -82,8 +77,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(supplier);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading supplier details. SupplierId: {SupplierId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading supplier details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -91,13 +87,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public IActionResult Create()
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             return View();
         }
@@ -106,13 +98,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("CompanyName,ContactPerson,ContactNumber,Address")] Supplier supplier)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -137,7 +125,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
-                        StaffId = staffId,
+                        StaffId = GetCurrentStaffId(),
                         Action = "Create Supplier",
                         Module = "Supplier",
                         Description = $"Created supplier '{supplier.CompanyName}'."
@@ -149,8 +137,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
                 return View(supplier);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while creating supplier.");
                 TempData["ErrorMessage"] = "An error occurred while creating the supplier. Please try again.";
                 return View(supplier);
             }
@@ -158,13 +147,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Edit(int? id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id == null) return NotFound();
 
@@ -175,8 +160,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(supplier);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading supplier for editing. SupplierId: {SupplierId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading the supplier for editing. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -186,13 +172,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("SupplierId,CompanyName,ContactPerson,ContactNumber,Address")] Supplier supplier)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id != supplier.SupplierId) return NotFound();
 
@@ -219,7 +201,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
-                        StaffId = staffId,
+                        StaffId = GetCurrentStaffId(),
                         Action = "Edit Supplier",
                         Module = "Supplier",
                         Description = $"Edited supplier '{supplier.CompanyName}'."
@@ -229,16 +211,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["SuccessMessage"] = $"Supplier '{supplier.CompanyName}' updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateConcurrencyException ex)
                 {
+                    _logger.LogWarning(ex, "Concurrency conflict while updating supplier. SupplierId: {SupplierId}", id);
                     if (!await _context.Suppliers.AnyAsync(s => s.SupplierId == supplier.SupplierId))
                         return NotFound();
 
                     TempData["ErrorMessage"] = "The supplier was modified by another user. Please try again.";
                     return View(supplier);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Error occurred while updating supplier. SupplierId: {SupplierId}", id);
                     TempData["ErrorMessage"] = "An error occurred while updating the supplier. Please try again.";
                     return View(supplier);
                 }
@@ -248,13 +232,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Delete(int? id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             if (id == null) return NotFound();
 
@@ -277,8 +257,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 return View(supplier);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while loading supplier for deletion. SupplierId: {SupplierId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading the supplier for deletion. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -288,13 +269,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            // Validate session
-            int? staffId = HttpContext.Session.GetInt32("StaffId");
-            if (!staffId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Session expired. Please log in again.";
-                return RedirectToAction("Login", "Account");
-            }
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
 
             try
             {
@@ -317,7 +294,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    StaffId = staffId,
+                    StaffId = GetCurrentStaffId(),
                     Action = "Delete Supplier",
                     Module = "Supplier",
                     Description = $"Deleted supplier '{name}'."
@@ -327,8 +304,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = $"Supplier '{name}' deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while deleting supplier. SupplierId: {SupplierId}", id);
                 TempData["ErrorMessage"] = "An error occurred while deleting the supplier. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
