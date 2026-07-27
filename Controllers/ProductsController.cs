@@ -149,7 +149,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (ModelState.IsValid)
                 {
                     // Check duplicate product name
-                    bool nameExists = await _context.Products.AnyAsync(p => p.ProductName == product.ProductName);
+                    bool nameExists = await _context.Products.AnyAsync(p =>
+                        p.ProductName == product.ProductName &&
+                        (p.Brand ?? "") == (product.Brand ?? "") &&
+                        p.SupplierId == product.SupplierId);
                     if (nameExists)
                     {
                         ModelState.AddModelError("ProductName", "A product with this name already exists.");
@@ -281,7 +284,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (ModelState.IsValid)
                 {
                     // Check duplicate product name (exclude self)
-                    bool nameExists = await _context.Products.AnyAsync(p => p.ProductName == product.ProductName && p.ProductId != id);
+                    bool nameExists = await _context.Products.AnyAsync(p =>
+                        p.ProductName == product.ProductName &&
+                        (p.Brand ?? "") == (product.Brand ?? "") &&
+                        p.SupplierId == product.SupplierId &&
+                        p.ProductId != id);
                     if (nameExists)
                     {
                         ModelState.AddModelError("ProductName", "A product with this name already exists.");

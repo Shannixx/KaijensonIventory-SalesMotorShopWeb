@@ -65,9 +65,12 @@
                             <td class="action-cell action-cell-wide">
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-view" title="View Purchase Order" aria-label="View @item.PurchaseOrderNumber"><i class="bi bi-eye"></i></a>
-                                    <a asp-action="Edit" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-edit" title="Edit Purchase Order" aria-label="Edit @item.PurchaseOrderNumber"><i class="bi bi-pencil"></i></a>
+                                    @if (item.Status == "Pending" || item.Status == "Approved")
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-edit" title="Edit Purchase Order" aria-label="Edit @item.PurchaseOrderNumber"><i class="bi bi-pencil"></i></a>
+                                    }
                                     <button type="button" class="btn btn-icon btn-icon-print" title="Print Purchase Order" aria-label="Print @item.PurchaseOrderNumber" onclick="openPrintPreview(@item.PurchaseOrderId, '@item.PurchaseOrderNumber')"><i class="bi bi-printer"></i></button>
-                                    @if (item.Status == "Pending")
+                                    @if (item.Status == "Pending" || item.Status == "Approved")
                                     {
                                         <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form">
                                             @Html.AntiForgeryToken()

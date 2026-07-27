@@ -87,7 +87,7 @@
                 <button type="submit" class="btn btn-app-primary">
                     <i class="bi bi-check-lg"></i> Update Purchase Order
                 </button>
-                <a asp-action="Index" class="btn btn-app-secondary">Cancel</a>
+                <a asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-app-secondary">Cancel</a>
             </div>
         </form>
     </div>
@@ -245,7 +245,18 @@
             updateSupplierInfo();
         }
 
+        function reindexRows() {
+            var rows = document.querySelectorAll('#itemsContainer tr');
+            rows.forEach(function (row, index) {
+                row.querySelectorAll('[name^="Items["]').forEach(function (el) {
+                    var name = el.getAttribute('name');
+                    el.setAttribute('name', name.replace(/Items\[\d+\]/, 'Items[' + index + ']'));
+                });
+            });
+        }
+
         document.getElementById('poForm').addEventListener('submit', function (e) {
+            reindexRows();
             var hasProduct = false;
             document.querySelectorAll('.product-select').forEach(function (sel) {
                 if (sel.value) hasProduct = true;

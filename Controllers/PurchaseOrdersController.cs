@@ -312,6 +312,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (order == null) return NotFound();
 
+                if (order.Status == "Delivered" || order.Status == "Cancelled")
+                {
+                    TempData["ErrorMessage"] = "Cannot edit a purchase order that has been delivered or cancelled.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
                 var viewModel = new PurchaseOrderViewModel
                 {
                     PurchaseOrderId = order.PurchaseOrderId,
@@ -371,6 +377,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
 
                 if (order == null) return NotFound();
+
+                if (order.Status == "Delivered" || order.Status == "Cancelled")
+                {
+                    TempData["ErrorMessage"] = "Cannot edit a purchase order that has been delivered or cancelled.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
 
                 if (viewModel.SupplierId <= 0)
                 {
@@ -501,6 +513,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     TempData["ErrorMessage"] = "The purchase order could not be found.";
                     return RedirectToAction(nameof(Index));
+                }
+
+                if (order.Status == "Delivered" || order.Status == "Cancelled")
+                {
+                    TempData["ErrorMessage"] = "Cannot delete a purchase order that has been delivered or cancelled.";
+                    return RedirectToAction(nameof(Details), new { id });
                 }
 
                 string poNumber = order.PurchaseOrderNumber;
@@ -860,16 +878,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 }
                             });
 
-                            col.Item().PaddingTop(10).AlignRight().Text($"Total Amount: {order.TotalAmount:N2}")
+                            col.Item().PaddingTop(10).EnsureSpace(30).AlignRight().Text($"Total Amount: {order.TotalAmount:N2}")
                                 .Bold().FontSize(14);
 
                             if (!string.IsNullOrWhiteSpace(order.Remarks))
                             {
-                                col.Item().PaddingTop(15).Text("Remarks:").Bold().FontSize(10);
+                                col.Item().PaddingTop(15).EnsureSpace(30).Text("Remarks:").Bold().FontSize(10);
                                 col.Item().Text(order.Remarks).FontSize(10);
                             }
 
-                            col.Item().PaddingTop(30).Row(row =>
+                            col.Item().PaddingTop(30).EnsureSpace(80).Row(row =>
                             {
                                 row.RelativeItem().Column(sigCol =>
                                 {

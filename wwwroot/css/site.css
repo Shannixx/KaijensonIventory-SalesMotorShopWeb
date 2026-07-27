@@ -1383,7 +1383,7 @@ textarea.form-control { min-height: 80px; resize: vertical; }
 @media print {
     @page { margin: 12mm; size: auto; }
 
-    body { background: #fff !important; }
+    body { background: #fff !important; margin: 0; padding: 0; }
     body * { visibility: hidden; }
     .print-preview-wrapper, .print-preview-wrapper * { visibility: visible; }
     .print-preview-wrapper {
@@ -1409,11 +1409,15 @@ textarea.form-control { min-height: 80px; resize: vertical; }
     .print-supplier-section { page-break-inside: avoid; page-break-after: avoid; }
 
     .print-items-table { width: 100%; border-collapse: collapse; }
+    .print-items-table thead { display: table-header-group; }
     .print-items-table th,
     .print-items-table td {
         border: 1px solid #dee2e6;
         padding: 4px 6px;
         font-size: 9pt;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        white-space: normal;
     }
     .print-items-table th {
         background-color: #FF7F11 !important;
