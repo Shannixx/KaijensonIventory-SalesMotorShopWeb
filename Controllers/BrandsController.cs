@@ -82,6 +82,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["StatusFilter"] = statusFilter;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewBag.CanDelete = IsAdmin();
                 return View(brands);
             }
             catch (Exception ex)
@@ -280,6 +281,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 return accessCheck;
             }
+
+            if (!IsAdmin())
+                return Forbid();
 
             try
             {

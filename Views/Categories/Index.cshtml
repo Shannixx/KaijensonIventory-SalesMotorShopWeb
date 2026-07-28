@@ -53,18 +53,21 @@
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-view" title="View category" aria-label="View category @item.CategoryName"><i class="bi bi-eye"></i></a>
                                     <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-edit" title="Edit category" aria-label="Edit category @item.CategoryName"><i class="bi bi-pencil"></i></a>
-                                    @if (isInUse)
+                                    @if (ViewBag.CanDelete == true)
                                     {
-                                        <span class="d-inline-flex" tabindex="0" title="This category cannot be deleted until its products and services are reassigned." aria-label="Cannot delete category @item.CategoryName because it is in use">
-                                            <button type="button" class="btn btn-icon btn-icon-delete" disabled aria-hidden="true" tabindex="-1"><i class="bi bi-trash"></i></button>
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <form asp-action="Delete" asp-route-id="@item.CategoryId" method="post" id="delete-category-@item.CategoryId" class="action-form">
-                                            @Html.AntiForgeryToken()
-                                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-category-@item.CategoryId" data-delete-record-name="@item.CategoryName" data-delete-entity-name="category" title="Delete category" aria-label="Delete category @item.CategoryName"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        @if (isInUse)
+                                        {
+                                            <span class="d-inline-flex" tabindex="0" title="This category cannot be deleted until its products and services are reassigned." aria-label="Cannot delete category @item.CategoryName because it is in use">
+                                                <button type="button" class="btn btn-icon btn-icon-delete" disabled aria-hidden="true" tabindex="-1"><i class="bi bi-trash"></i></button>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Delete" asp-route-id="@item.CategoryId" method="post" id="delete-category-@item.CategoryId" class="action-form">
+                                                @Html.AntiForgeryToken()
+                                                <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-category-@item.CategoryId" data-delete-record-name="@item.CategoryName" data-delete-entity-name="category" title="Delete category" aria-label="Delete category @item.CategoryName"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        }
                                     }
                                 </div>
                             </td>

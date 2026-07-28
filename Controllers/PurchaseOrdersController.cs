@@ -519,12 +519,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                if (order.Status == "Delivered" || order.Status == "Cancelled")
-                {
-                    TempData["ErrorMessage"] = "Cannot delete a purchase order that has been delivered or cancelled.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 string poNumber = order.PurchaseOrderNumber;
 
                 _context.PurchaseOrderItems.RemoveRange(order.Items);
