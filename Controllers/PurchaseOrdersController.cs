@@ -474,7 +474,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = $"Purchase Order {order.PurchaseOrderNumber} updated successfully.";
-                    return RedirectToAction(nameof(Details), new { id = order.PurchaseOrderId });
+                    return RedirectToAction(nameof(Index));
                 }
             }
             catch (Exception ex)
@@ -518,7 +518,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (order.Status == "Delivered" || order.Status == "Cancelled")
                 {
                     TempData["ErrorMessage"] = "Cannot delete a purchase order that has been delivered or cancelled.";
-                    return RedirectToAction(nameof(Details), new { id });
+                    return RedirectToAction(nameof(Index));
                 }
 
                 string poNumber = order.PurchaseOrderNumber;
@@ -572,7 +572,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (!validStatuses.Contains(status))
                 {
                     TempData["ErrorMessage"] = "Invalid status.";
-                    return RedirectToAction(nameof(Details), new { id });
+                    return RedirectToAction(nameof(Index));
                 }
 
                 bool validTransition = (oldStatus == "Pending" && (status == "Approved" || status == "Cancelled")) ||
@@ -581,7 +581,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (!validTransition)
                 {
                     TempData["ErrorMessage"] = $"Cannot change status from '{oldStatus}' to '{status}'.";
-                    return RedirectToAction(nameof(Details), new { id });
+                    return RedirectToAction(nameof(Index));
                 }
 
                 order.Status = status;
@@ -626,13 +626,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = $"Purchase Order {order.PurchaseOrderNumber} status updated to '{status}'.";
-                return RedirectToAction(nameof(Details), new { id });
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating status for purchase order {Id}", id);
                 TempData["ErrorMessage"] = "An error occurred while updating the purchase order status. Please try again.";
-                return RedirectToAction(nameof(Details), new { id });
+                return RedirectToAction(nameof(Index));
             }
         }
 
@@ -782,7 +782,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 _logger.LogError(ex, "Error printing purchase order {Id}", id);
                 TempData["ErrorMessage"] = "An error occurred while generating the PDF. Please try again.";
-                return RedirectToAction(nameof(Details), new { id });
+                return RedirectToAction(nameof(Index));
             }
         }
 

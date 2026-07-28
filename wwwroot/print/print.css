@@ -1,0 +1,172 @@
+/**
+ * Print Stylesheet - Purchase Order Print
+ * Optimized for clean, single-page output
+ */
+
+@media print {
+    /* Page setup with standard margins */
+    @page {
+        margin: 12mm;
+        size: auto;
+    }
+
+    /* Clean white background for printing */
+    body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-family: Arial, sans-serif !important;
+        font-size: 11pt !important;
+        line-height: 1.4 !important;
+    }
+
+    /* Hide everything except the print preview wrapper */
+    body > *:not(.print-preview-wrapper) {
+        display: none !important;
+    }
+
+    /* Center and constrain print preview */
+    .print-preview-wrapper {
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        background: #fff !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Typography */
+    .print-preview-wrapper .print-shop-name {
+        font-size: 18pt !important;
+        font-weight: bold !important;
+        color: #000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .print-preview-wrapper .print-po-title {
+        font-size: 12pt !important;
+        font-weight: 600 !important;
+        color: #000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Header layout */
+    .print-preview-wrapper .print-preview-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: start !important;
+        margin-bottom: 10pt !important;
+        padding: 0 !important;
+    }
+
+    .print-preview-wrapper .print-header-info {
+        text-align: right !important;
+    }
+
+    .print-preview-wrapper .print-po-number {
+        font-size: 11pt !important;
+        font-weight: bold !important;
+        margin-bottom: 3pt !important;
+    }
+
+    /* Table styling */
+    .print-preview-wrapper .table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-top: 10pt !important;
+        font-size: 9pt !important;
+        page-break-inside: avoid !important;
+    }
+
+    .print-preview-wrapper .table th {
+        background-color: #FF7F11 !important;
+        color: #fff !important;
+        font-weight: bold !important;
+        border: 1px solid #dee2e6 !important;
+        padding: 5px !important;
+        text-align: left !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .print-preview-wrapper .table td {
+        border: 1px solid #dee2e6 !important;
+        padding: 4px 5px !important;
+        text-align: left !important;
+        vertical-align: top !important;
+    }
+
+    /* Section headers */
+    .print-preview-wrapper .print-supplier-section,
+    .print-preview-wrapper .print-remarks-section,
+    .print-preview-wrapper .print-signatures {
+        margin-top: 10pt !important;
+    }
+
+    .print-preview-wrapper .print-supplier-section h5,
+    .print-preview-wrapper .print-remarks-section h5,
+    .print-preview-wrapper .print-signatures h5 {
+        font-size: 10pt !important;
+        font-weight: bold !important;
+        margin-bottom: 3pt !important;
+    }
+
+    /* Signature section */
+    .print-preview-wrapper .print-signatures {
+        margin-top: 15mm !important;
+        page-break-inside: avoid !important;
+    }
+
+    .print-preview-wrapper .print-signatures .row {
+        display: flex !important;
+        justify-content: space-between !important;
+        margin-top: 8pt !important;
+    }
+
+    .print-preview-wrapper .print-signatures .col-5 {
+        flex: 0 0 45% !important;
+    }
+
+    .print-preview-wrapper .print-signatures hr {
+        border-top: 1px solid #000 !important;
+        margin: 8pt 0 !important;
+    }
+
+    /* Minimal separators */
+    .print-separator {
+        border-top: 1px solid #dee2e6 !important;
+        margin: 6pt 0 !important;
+    }
+
+    /* Total amount row */
+    .print-total-row {
+        border-top: 2px solid #000 !important;
+        margin-top: 6pt !important;
+    }
+
+    .print-total-row td {
+        font-size: 10pt !important;
+    }
+
+    /* Page break utilities */
+    .page-break {
+        page-break-before: always !important;
+    }
+
+    /* Prevent breaks */
+    .print-no-break {
+        page-break-inside: avoid !important;
+    }
+
+    /* Hide print preview modal */
+    .modal {
+        display: none !important;
+    }
+
+    /* Hide loading elements */
+    .spinner-border,
+    .d-none {
+        display: none !important;
+    }
+}

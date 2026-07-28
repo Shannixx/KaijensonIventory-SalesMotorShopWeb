@@ -13,7 +13,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260603120646_innit")]
-    partial class innit
+    partial class Innit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

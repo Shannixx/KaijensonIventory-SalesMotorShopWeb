@@ -5,7 +5,7 @@
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     /// <inheritdoc />
-    public partial class innit : Migration
+    public partial class Innit : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

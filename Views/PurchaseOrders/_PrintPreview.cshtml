@@ -10,13 +10,13 @@
     };
 }
 <div class="print-preview-wrapper">
-    <div class="print-preview-header d-flex justify-content-between align-items-start mb-4">
+    <div class="print-preview-header">
         <div>
-            <h1 class="print-shop-name mb-0">KAIJENSON MOTOR SHOP</h1>
-            <p class="print-po-title mb-0">Purchase Order</p>
+            <h1 class="print-shop-name">KAIJENSON MOTOR SHOP</h1>
+            <p class="print-po-title">Purchase Order</p>
         </div>
-        <div class="text-end">
-            <div class="print-po-number fw-bold fs-5">PO #: @Model.PurchaseOrderNumber</div>
+        <div class="print-header-info">
+            <div class="print-po-number">PO #: @Model.PurchaseOrderNumber</div>
             <div class="print-po-date">Date: @Model.OrderDate.ToString("MMM dd, yyyy")</div>
             @if (Model.ExpectedDeliveryDate.HasValue)
             {
@@ -26,36 +26,34 @@
         </div>
     </div>
 
-    <hr class="my-3" />
+    <hr class="print-separator" />
 
-    <div class="print-supplier-section mb-4">
-        <h5 class="fw-bold mb-2">Supplier Information</h5>
-        <table class="table table-sm table-borderless mb-0 print-supplier-table">
-            <tr><td style="width:120px;" class="fw-semibold">Company:</td><td>@Model.SupplierName</td></tr>
+    <div class="print-supplier-section">
+        <h5 class="fw-bold">Supplier Information</h5>
+        <table class="table table-sm table-borderless print-supplier-table">
+            <tr><td class="fw-semibold" style="width:120px;">Company:</td><td>@Model.SupplierName</td></tr>
             <tr><td class="fw-semibold">Contact:</td><td>@(Model.ContactPerson ?? "N/A")</td></tr>
             <tr><td class="fw-semibold">Phone:</td><td>@(Model.ContactNumber ?? "N/A")</td></tr>
             <tr><td class="fw-semibold">Address:</td><td>@(Model.SupplierAddress ?? "N/A")</td></tr>
         </table>
     </div>
 
-    <hr class="my-3" />
+    <hr class="print-separator" />
 
-    <div class="print-items-section mb-4">
-        <table class="table table-bordered print-items-table mb-0">
+    <div class="print-items-section">
+        <table class="table table-bordered print-items-table">
             <thead>
                 <tr class="print-table-header">
-                    <th style="width:40px;" class="text-center">#</th>
+                    <th class="text-center">#</th>
                     <th>Product</th>
                     <th>Brand</th>
-                    <th style="width:90px;" class="text-end">Price</th>
-                    <th style="width:70px;" class="text-center">Qty</th>
-                    <th style="width:110px;" class="text-end">Subtotal</th>
+                    <th class="text-end">Price</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
-                @{
-                    int idx = 1;
-                }
+                @{ int idx = 1; }
                 @foreach (var item in Model.Items)
                 {
                     <tr>
@@ -84,34 +82,29 @@
 
     @if (!string.IsNullOrWhiteSpace(Model.Remarks))
     {
-        <div class="print-remarks-section mb-4">
-            <h5 class="fw-bold mb-1">Remarks:</h5>
+        <div class="print-remarks-section">
+            <h5 class="fw-bold">Remarks:</h5>
             <p class="mb-0">@Model.Remarks</p>
         </div>
     }
 
-    <hr class="my-3" />
+    <hr class="print-separator" />
 
-    <div class="print-signatures row mt-4">
-        <div class="col-5">
-            <p class="fw-bold mb-5">Prepared By:</p>
-            <p class="mb-0">@(Model.CreatedByName ?? "________________________")</p>
-            <hr class="m-0" />
-        </div>
-        <div class="col-2"></div>
-        <div class="col-5">
-            <p class="fw-bold mb-5">Approved By:</p>
-            <p class="mb-0">________________________</p>
-            <hr class="m-0" />
+    <div class="print-signatures">
+        <div class="row">
+            <div class="col-5">
+                <p class="fw-bold mb-5">Prepared By:</p>
+                <p class="mb-0">@(Model.CreatedByName ?? "________________________")</p>
+                <hr class="m-0" />
+            </div>
+            <div class="col-2"></div>
+            <div class="col-5">
+                <p class="fw-bold mb-5">Approved By:</p>
+                <p class="mb-0">________________________</p>
+                <hr class="m-0" />
+            </div>
         </div>
     </div>
 </div>
 
-<style>
-    @@media print {
-        .print-table-header th { background-color: #FF7F11 !important; color: #fff !important; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-items-table thead { display: table-header-group; }
-        .print-items-table td { overflow-wrap: break-word; word-wrap: break-word; white-space: normal; }
-        .print-items-table th { overflow-wrap: break-word; word-wrap: break-word; }
-    }
-</style>
+<link rel="stylesheet" href="~/css/print.css" />
