@@ -279,10 +279,17 @@
 
             event.preventDefault();
 
+            console.log("[STEP 1] Delete button clicked");
+
             var formId = trigger.getAttribute("data-delete-form-id");
+
+            console.log("Form ID:", formId);
+
             var recordName = trigger.getAttribute("data-delete-record-name") || "this record";
             var entityName = trigger.getAttribute("data-delete-entity-name") || "record";
             var form = document.getElementById(formId);
+
+            console.log("[STEP 2] Form found:", form);
 
             if (!form) {
                 console.error("Delete form '" + formId + "' could not be found.");
@@ -294,40 +301,69 @@
             isSubmitting = false;
 
             pendingForm = form;
+            console.log("[STEP 3] pendingForm =", pendingForm.id);
             pendingTrigger = trigger;
 
             modalTitle.textContent = "Delete " + entityName;
             recordNameElement.textContent = '"' + recordName + '"';
             confirmButton.disabled = false;
 
-            modal.show();
-        });
 
-        confirmButton.addEventListener("click", function () {
+            console.log("[STEP 4] Opening modal");
+
+            modal.show();
+
+        });
+          
+
+        confirmButton.addEventListener("click", function (event) {
+
+            console.log("========== CONFIRM ==========");
+            console.log("pendingForm:", pendingForm);
+            console.log("isSubmitting:", isSubmitting);
+            console.log("confirm disabled:", confirmButton.disabled);
+
             if (!pendingForm || isSubmitting) {
+                console.warn("[BLOCKED] pendingForm =", pendingForm);
+                console.warn("[BLOCKED] isSubmitting =", isSubmitting);
                 return;
             }
+           
 
             isSubmitting = true;
             confirmButton.disabled = true;
+            
+            event.stopPropagation();
+
+            console.log("[STEP 7] Submitting form");
 
             HTMLFormElement.prototype.submit.call(pendingForm);
+        
         });
 
         modalElement.addEventListener("shown.bs.modal", function () {
             confirmButton.focus();
+            console.log("[STEP 5] Modal shown");
         });
 
         modalElement.addEventListener("hidden.bs.modal", function () {
+
+            console.log("[STEP 8] Modal hidden");
+            console.log("pendingForm:", pendingForm);
+            console.log("isSubmitting:", isSubmitting);
+
             if (isSubmitting) {
                 return;
             }
+
 
             if (pendingTrigger) {
                 pendingTrigger.focus();
             }
 
             isSubmitting = false;
+            pendingForm = null;
+            pendingTrigger = null;
 
             confirmButton.disabled = false;
             modalTitle.textContent = "Confirm deletion";
