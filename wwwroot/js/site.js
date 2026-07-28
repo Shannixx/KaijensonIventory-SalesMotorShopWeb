@@ -383,7 +383,16 @@
             });
 
         printBtn.onclick = function () {
-            window.print();
+            var printContent = document.getElementById('printPreviewBody').innerHTML;
+            var printWindow = window.open('', '_blank', 'height=600,width=800');
+            printWindow.document.write('<!DOCTYPE html><html><head><title>Print - ' + poNumber + '</title>');
+            printWindow.document.write('<link rel="stylesheet" href="/css/print.css" />');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(printContent);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(function () { printWindow.print(); }, 500);
         };
 
         modalEl.addEventListener('hidden.bs.modal', function () {
