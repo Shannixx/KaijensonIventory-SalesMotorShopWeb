@@ -289,9 +289,12 @@
                 return;
             }
 
+            pendingForm = null;
+            pendingTrigger = null;
+            isSubmitting = false;
+
             pendingForm = form;
             pendingTrigger = trigger;
-            isSubmitting = false;
 
             modalTitle.textContent = "Delete " + entityName;
             recordNameElement.textContent = '"' + recordName + '"';
@@ -324,8 +327,6 @@
                 pendingTrigger.focus();
             }
 
-            pendingForm = null;
-            pendingTrigger = null;
             isSubmitting = false;
 
             confirmButton.disabled = false;
