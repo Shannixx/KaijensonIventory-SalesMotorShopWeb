@@ -27,7 +27,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 int pageSize = 10;
                 IQueryable<Service> query = _context.Services
-                    .Include(s => s.Category)
                     .Include(s => s.Mechanic)
                     .AsNoTracking();
 
@@ -69,7 +68,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 Service? service = await _context.Services
-                    .Include(s => s.Category)
                     .Include(s => s.Mechanic)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.ServiceId == id);
@@ -94,7 +92,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                ViewBag.CategoryId = new SelectList(await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(), "CategoryId", "CategoryName");
                 ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName");
                 return View();
             }
@@ -108,7 +105,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice,CategoryId,MechanicId")] Service service)
+        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice,MechanicId")] Service service)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -123,10 +120,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
             }
-            if (service.CategoryId <= 0)
-            {
-                ModelState.AddModelError("CategoryId", "Please select a category.");
-            }
             if (service.MechanicId <= 0)
             {
                 ModelState.AddModelError("MechanicId", "Please select a mechanic.");
@@ -136,6 +129,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
+                    service.CategoryId = 1;
                     _context.Services.Add(service);
                     await _context.SaveChangesAsync();
 
@@ -159,7 +153,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
             }
 
-            ViewBag.CategoryId = new SelectList(await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(), "CategoryId", "CategoryName", service.CategoryId);
             ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
             return View(service);
         }
@@ -177,9 +170,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Service? service = await _context.Services.FindAsync(id);
                 if (service == null) return NotFound();
 
-                ViewBag.CategoryId = new SelectList(await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(), "CategoryId", "CategoryName", service.CategoryId);
-                ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
-                return View(service);
+            ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
+            return View(service);
             }
             catch (Exception ex)
             {
@@ -191,7 +183,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice,CategoryId,MechanicId")] Service service)
+        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice,MechanicId")] Service service)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -208,10 +200,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
             }
-            if (service.CategoryId <= 0)
-            {
-                ModelState.AddModelError("CategoryId", "Please select a category.");
-            }
             if (service.MechanicId <= 0)
             {
                 ModelState.AddModelError("MechanicId", "Please select a mechanic.");
@@ -221,7 +209,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
-                    _context.Services.Update(service);
+                    Service? existing = await _context.Services.FindAsync(id);
+                    if (existing == null) return NotFound();
+                    existing.ServiceName = service.ServiceName;
+                    existing.ServicePrice = service.ServicePrice;
+                    existing.MechanicId = service.MechanicId;
                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
@@ -244,8 +236,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         return NotFound();
 
                     TempData["ErrorMessage"] = "The service was modified by another user. Please try again.";
-                    ViewBag.CategoryId = new SelectList(await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(), "CategoryId", "CategoryName", service.CategoryId);
-                    ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
+                ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
                     return View(service);
                 }
                 catch (Exception ex)
@@ -255,7 +246,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
             }
 
-            ViewBag.CategoryId = new SelectList(await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName).ToListAsync(), "CategoryId", "CategoryName", service.CategoryId);
             ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
             return View(service);
         }
@@ -275,7 +265,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 // So we don't check for related ServiceTransactions when deleting a Service
 
                 Service? service = await _context.Services
-                    .Include(s => s.Category)
                     .Include(s => s.Mechanic)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.ServiceId == id);

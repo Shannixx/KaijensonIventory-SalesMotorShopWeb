@@ -316,7 +316,11 @@
         });
 
         modalElement.addEventListener("hidden.bs.modal", function () {
-            if (!isSubmitting && pendingTrigger) {
+            if (isSubmitting) {
+                return;
+            }
+
+            if (pendingTrigger) {
                 pendingTrigger.focus();
             }
 

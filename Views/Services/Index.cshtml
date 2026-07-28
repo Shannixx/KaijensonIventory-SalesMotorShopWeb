@@ -34,7 +34,6 @@
                         <th>ID</th>
                         <th>Name</th>
                         <th>Price</th>
-                        <th>Category</th>
                         <th>Mechanic</th>
                         <th class="actions-column">Actions</th>
                     </tr>
@@ -46,7 +45,6 @@
                             <td>@item.ServiceId</td>
                             <td>@item.ServiceName</td>
                             <td>@item.ServicePrice.ToString("N2")</td>
-                            <td>@item.Category?.CategoryName</td>
                             <td>@item.Mechanic?.MechanicName</td>
                             <td class="action-cell">
                                 <div class="action-buttons">
@@ -63,7 +61,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">No services found.</td>
+                            <td colspan="5" class="text-center py-4 text-muted">No services found.</td>
                         </tr>
                     }
                 </tbody>
