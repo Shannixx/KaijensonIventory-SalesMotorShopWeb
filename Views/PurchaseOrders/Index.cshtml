@@ -91,10 +91,13 @@
                         </form>
                     }
                     <button type="button" class="btn btn-icon btn-icon-print" title="Print Purchase Order" aria-label="Print @item.PurchaseOrderNumber" onclick="openPrintPreview(@item.PurchaseOrderId, '@item.PurchaseOrderNumber')"><i class="bi bi-printer"></i></button>
-                    <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form" style="display:inline;">
-                        @Html.AntiForgeryToken()
-                        <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-po-@item.PurchaseOrderId" data-delete-record-name="@item.PurchaseOrderNumber" data-delete-entity-name="purchase order" title="Delete purchase order" aria-label="Delete purchase order @item.PurchaseOrderNumber"><i class="bi bi-trash"></i></button>
-                    </form>
+                    @if (ViewBag.CanDelete == true)
+                    {
+                        <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-po-@item.PurchaseOrderId" data-delete-record-name="@item.PurchaseOrderNumber" data-delete-entity-name="purchase order" title="Delete purchase order" aria-label="Delete purchase order @item.PurchaseOrderNumber"><i class="bi bi-trash"></i></button>
+                        </form>
+                    }
                 </div>
                             </td>
                         </tr>
