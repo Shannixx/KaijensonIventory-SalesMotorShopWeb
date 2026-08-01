@@ -1,66 +1,60 @@
-@model Product
+@model ProductCreateViewModel
 @{ ViewData["Title"] = "Create Product"; }
 
 <div class="page-header"><div><h1>Create Product</h1><p>Add a new product to inventory.</p></div></div>
 
 <div class="card form-card">
     <div class="card-body">
-        <form asp-action="Create" enctype="multipart/form-data">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
             <div class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <label asp-for="ProductName" class="form-label"></label>
                     <input asp-for="ProductName" class="form-control" />
                     <span asp-validation-for="ProductName" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
-                    <label asp-for="Brand" class="form-label">Brand</label>
-                    <select asp-for="Brand" class="form-select" asp-items="ViewBag.Brands">
+                    <label asp-for="Brand" class="form-label"></label>
+                    <select asp-for="Brand" class="form-select" asp-items="Model.Brands">
                         <option value="">-- Select Brand --</option>
                     </select>
                     <span asp-validation-for="Brand" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
-                    <label asp-for="PartNumber" class="form-label"></label>
-                    <input asp-for="PartNumber" class="form-control" placeholder="e.g. 15410-KPP-901" />
-                    <span asp-validation-for="PartNumber" class="text-danger small"></span>
-                </div>
-                <div class="col-md-3">
-                    <label asp-for="CategoryId" class="form-label">Category</label>
-                    <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" class="form-select" asp-items="Model.Categories">
                         <option value="">-- Select Category --</option>
                     </select>
                     <span asp-validation-for="CategoryId" class="text-danger small"></span>
                 </div>
-                <div class="col-md-8">
-                    <label asp-for="ModelCompatibility" class="form-label"></label>
-                    <input asp-for="ModelCompatibility" class="form-control" placeholder="e.g. Click 125, NMAX, Raider 150" />
-                    <span asp-validation-for="ModelCompatibility" class="text-danger small"></span>
-                </div>
                 <div class="col-md-4">
-                    <label asp-for="SupplierId" class="form-label">Supplier</label>
-                    <select asp-for="SupplierId" class="form-select" asp-items="ViewBag.Suppliers">
+                    <label asp-for="SupplierId" class="form-label"></label>
+                    <select asp-for="SupplierId" class="form-select" asp-items="Model.Suppliers">
                         <option value="">-- Select Supplier --</option>
                     </select>
                     <span asp-validation-for="SupplierId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="QuantityOnHand" class="form-label"></label>
+                    <input asp-for="QuantityOnHand" class="form-control" />
+                    <span asp-validation-for="QuantityOnHand" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="PurchaseOrderId" class="form-label"></label>
+                    <select asp-for="PurchaseOrderId" class="form-select" asp-items="Model.PurchaseOrders">
+                        <option value="">-- No Purchase Order --</option>
+                    </select>
+                    <span asp-validation-for="PurchaseOrderId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-12">
+                    <label asp-for="ModelCompatibility" class="form-label"></label>
+                    <input asp-for="ModelCompatibility" class="form-control" placeholder="e.g. Click 125, NMAX, Raider 150" />
+                    <span asp-validation-for="ModelCompatibility" class="text-danger small"></span>
                 </div>
                 <div class="col-md-12">
                     <label asp-for="Description" class="form-label"></label>
                     <textarea asp-for="Description" class="form-control" rows="2"></textarea>
                     <span asp-validation-for="Description" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Price" class="form-label"></label>
-                    <input asp-for="Price" class="form-control" step="0.01" />
-                    <span asp-validation-for="Price" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="QuantityOnHand" class="form-label"></label>
-                    <input asp-for="QuantityOnHand" class="form-control" />
-                    <span asp-validation-for="QuantityOnHand" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="ImagePath" class="form-label">Product Image</label>
-                    <input type="file" name="imageFile" class="form-control" accept="image/*" />
                 </div>
             </div>
             <div class="form-actions">

@@ -86,6 +86,11 @@
                                 <i class="bi bi-cart-check"></i><span>Purchase Order</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a asp-controller="Delivery" asp-action="Index" class="nav-link @(IsActive("Delivery") ? "active" : "")" data-title="Delivery" aria-current="@ActiveAttr("Delivery")">
+                                <i class="bi bi-truck"></i><span>Delivery</span>
+                            </a>
+                        </li>
                     }
                     <li class="nav-item">
                         <a asp-controller="Services" asp-action="Index" class="nav-link @(IsActive("Services") ? "active" : "")" data-title="Service" aria-current="@ActiveAttr("Services")">

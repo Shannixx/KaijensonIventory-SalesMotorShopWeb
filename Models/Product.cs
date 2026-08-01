@@ -21,16 +21,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public string? ModelCompatibility { get; set; }
 
         [StringLength(50)]
-        [Display(Name = "Part Number")]
-        public string? PartNumber { get; set; }
-
-        [StringLength(50)]
         [Display(Name = "Part Type")]
         public string? PartType { get; set; }
 
         [StringLength(500)]
         [Display(Name = "Description")]
         public string? Description { get; set; }
+
+        [Display(Name = "Purchase Order")]
+        public int? PurchaseOrderId { get; set; }
 
         [Range(0, 999999.99)]
         [Column(TypeName = "decimal(18,2)")]
@@ -71,10 +70,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Average Cost")]
         public decimal AverageCost { get; set; }
 
-        [StringLength(500)]
-        [Display(Name = "Image")]
-        public string? ImagePath { get; set; }
-
         [Display(Name = "Category")]
         public int CategoryId { get; set; }
 
@@ -85,5 +80,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         public Category? Category { get; set; }
         public Supplier? Supplier { get; set; }
+        public PurchaseOrder? PurchaseOrder { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 {
@@ -48,5 +49,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public DateTime? UpdatedDate { get; set; }
 
         public List<PurchaseOrderItemViewModel> Items { get; set; } = new();
+
+        public List<SelectListItem> Suppliers { get; set; } = new();
     }
 }

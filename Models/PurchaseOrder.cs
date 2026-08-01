@@ -44,6 +44,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Updated Date")]
         public DateTime? UpdatedDate { get; set; }
 
+        [DataType(DataType.Date)]
+        [Display(Name = "Delivered Date")]
+        public DateTime? DeliveredDate { get; set; }
+
+        [Display(Name = "Delivered By")]
+        public int? DeliveredBy { get; set; }
+
         public Supplier? Supplier { get; set; }
 
         public Staff? Staff { get; set; }

@@ -1,0 +1,50 @@
+@model IEnumerable<KaijensonIventory_SalesMotorShopWeb.ViewModels.DeliveryViewModel>
+@{ ViewData["Title"] = "Delivery"; }
+
+<div class="page-header">
+    <div>
+        <h1>Delivery</h1>
+        <p>Purchase orders awaiting delivery.</p>
+    </div>
+    <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-receipt"></i> Purchase Orders</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>PO Number</th>
+                        <th>Supplier</th>
+                        <th>Order Date</th>
+                        <th>Products</th>
+                        <th>Status</th>
+                        <th class="actions-column">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><span class="fw-medium">@item.PurchaseOrderNumber</span></td>
+                            <td>@item.SupplierName</td>
+                            <td>@item.OrderDate.ToString("MMM dd, yyyy")</td>
+                            <td>@item.Items.Count</td>
+                            <td><span class="badge bg-primary">Approved</span></td>
+                            <td class="action-cell">
+                                <div class="action-buttons">
+                                    <a asp-action="Details" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-deliver" title="View Delivery" aria-label="View delivery for @item.PurchaseOrderNumber"><i class="bi bi-truck"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No purchase orders awaiting delivery.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

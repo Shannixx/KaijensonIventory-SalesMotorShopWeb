@@ -1,9 +1,7 @@
-using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.Services;
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -12,12 +10,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
     public class PurchaseOrdersController : BaseController
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPurchaseOrderService _purchaseOrderService;
         private readonly ILogger<PurchaseOrdersController> _logger;
 
-        public PurchaseOrdersController(ApplicationDbContext context, ILogger<PurchaseOrdersController> logger)
+        public PurchaseOrdersController(IPurchaseOrderService purchaseOrderService, ILogger<PurchaseOrdersController> logger)
         {
-            _context = context;
+            _purchaseOrderService = purchaseOrderService;
             _logger = logger;
         }
 
@@ -41,51 +39,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            try
-            {
-                int pageSize = 10;
-                IQueryable<PurchaseOrder> query = _context.PurchaseOrders
-                    .Include(p => p.Supplier)
-                    .Include(p => p.Staff)
-                    .AsNoTracking();
+            var result = await _purchaseOrderService.GetPagedAsync(searchString, statusFilter, page);
 
-                if (!string.IsNullOrWhiteSpace(searchString))
-                {
-                    string s = searchString.ToLower();
-                    query = query.Where(p =>
-                        p.PurchaseOrderNumber.ToLower().Contains(s) ||
-                        p.Supplier!.CompanyName.ToLower().Contains(s));
-                }
+            ViewData["CurrentFilter"] = searchString;
+            ViewData["StatusFilter"] = statusFilter;
+            ViewData["Page"] = page;
+            ViewData["TotalPages"] = result.TotalPages;
+            ViewBag.CanDelete = IsAdmin();
 
-                if (!string.IsNullOrWhiteSpace(statusFilter) &&
-                    (statusFilter == "Pending" || statusFilter == "Approved" ||
-                     statusFilter == "Delivered" || statusFilter == "Cancelled"))
-                {
-                    query = query.Where(p => p.Status == statusFilter);
-                }
-
-                int total = await query.CountAsync();
-
-                List<PurchaseOrder> orders = await query
-                    .OrderByDescending(p => p.CreatedDate)
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
-
-                ViewData["CurrentFilter"] = searchString;
-                ViewData["StatusFilter"] = statusFilter;
-                ViewData["Page"] = page;
-                ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
-                ViewBag.CanDelete = IsAdmin();
-
-                return View(orders);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading purchase orders");
-                TempData["ErrorMessage"] = "An error occurred while loading purchase orders. Please try again.";
-                return View(new List<PurchaseOrder>());
-            }
+            return View(result.Items);
         }
 
         public async Task<IActionResult> Create()
@@ -93,26 +55,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            try
-            {
-                ViewBag.Suppliers = new SelectList(
-                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                    "SupplierId", "CompanyName");
-
-                ViewBag.Products = await _context.Products
-                    .AsNoTracking()
-                    .OrderBy(p => p.ProductName)
-                    .Select(p => new { p.ProductId, p.ProductName, p.Brand, p.QuantityOnHand, p.Price })
-                    .ToListAsync();
-
-                return View(new PurchaseOrderViewModel());
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading purchase order create form");
-                TempData["ErrorMessage"] = "An error occurred while loading the form. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
+            return View(await _purchaseOrderService.PrepareCreateViewModelAsync());
         }
 
         [HttpPost]
@@ -122,124 +65,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            try
+            if (!ModelState.IsValid)
+                return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
+
+            var result = await _purchaseOrderService.CreateAsync(viewModel, GetCurrentStaffId());
+
+            if (!result.Succeeded)
             {
-                if (viewModel.SupplierId <= 0)
-                {
-                    ModelState.AddModelError("SupplierId", "Please select a supplier.");
-                }
-
-                if (viewModel.Items == null || viewModel.Items.Count == 0 || viewModel.Items.All(i => i.ProductId <= 0))
-                {
-                    ModelState.AddModelError("Items", "Please add at least one product.");
-                }
-                else
-                {
-                    var duplicateProducts = viewModel.Items
-                        .Where(i => i.ProductId > 0)
-                        .GroupBy(i => i.ProductId)
-                        .Where(g => g.Count() > 1)
-                        .Select(g => g.Key)
-                        .ToList();
-
-                    if (duplicateProducts.Any())
-                    {
-                        ModelState.AddModelError("Items", "Duplicate products are not allowed.");
-                    }
-
-                    for (int i = 0; i < viewModel.Items.Count; i++)
-                    {
-                        var item = viewModel.Items[i];
-                        if (item.ProductId > 0 && item.Quantity <= 0)
-                        {
-                            ModelState.AddModelError($"Items[{i}].Quantity", "Quantity must be greater than 0.");
-                        }
-                    }
-                }
-
-                if (viewModel.ExpectedDeliveryDate.HasValue && viewModel.ExpectedDeliveryDate < viewModel.OrderDate)
-                {
-                    ModelState.AddModelError("ExpectedDeliveryDate", "Expected delivery date must be on or after the order date.");
-                }
-
-                if (ModelState.IsValid)
-                {
-                    string poNumber = await GeneratePONumberAsync();
-
-                    var productIds = (viewModel.Items ?? [])
-                        .Where(i => i != null && i.ProductId > 0)
-                        .Select(i => i.ProductId)
-                        .Distinct()
-                        .ToList();
-
-                    var products = await _context.Products
-                        .AsNoTracking()
-                        .Where(p => productIds.Contains(p.ProductId))
-                        .ToDictionaryAsync(p => p.ProductId, p => p.Price);
-
-                    var order = new PurchaseOrder
-                    {
-                        PurchaseOrderNumber = poNumber,
-                        SupplierId = viewModel.SupplierId,
-                        OrderDate = viewModel.OrderDate,
-                        ExpectedDeliveryDate = viewModel.ExpectedDeliveryDate,
-                        Status = "Pending",
-                        Remarks = viewModel.Remarks,
-                        CreatedBy = GetCurrentStaffId(),
-                        CreatedDate = DateTime.Now
-                    };
-
-                    decimal totalAmount = 0;
-
-                    foreach (var item in (viewModel.Items ?? []).Where(i => i != null && i.ProductId > 0))
-                    {
-                        var productPrice = products.GetValueOrDefault(item.ProductId, 0);
-                        var poItem = new PurchaseOrderItem
-                        {
-                            ProductId = item.ProductId,
-                            Quantity = item.Quantity,
-                            Price = productPrice,
-                            Subtotal = item.Quantity * productPrice
-                        };
-                        order.Items.Add(poItem);
-                        totalAmount += poItem.Subtotal;
-                    }
-
-                    order.TotalAmount = totalAmount;
-
-                    _context.PurchaseOrders.Add(order);
-                    await _context.SaveChangesAsync();
-
-                    _context.ActivityLogs.Add(new ActivityLog
-                    {
-                        StaffId = GetCurrentStaffId(),
-                        Action = "Create Purchase Order",
-                        Module = "PurchaseOrder",
-                        Description = $"Created PO {poNumber} - Total: {totalAmount:N2}"
-                    });
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = $"Purchase Order {poNumber} created successfully.";
-                    return RedirectToAction(nameof(Index));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating purchase order");
-                TempData["ErrorMessage"] = "An error occurred while creating the purchase order. Please try again.";
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(error.Key ?? "", error.Message);
+                return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
             }
 
-            ViewBag.Suppliers = new SelectList(
-                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                "SupplierId", "CompanyName", viewModel.SupplierId);
-
-            ViewBag.Products = await _context.Products
-                .AsNoTracking()
-                .OrderBy(p => p.ProductName)
-                .Select(p => new { p.ProductId, p.ProductName, p.Brand, p.QuantityOnHand, p.Price })
-                .ToListAsync();
-
-            return View(viewModel);
+            TempData["SuccessMessage"] = "Purchase order created successfully.";
+            return RedirectToAction(nameof(Index));
         }
 
         public async Task<IActionResult> Details(int id)
@@ -247,55 +86,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            try
-            {
-                var order = await _context.PurchaseOrders
-                    .Include(p => p.Supplier)
-                    .Include(p => p.Staff)
-                    .Include(p => p.Items).ThenInclude(i => i.Product)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
+            var viewModel = await _purchaseOrderService.GetDetailsViewModelAsync(id);
+            if (viewModel == null) return NotFound();
 
-                if (order == null) return NotFound();
-
-                var viewModel = new PurchaseOrderViewModel
-                {
-                    PurchaseOrderId = order.PurchaseOrderId,
-                    PurchaseOrderNumber = order.PurchaseOrderNumber,
-                    SupplierId = order.SupplierId,
-                    SupplierName = order.Supplier?.CompanyName,
-                    ContactPerson = order.Supplier?.ContactPerson,
-                    ContactNumber = order.Supplier?.ContactNumber,
-                    SupplierAddress = order.Supplier?.Address,
-                    OrderDate = order.OrderDate,
-                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
-                    Status = order.Status,
-                    TotalAmount = order.TotalAmount,
-                    Remarks = order.Remarks,
-                    CreatedByName = order.Staff?.StaffName,
-                    CreatedDate = order.CreatedDate,
-                    UpdatedDate = order.UpdatedDate,
-                    Items = order.Items.Select(i => new PurchaseOrderItemViewModel
-                    {
-                        PurchaseOrderItemId = i.PurchaseOrderItemId,
-                        ProductId = i.ProductId,
-                        ProductName = i.Product?.ProductName,
-                        Brand = i.Product?.Brand,
-                        CurrentStock = i.Product?.QuantityOnHand ?? 0,
-                        Quantity = i.Quantity,
-                        Price = i.Price,
-                        Subtotal = i.Subtotal
-                    }).ToList()
-                };
-
-                return View(viewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading purchase order details for {Id}", id);
-                TempData["ErrorMessage"] = "An error occurred while loading purchase order details. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
+            return View(viewModel);
         }
 
         public async Task<IActionResult> Edit(int id)
@@ -303,63 +97,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            try
+            var viewModel = await _purchaseOrderService.PrepareEditViewModelAsync(id);
+            if (viewModel == null) return NotFound();
+
+            if (viewModel.Status == "Delivered" || viewModel.Status == "Cancelled")
             {
-                var order = await _context.PurchaseOrders
-                    .Include(p => p.Supplier)
-                    .Include(p => p.Items).ThenInclude(i => i.Product)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
-
-                if (order == null) return NotFound();
-
-                if (order.Status == "Delivered" || order.Status == "Cancelled")
-                {
-                    TempData["ErrorMessage"] = "Cannot edit a purchase order that has been delivered or cancelled.";
-                    return RedirectToAction(nameof(Details), new { id });
-                }
-
-                var viewModel = new PurchaseOrderViewModel
-                {
-                    PurchaseOrderId = order.PurchaseOrderId,
-                    PurchaseOrderNumber = order.PurchaseOrderNumber,
-                    SupplierId = order.SupplierId,
-                    OrderDate = order.OrderDate,
-                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
-                    Status = order.Status,
-                    TotalAmount = order.TotalAmount,
-                    Remarks = order.Remarks,
-                    Items = order.Items.Select(i => new PurchaseOrderItemViewModel
-                    {
-                        PurchaseOrderItemId = i.PurchaseOrderItemId,
-                        ProductId = i.ProductId,
-                        ProductName = i.Product?.ProductName,
-                        Brand = i.Product?.Brand,
-                        CurrentStock = i.Product?.QuantityOnHand ?? 0,
-                        Quantity = i.Quantity,
-                        Price = i.Price,
-                        Subtotal = i.Subtotal
-                    }).ToList()
-                };
-
-                ViewBag.Suppliers = new SelectList(
-                    await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                    "SupplierId", "CompanyName", order.SupplierId);
-
-                ViewBag.Products = await _context.Products
-                    .AsNoTracking()
-                    .OrderBy(p => p.ProductName)
-                    .Select(p => new { p.ProductId, p.ProductName, p.Brand, p.QuantityOnHand, p.Price })
-                    .ToListAsync();
-
-                return View(viewModel);
+                TempData["ErrorMessage"] = "Cannot edit a purchase order that has been delivered or cancelled.";
+                return RedirectToAction(nameof(Details), new { id });
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading purchase order {Id} for editing", id);
-                TempData["ErrorMessage"] = "An error occurred while loading the purchase order for editing. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
+
+            return View(viewModel);
         }
 
         [HttpPost]
@@ -371,130 +118,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             if (id != viewModel.PurchaseOrderId) return NotFound();
 
-            try
+            if (!ModelState.IsValid)
+                return View(await _purchaseOrderService.PrepareEditViewModelAsync(viewModel));
+
+            var result = await _purchaseOrderService.UpdateAsync(viewModel, GetCurrentStaffId());
+
+            if (!result.Succeeded)
             {
-                var order = await _context.PurchaseOrders
-                    .Include(p => p.Items)
-                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
-
-                if (order == null) return NotFound();
-
-                if (order.Status == "Delivered" || order.Status == "Cancelled")
-                {
-                    TempData["ErrorMessage"] = "Cannot edit a purchase order that has been delivered or cancelled.";
-                    return RedirectToAction(nameof(Details), new { id });
-                }
-
-                if (viewModel.SupplierId <= 0)
-                {
-                    ModelState.AddModelError("SupplierId", "Please select a supplier.");
-                }
-
-                if (viewModel.Items == null || viewModel.Items.Count == 0 || viewModel.Items.All(i => i.ProductId <= 0))
-                {
-                    ModelState.AddModelError("Items", "Please add at least one product.");
-                }
-                else
-                {
-                    var duplicateProducts = viewModel.Items
-                        .Where(i => i.ProductId > 0)
-                        .GroupBy(i => i.ProductId)
-                        .Where(g => g.Count() > 1)
-                        .Select(g => g.Key)
-                        .ToList();
-
-                    if (duplicateProducts.Any())
-                    {
-                        ModelState.AddModelError("Items", "Duplicate products are not allowed.");
-                    }
-
-                    for (int i = 0; i < viewModel.Items.Count; i++)
-                    {
-                        var item = viewModel.Items[i];
-                        if (item.ProductId > 0 && item.Quantity <= 0)
-                        {
-                            ModelState.AddModelError($"Items[{i}].Quantity", "Quantity must be greater than 0.");
-                        }
-                    }
-                }
-
-                if (viewModel.ExpectedDeliveryDate.HasValue && viewModel.ExpectedDeliveryDate < viewModel.OrderDate)
-                {
-                    ModelState.AddModelError("ExpectedDeliveryDate", "Expected delivery date must be on or after the order date.");
-                }
-
-                if (ModelState.IsValid)
-                {
-                    order.SupplierId = viewModel.SupplierId;
-                    order.OrderDate = viewModel.OrderDate;
-                    order.ExpectedDeliveryDate = viewModel.ExpectedDeliveryDate;
-                    order.Remarks = viewModel.Remarks;
-                    order.UpdatedDate = DateTime.Now;
-
-                    var productIds = (viewModel.Items ?? [])
-                        .Where(i => i != null && i.ProductId > 0)
-                        .Select(i => i.ProductId)
-                        .Distinct()
-                        .ToList();
-
-                    var products = await _context.Products
-                        .AsNoTracking()
-                        .Where(p => productIds.Contains(p.ProductId))
-                        .ToDictionaryAsync(p => p.ProductId, p => p.Price);
-
-                    _context.PurchaseOrderItems.RemoveRange(order.Items);
-
-                    decimal totalAmount = 0;
-
-                    foreach (var item in (viewModel.Items ?? []).Where(i => i != null && i.ProductId > 0))
-                    {
-                        var productPrice = products.GetValueOrDefault(item.ProductId, 0);
-                        var poItem = new PurchaseOrderItem
-                        {
-                            PurchaseOrderId = order.PurchaseOrderId,
-                            ProductId = item.ProductId,
-                            Quantity = item.Quantity,
-                            Price = productPrice,
-                            Subtotal = item.Quantity * productPrice
-                        };
-                        _context.PurchaseOrderItems.Add(poItem);
-                        totalAmount += poItem.Subtotal;
-                    }
-
-                    order.TotalAmount = totalAmount;
-
-                    await _context.SaveChangesAsync();
-
-                    _context.ActivityLogs.Add(new ActivityLog
-                    {
-                        StaffId = GetCurrentStaffId(),
-                        Action = "Edit Purchase Order",
-                        Module = "PurchaseOrder",
-                        Description = $"Edited PO {order.PurchaseOrderNumber} - Total: {totalAmount:N2}"
-                    });
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = $"Purchase Order {order.PurchaseOrderNumber} updated successfully.";
-                    return RedirectToAction(nameof(Index));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating purchase order {Id}", id);
-                TempData["ErrorMessage"] = "An error occurred while updating the purchase order. Please try again.";
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(error.Key ?? "", error.Message);
+                return View(await _purchaseOrderService.PrepareEditViewModelAsync(viewModel));
             }
 
-            ViewBag.Suppliers = new SelectList(
-                await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName).ToListAsync(),
-                "SupplierId", "CompanyName", viewModel.SupplierId);
-
-            ViewBag.Products = await _context.Products
-                .AsNoTracking()
-                .OrderBy(p => p.ProductName)
-                .Select(p => new { p.ProductId, p.ProductName, p.Brand, p.QuantityOnHand, p.Price })
-                .ToListAsync();
-
-            return View(viewModel);
+            TempData["SuccessMessage"] = "Purchase order updated successfully.";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
@@ -507,244 +144,80 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (!IsAdmin())
                 return Forbid();
 
-            try
+            var result = await _purchaseOrderService.DeleteAsync(id, GetCurrentStaffId());
+
+            if (!result.Succeeded)
             {
-                var order = await _context.PurchaseOrders
-                    .Include(p => p.Items)
-                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
-
-                if (order == null)
-                {
-                    TempData["ErrorMessage"] = "The purchase order could not be found.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                string poNumber = order.PurchaseOrderNumber;
-
-                _context.PurchaseOrderItems.RemoveRange(order.Items);
-                _context.PurchaseOrders.Remove(order);
-                await _context.SaveChangesAsync();
-
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    StaffId = GetCurrentStaffId(),
-                    Action = "Delete Purchase Order",
-                    Module = "PurchaseOrder",
-                    Description = $"Deleted PO {poNumber}"
-                });
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = $"Purchase Order {poNumber} deleted successfully.";
+                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message
+                    ?? "An error occurred while deleting the purchase order. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting purchase order {Id}", id);
-                TempData["ErrorMessage"] = "An error occurred while deleting the purchase order. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
+
+            TempData["SuccessMessage"] = "Purchase order deleted successfully.";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateStatus(int id, string status)
+        public async Task<IActionResult> Approve(int id)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            try
+            var result = await _purchaseOrderService.ApproveAsync(id, GetCurrentStaffId());
+
+            if (!result.Succeeded)
             {
-                var order = await _context.PurchaseOrders
-                    .Include(p => p.Items).ThenInclude(i => i.Product)
-                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
-
-                if (order == null)
-                {
-                    TempData["ErrorMessage"] = "The purchase order could not be found.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                string oldStatus = order.Status;
-                string[] validStatuses = { "Pending", "Approved", "Delivered", "Cancelled" };
-
-                if (!validStatuses.Contains(status))
-                {
-                    TempData["ErrorMessage"] = "Invalid status.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                bool validTransition = (oldStatus == "Pending" && (status == "Approved" || status == "Cancelled")) ||
-                                       (oldStatus == "Approved" && status == "Delivered");
-
-                if (!validTransition)
-                {
-                    TempData["ErrorMessage"] = $"Cannot change status from '{oldStatus}' to '{status}'.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                order.Status = status;
-                order.UpdatedDate = DateTime.Now;
-
-                if (status == "Delivered")
-                {
-                    foreach (var item in order.Items)
-                    {
-                        if (item.Product != null)
-                        {
-                            item.Product.QuantityOnHand += item.Quantity;
-                            item.Product.LastStockInDate = DateTime.Now;
-                            item.Product.AverageCost = CalculateNewAverageCost(
-                                item.Product.QuantityOnHand - item.Quantity,
-                                item.Product.AverageCost,
-                                item.Quantity,
-                                item.Price);
-                            item.Product.StockStatus = CalculateStockStatus(
-                                item.Product.QuantityOnHand, item.Product.ReorderLevel);
-                        }
-                    }
-                }
-
-                await _context.SaveChangesAsync();
-
-                string actionLabel = status switch
-                {
-                    "Approved" => "Approve Purchase Order",
-                    "Delivered" => "Deliver Purchase Order",
-                    "Cancelled" => "Cancel Purchase Order",
-                    _ => "Update Status"
-                };
-
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    StaffId = GetCurrentStaffId(),
-                    Action = actionLabel,
-                    Module = "PurchaseOrder",
-                    Description = $"{actionLabel} - PO {order.PurchaseOrderNumber} ({oldStatus} -> {status})"
-                });
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = $"Purchase Order {order.PurchaseOrderNumber} status updated to '{status}'.";
+                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message
+                    ?? "An error occurred while approving the purchase order. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (Exception ex)
+
+            TempData["SuccessMessage"] = "Purchase order approved. Proceed to delivery.";
+            return RedirectToAction("Details", "Delivery", new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            var accessCheck = CheckAccess();
+            if (accessCheck != null) return accessCheck;
+
+            var result = await _purchaseOrderService.CancelAsync(id, GetCurrentStaffId());
+
+            if (!result.Succeeded)
             {
-                _logger.LogError(ex, "Error updating status for purchase order {Id}", id);
-                TempData["ErrorMessage"] = "An error occurred while updating the purchase order status. Please try again.";
+                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message
+                    ?? "An error occurred while cancelling the purchase order. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+
+            TempData["SuccessMessage"] = "Purchase order cancelled.";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]
         public async Task<JsonResult> GetSupplierInfo(int id)
         {
-            var supplier = await _context.Suppliers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.SupplierId == id);
-
-            if (supplier == null)
-                return Json(new { contactPerson = "", contactNumber = "", address = "" });
-
-            return Json(new
-            {
-                contactPerson = supplier.ContactPerson ?? "",
-                contactNumber = supplier.ContactNumber ?? "",
-                address = supplier.Address ?? ""
-            });
-        }
-
-        [HttpGet]
-        public async Task<JsonResult> GetProductInfo(int id)
-        {
-            var product = await _context.Products
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ProductId == id);
-
-            if (product == null)
-                return Json(new { productName = "", brand = "", stock = 0, price = 0 });
-
-            return Json(new
-            {
-                productName = product.ProductName ?? "",
-                brand = product.Brand ?? "",
-                stock = product.QuantityOnHand,
-                price = product.Price
-            });
+            var info = await _purchaseOrderService.GetSupplierInfoAsync(id);
+            return Json(info ?? new SupplierInfoDto());
         }
 
         [HttpGet]
         public async Task<JsonResult> GetProductsBySupplier(int id)
         {
-            var products = await _context.Products
-                .AsNoTracking()
-                .Where(p => p.SupplierId == id)
-                .OrderBy(p => p.ProductName)
-                .Select(p => new
-                {
-                    p.ProductId,
-                    p.ProductName,
-                    p.Brand,
-                    p.QuantityOnHand,
-                    p.Price
-                })
-                .ToListAsync();
-
+            var products = await _purchaseOrderService.GetProductsBySupplierAsync(id);
             return Json(products);
         }
 
         [HttpGet]
         public async Task<IActionResult> PrintPreviewHtml(int id)
         {
-            var accessCheck = CheckAccess();
-            if (accessCheck != null) return accessCheck;
+            var viewModel = await _purchaseOrderService.GetDetailsViewModelAsync(id);
+            if (viewModel == null) return NotFound();
 
-            try
-            {
-                var order = await _context.PurchaseOrders
-                    .Include(p => p.Supplier)
-                    .Include(p => p.Staff)
-                    .Include(p => p.Items).ThenInclude(i => i.Product)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
-
-                if (order == null) return NotFound();
-
-                var viewModel = new PurchaseOrderViewModel
-                {
-                    PurchaseOrderId = order.PurchaseOrderId,
-                    PurchaseOrderNumber = order.PurchaseOrderNumber,
-                    SupplierId = order.SupplierId,
-                    SupplierName = order.Supplier?.CompanyName,
-                    ContactPerson = order.Supplier?.ContactPerson,
-                    ContactNumber = order.Supplier?.ContactNumber,
-                    SupplierAddress = order.Supplier?.Address,
-                    OrderDate = order.OrderDate,
-                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
-                    Status = order.Status,
-                    TotalAmount = order.TotalAmount,
-                    Remarks = order.Remarks,
-                    CreatedByName = order.Staff?.StaffName,
-                    CreatedDate = order.CreatedDate,
-                    UpdatedDate = order.UpdatedDate,
-                    Items = order.Items.Select(i => new PurchaseOrderItemViewModel
-                    {
-                        PurchaseOrderItemId = i.PurchaseOrderItemId,
-                        ProductId = i.ProductId,
-                        ProductName = i.Product?.ProductName,
-                        Brand = i.Product?.Brand,
-                        CurrentStock = i.Product?.QuantityOnHand ?? 0,
-                        Quantity = i.Quantity,
-                        Price = i.Price,
-                        Subtotal = i.Subtotal
-                    }).ToList()
-                };
-
-                return PartialView("_PrintPreview", viewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading print preview for purchase order {Id}", id);
-                return StatusCode(500, "An error occurred while loading the print preview.");
-            }
+            return PartialView("_PrintPreview", viewModel);
         }
 
         public async Task<IActionResult> Print(int id)
@@ -752,27 +225,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
+            var order = await _purchaseOrderService.GetByIdAsync(id);
+            if (order == null) return NotFound();
+
             try
             {
-                var order = await _context.PurchaseOrders
-                    .Include(p => p.Supplier)
-                    .Include(p => p.Staff)
-                    .Include(p => p.Items).ThenInclude(i => i.Product)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
-
-                if (order == null) return NotFound();
-
                 byte[] pdfBytes = GeneratePurchaseOrderPdfBytes(order);
-
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    StaffId = GetCurrentStaffId(),
-                    Action = "Print Purchase Order",
-                    Module = "PurchaseOrder",
-                    Description = $"Printed PO {order.PurchaseOrderNumber}"
-                });
-                await _context.SaveChangesAsync();
+                await _purchaseOrderService.LogPrintAsync(id, GetCurrentStaffId());
 
                 return File(pdfBytes, "application/pdf", $"PO-{order.PurchaseOrderNumber}.pdf");
             }
@@ -912,39 +371,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 });
             }).GeneratePdf(ms);
             return ms.ToArray();
-        }
-
-        private static decimal CalculateNewAverageCost(decimal oldQty, decimal oldAvgCost, decimal newQty, decimal newUnitCost)
-        {
-            if (oldQty + newQty == 0) return newUnitCost;
-            return ((oldQty * oldAvgCost) + (newQty * newUnitCost)) / (oldQty + newQty);
-        }
-
-        private static string CalculateStockStatus(int qty, int reorder)
-        {
-            if (qty <= 0) return "Out of Stock";
-            if (qty <= reorder) return "Low Stock";
-            return "Available";
-        }
-
-        private async Task<string> GeneratePONumberAsync()
-        {
-            string prefix = "PO-" + DateTime.Now.ToString("yyyyMMdd") + "-";
-            string? lastNumber = await _context.PurchaseOrders
-                .Where(p => p.PurchaseOrderNumber.StartsWith(prefix))
-                .OrderByDescending(p => p.PurchaseOrderNumber)
-                .Select(p => p.PurchaseOrderNumber)
-                .FirstOrDefaultAsync();
-
-            int nextSeq = 1;
-            if (lastNumber != null)
-            {
-                string lastSeq = lastNumber[prefix.Length..];
-                int.TryParse(lastSeq, out nextSeq);
-                nextSeq++;
-            }
-
-            return prefix + nextSeq.ToString("D4");
         }
     }
 }

@@ -16,7 +16,7 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label asp-for="SupplierId" class="form-label"></label>
-                    <select asp-for="SupplierId" class="form-select" asp-items="ViewBag.Suppliers" id="supplierSelect">
+                    <select asp-for="SupplierId" class="form-select" asp-items="Model.Suppliers" id="supplierSelect">
                         <option value="">-- Select Supplier --</option>
                     </select>
                     <span asp-validation-for="SupplierId" class="text-danger small"></span>
@@ -31,11 +31,6 @@
                     <input asp-for="OrderDate" class="form-control" type="date" />
                     <span asp-validation-for="OrderDate" class="text-danger small"></span>
                 </div>
-                <div class="col-md-3">
-                    <label asp-for="ExpectedDeliveryDate" class="form-label"></label>
-                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
-                    <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
-                </div>
             </div>
 
             <div class="mb-3">
@@ -45,24 +40,14 @@
                     <table class="table mb-0" id="itemsTable">
                         <thead>
                             <tr>
-                                <th style="width:28%;">Product</th>
-                                <th style="width:12%;">Brand</th>
-                                <th style="width:10%;">Stock</th>
-                                <th style="width:12%;">Price</th>
-                                <th style="width:12%;">Quantity</th>
-                                <th style="width:12%;">Subtotal</th>
+                                <th style="width:45%;">Product</th>
+                                <th style="width:25%;">Brand</th>
+                                <th style="width:20%;">Quantity</th>
                                 <th style="width:40px;"></th>
                             </tr>
                         </thead>
                         <tbody id="itemsContainer">
                         </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="5" class="text-end fw-bold">Grand Total:</td>
-                                <td class="fw-bold fs-5" id="grandTotal">0.00</td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addItemBtn">
@@ -90,13 +75,14 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         var products = [];
+        var existingItems = @Html.Raw(Json.Serialize(Model.Items));
         var itemIndex = 0;
 
         function buildProductOptions(data) {
             var options = '<option value="">-- Select Product --</option>';
             products.forEach(function (p) {
                 var selected = (data && data.productId == p.productId) ? 'selected' : '';
-                options += '<option value="' + p.productId + '" data-brand="' + (p.brand || '') + '" data-stock="' + p.quantityOnHand + '" data-price="' + p.price + '" ' + selected + '>' + p.productName + '</option>';
+                options += '<option value="' + p.productId + '" data-brand="' + (p.brand || '') + '" ' + selected + '>' + p.productName + '</option>';
             });
             return options;
         }
@@ -135,10 +121,7 @@
             row.innerHTML =
                 '<td><select name="Items[' + itemIndex + '].ProductId" class="form-select form-select-sm product-select">' + options + '</select></td>' +
                 '<td class="brand-display align-middle">' + (data ? (data.brand || '') : '') + '</td>' +
-                '<td class="current-stock align-middle text-center">' + (data ? data.currentStock : 0) + '</td>' +
-                '<td class="price-display align-middle text-end fw-semibold text-nowrap">' + (data ? parseFloat(data.price).toFixed(2) : '0.00') + '</td>' +
                 '<td><input type="number" name="Items[' + itemIndex + '].Quantity" class="form-control form-control-sm item-qty" value="' + (data ? data.quantity : 1) + '" min="1" /></td>' +
-                '<td class="item-subtotal align-middle text-end fw-semibold">' + (data ? (data.quantity * data.price).toFixed(2) : '0.00') + '</td>' +
                 '<td><button type="button" class="btn btn-icon btn-icon-delete remove-item" style="width:28px;height:28px;font-size:11px;"><i class="bi bi-x"></i></button></td>';
 
             container.appendChild(row);
@@ -148,44 +131,17 @@
             select.addEventListener('change', function () {
                 var selectedOption = select.options[select.selectedIndex];
                 row.querySelector('.brand-display').textContent = selectedOption ? selectedOption.getAttribute('data-brand') || '' : '';
-                row.querySelector('.current-stock').textContent = selectedOption ? selectedOption.getAttribute('data-stock') || 0 : 0;
-                row.querySelector('.price-display').textContent = selectedOption ? parseFloat(selectedOption.getAttribute('data-price') || 0).toFixed(2) : '0.00';
-                updateRowSubtotal(row);
-                updateGrandTotal();
             });
-
-            var qty = row.querySelector('.item-qty');
-            qty.addEventListener('input', function () { updateRowSubtotal(row); updateGrandTotal(); });
 
             row.querySelector('.remove-item').addEventListener('click', function () {
                 if (!confirm('Remove this product from the order?')) return;
                 row.remove();
-                updateGrandTotal();
             });
 
             if (data && data.productId) {
                 var selectedOption = select.options[select.selectedIndex];
                 row.querySelector('.brand-display').textContent = selectedOption ? selectedOption.getAttribute('data-brand') || '' : '';
-                row.querySelector('.current-stock').textContent = selectedOption ? selectedOption.getAttribute('data-stock') || 0 : 0;
-                row.querySelector('.price-display').textContent = selectedOption ? parseFloat(selectedOption.getAttribute('data-price') || 0).toFixed(2) : '0.00';
-                updateRowSubtotal(row);
             }
-
-            updateGrandTotal();
-        }
-
-        function updateRowSubtotal(row) {
-            var qty = parseInt(row.querySelector('.item-qty').value) || 0;
-            var price = parseFloat(row.querySelector('.price-display').textContent) || 0;
-            row.querySelector('.item-subtotal').textContent = (qty * price).toFixed(2);
-        }
-
-        function updateGrandTotal() {
-            var total = 0;
-            document.querySelectorAll('.item-subtotal').forEach(function (el) {
-                total += parseFloat(el.textContent) || 0;
-            });
-            document.getElementById('grandTotal').textContent = total.toFixed(2);
         }
 
         function updateSupplierInfo() {
@@ -211,11 +167,32 @@
         document.getElementById('supplierSelect').addEventListener('change', updateSupplierInfo);
         document.getElementById('addItemBtn').addEventListener('click', function () { addItemRow(); });
 
-        // Add first empty row on load
-        addItemRow();
+        // Restore previously submitted rows after a validation error, otherwise start with one empty row
+        if (existingItems && existingItems.length > 0) {
+            var supplierId = document.getElementById('supplierSelect').value;
+            if (supplierId) {
+                fetch('/PurchaseOrders/GetProductsBySupplier/' + supplierId)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        products = data;
+                        existingItems.forEach(function (item) { addItemRow(item); });
+                    })
+                    .catch(function () { existingItems.forEach(function (item) { addItemRow(item); }); });
+            } else {
+                existingItems.forEach(function (item) { addItemRow(item); });
+            }
+        } else {
+            addItemRow();
+        }
 
         // Form validation
         document.getElementById('poForm').addEventListener('submit', function (e) {
+            var supplierId = document.getElementById('supplierSelect').value;
+            if (!supplierId) {
+                e.preventDefault();
+                alert('Please select a supplier.');
+                return;
+            }
             var hasProduct = false;
             document.querySelectorAll('.product-select').forEach(function (sel) {
                 if (sel.value) hasProduct = true;

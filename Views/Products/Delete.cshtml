@@ -6,13 +6,7 @@
 <div class="card border-danger">
     <div class="card-body">
         <div class="row g-4">
-            @if (!string.IsNullOrEmpty(Model.ImagePath))
-            {
-                <div class="col-md-4 text-center">
-                    <img src="@Model.ImagePath" alt="@Model.ProductName" class="img-fluid rounded border" style="max-height:200px;" />
-                </div>
-            }
-            <div class="@(string.IsNullOrEmpty(Model.ImagePath) ? "col-md-12" : "col-md-8")">
+            <div class="col-md-12">
                 <table class="table table-borderless mb-0">
                     <tr><th style="width:180px;">Product ID</th><td>@Model.ProductId</td></tr>
                     <tr><th>Name</th><td>@Model.ProductName</td></tr>

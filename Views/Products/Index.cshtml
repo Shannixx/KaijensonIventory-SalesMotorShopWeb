@@ -13,7 +13,7 @@
     <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
         <div>
             <label class="form-label small">Search</label>
-            <input type="text" name="searchString" class="form-control" placeholder="Name, brand, or part number..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
+            <input type="text" name="searchString" class="form-control" placeholder="Name, brand, or description..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
         </div>
         <div>
             <label class="form-label small">Category</label>
@@ -34,12 +34,10 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th style="width:50px;">Image</th>
                         <th>ID</th>
                         <th>Name</th>
                         <th>Supplier</th>
                         <th>Brand</th>
-                        <th>Part #</th>
                         <th>Category</th>
                         <th>Price</th>
                         <th>Stock</th>
@@ -51,21 +49,10 @@
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>
-                                @if (!string.IsNullOrEmpty(item.ImagePath))
-                                {
-                                    <img src="@item.ImagePath" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" onerror="this.src='/uploads/products/placeholder.svg'" />
-                                }
-                                else
-                                {
-                                    <img src="/uploads/products/placeholder.svg" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" />
-                                }
-                            </td>
                             <td>@item.ProductId</td>
                             <td><span class="fw-medium">@item.ProductName</span></td>
                             <td>@item.Supplier?.CompanyName</td>
                             <td>@(item.Brand ?? "-")</td>
-                            <td><span class="small">@(item.PartNumber ?? "-")</span></td>
                             <td>@item.Category?.CategoryName</td>
                             <td class="fw-semibold">@item.Price.ToString("N2")</td>
                             <td>@item.QuantityOnHand</td>
@@ -88,7 +75,7 @@
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="11" class="text-center py-4 text-muted">No products found.</td></tr>
+                        <tr><td colspan="9" class="text-center py-4 text-muted">No products found.</td></tr>
                     }
                 </tbody>
             </table>
