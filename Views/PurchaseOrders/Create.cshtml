@@ -119,9 +119,10 @@
 
             var options = buildProductOptions(data);
 
-            row.innerHTML =
+row.innerHTML =
                 '<td><select name="Items[' + itemIndex + '].ProductId" class="form-select form-select-sm product-select">' + options + '</select></td>' +
                 '<td class="brand-display align-middle">' + (data ? (data.brand || '') : '') + '</td>' +
+                '<td class="category-display align-middle">' + (data ? (data.category || '') : '') + '</td>' +
                 '<td><input type="number" name="Items[' + itemIndex + '].Quantity" class="form-control form-control-sm item-qty" value="' + (data ? data.quantity : 1) + '" min="1" /></td>' +
                 '<td><button type="button" class="btn btn-icon btn-icon-delete remove-item" style="width:28px;height:28px;font-size:11px;"><i class="bi bi-x"></i></button></td>';
 
@@ -132,6 +133,7 @@
             select.addEventListener('change', function () {
                 var selectedOption = select.options[select.selectedIndex];
                 row.querySelector('.brand-display').textContent = selectedOption ? selectedOption.getAttribute('data-brand') || '' : '';
+                row.querySelector('.category-display').textContent = selectedOption ? selectedOption.getAttribute('data-category') || '' : '';
             });
 
             row.querySelector('.remove-item').addEventListener('click', function () {
@@ -142,6 +144,7 @@
             if (data && data.productId) {
                 var selectedOption = select.options[select.selectedIndex];
                 row.querySelector('.brand-display').textContent = selectedOption ? selectedOption.getAttribute('data-brand') || '' : '';
+                row.querySelector('.category-display').textContent = selectedOption ? selectedOption.getAttribute('data-category') || '' : '';
             }
         }
 

@@ -17,7 +17,7 @@
         <p>Delivery details.</p>
     </div>
     <div class="d-flex gap-2">
-        @if (Model.Status == "Approved")
+        @if (Model.Status == "Pending")
         {
             <form asp-action="MarkDelivered" asp-route-id="@Model.DeliveryId" method="post">
                 @Html.AntiForgeryToken()
