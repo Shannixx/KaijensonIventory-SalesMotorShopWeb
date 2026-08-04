@@ -361,7 +361,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 {
                     ProductId = p.ProductId,
                     ProductName = p.ProductName,
-                    Brand = p.Brand
+                    Brand = p.Brand,
+                    Category = p.Category != null ? p.Category.CategoryName : null
                 })
                 .ToListAsync();
         }

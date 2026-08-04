@@ -59,5 +59,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         public string? ProductName { get; set; }
 
         public string? Brand { get; set; }
+
+        public string? Category { get; set; }
     }
 }
