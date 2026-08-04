@@ -26,6 +26,7 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
                 .Include(d => d.PurchaseOrder)
                     .ThenInclude(p => p.Items)
                         .ThenInclude(i => i.Product)
+                            .ThenInclude(p => p.Category)
                 .AsNoTracking()
                 .OrderByDescending(d => d.CreatedDate)
                 .Select(d => new DeliveryViewModel
@@ -63,6 +64,7 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
                 .Include(d => d.PurchaseOrder)
                     .ThenInclude(p => p.Items)
                         .ThenInclude(i => i.Product)
+                            .ThenInclude(p => p.Category)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.DeliveryId == id);
 
@@ -95,6 +97,7 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
                 .Include(d => d.PurchaseOrder)
                     .ThenInclude(p => p.Items)
                         .ThenInclude(i => i.Product)
+                            .ThenInclude(p => p.Category)
                 .FirstOrDefaultAsync(d => d.DeliveryId == id);
 
             if (delivery == null)

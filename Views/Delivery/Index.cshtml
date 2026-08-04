@@ -33,7 +33,7 @@
                             <td>
     @item.Items.Count
     @foreach (var it in item.Items) {
-        <span class="badge bg-secondary ms-1">@it.Category</span>
+        <span class="badge bg-secondary ms-1">@it.ProductName</span>
     }
 </td>
                             @{var badgeClass = item.Status == "Pending" ? "bg-warning" : item.Status == "Delivered" ? "bg-success" : "bg-primary";}
