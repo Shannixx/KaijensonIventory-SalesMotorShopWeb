@@ -4,6 +4,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 {
     public class DeliveryViewModel
     {
+        public int DeliveryId { get; set; }
         public int PurchaseOrderId { get; set; }
 
         [Display(Name = "PO Number")]
@@ -35,8 +36,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         [Display(Name = "Brand")]
         public string? Brand { get; set; }
 
-        [Display(Name = "Part Type")]
-        public string? PartType { get; set; }
+        [Display(Name = "Category")]
+        public string? Category { get; set; }
 
         [Display(Name = "Quantity")]
         public int Quantity { get; set; }

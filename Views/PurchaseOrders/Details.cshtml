@@ -17,7 +17,7 @@
         <p>Purchase order details.</p>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-secondary" onclick="openPrintPreview(@Model.PurchaseOrderId, '@Model.PurchaseOrderNumber')"><i class="bi bi-printer"></i> Print</button>
+        
         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
     </div>
 </div>
@@ -32,15 +32,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon info"><i class="bi bi-currency-dollar"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Total Amount</p>
-                <h3 class="metric-value">@Model.TotalAmount.ToString("N2")</h3>
-            </div>
-        </div>
-    </div>
+
     <div class="col-md-3">
         <div class="metric-card">
             <div class="metric-icon accent"><i class="bi bi-box-seam"></i></div>
@@ -80,7 +72,6 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>Products</span>
-        <span class="fw-bold">Grand Total: @Model.TotalAmount.ToString("N2")</span>
     </div>
     <div class="card-body p-0">
         <div class="table-container">
@@ -91,9 +82,7 @@
                         <th>Product</th>
                         <th>Brand</th>
                         <th>Stock</th>
-                        <th>Price</th>
                         <th>Qty</th>
-                        <th class="text-end">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -108,24 +97,19 @@
                                 </td>
                                 <td>@(item.Brand ?? "")</td>
                                 <td>@item.CurrentStock</td>
-                                <td>@item.Price.ToString("N2")</td>
+                                
                                 <td>@item.Quantity</td>
-                                <td class="text-end fw-semibold">@item.Subtotal.ToString("N2")</td>
+                                
                             </tr>
                             idx++;
                         }
                     }
                     @if (!Model.Items.Any())
                     {
-                        <tr><td colspan="7" class="text-center py-3 text-muted">No items.</td></tr>
+                        <tr><td colspan="5" class="text-center py-3 text-muted">No items.</td></tr>
                     }
                 </tbody>
-                <tfoot>
-                    <tr class="table-active">
-                        <td colspan="6" class="text-end fw-bold">Grand Total</td>
-                        <td class="text-end fw-bold fs-5">@Model.TotalAmount.ToString("N2")</td>
-                    </tr>
-                </tfoot>
+
             </table>
         </div>
     </div>

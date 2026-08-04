@@ -16,76 +16,96 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             _activityLogService = activityLogService;
         }
 
-        public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
+public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
         {
-            var orders = await _context.PurchaseOrders
-                .Include(p => p.Supplier)
+            var deliveries = await _context.Deliveries
+                .Include(d => d.PurchaseOrder)
+                    .ThenInclude(p => p.Supplier)
+                .Include(d => d.PurchaseOrder)
+                    .ThenInclude(p => p.Staff)
+                .Include(d => d.PurchaseOrder)
+                    .ThenInclude(p => p.Items)
+                        .ThenInclude(i => i.Product)
                 .AsNoTracking()
-                .Where(p => p.Status == "Approved")
-                .OrderByDescending(p => p.CreatedDate)
-                .Select(p => new DeliveryViewModel
+                .OrderByDescending(d => d.CreatedDate)
+                .Select(d => new DeliveryViewModel
                 {
-                    PurchaseOrderId = p.PurchaseOrderId,
-                    PurchaseOrderNumber = p.PurchaseOrderNumber,
-                    Status = p.Status,
-                    SupplierName = p.Supplier != null ? p.Supplier.CompanyName : null,
-                    OrderDate = p.OrderDate,
-                    DeliveredDate = p.DeliveredDate,
-                    CreatedByName = p.Staff != null ? p.Staff.StaffName : null,
-                    Items = p.Items.Select(i => new DeliveryItemViewModel
-                    {
-                        ProductName = i.Product != null ? i.Product.ProductName : null,
-                        Brand = i.Product != null ? i.Product.Brand : null,
-                        PartType = i.Product != null ? i.Product.PartType : null,
-                        Quantity = i.Quantity
-                    }).ToList()
+                    DeliveryId = d.DeliveryId,
+                    PurchaseOrderId = d.PurchaseOrderId,
+                    PurchaseOrderNumber = d.PurchaseOrder != null ? d.PurchaseOrder.PurchaseOrderNumber : null,
+                    Status = d.Status,
+                    SupplierName = d.PurchaseOrder != null && d.PurchaseOrder.Supplier != null ? d.PurchaseOrder.Supplier.CompanyName : null,
+                    OrderDate = d.PurchaseOrder != null ? d.PurchaseOrder.OrderDate : DateTime.MinValue,
+                    DeliveredDate = d.DeliveredDate,
+                    CreatedByName = d.PurchaseOrder != null && d.PurchaseOrder.Staff != null ? d.PurchaseOrder.Staff.StaffName : null,
+                    Items = d.PurchaseOrder != null
+                        ? d.PurchaseOrder.Items.Select(i => new DeliveryItemViewModel
+                        {
+                            ProductName = i.Product != null ? i.Product.ProductName : null,
+                            Brand = i.Product != null ? i.Product.Brand : null,
+                            Category = i.Product != null && i.Product.Category != null ? i.Product.Category.CategoryName : null,
+                            Quantity = i.Quantity
+                        }).ToList()
+                        : new List<DeliveryItemViewModel>()
                 })
                 .ToListAsync();
 
-            return orders;
+            return deliveries;
         }
 
         public async Task<DeliveryViewModel?> GetDeliveryDetailsAsync(int id)
         {
-            var order = await _context.PurchaseOrders
-                .Include(p => p.Supplier)
-                .Include(p => p.Staff)
-                .Include(p => p.Items).ThenInclude(i => i.Product)
+            var delivery = await _context.Deliveries
+                .Include(d => d.PurchaseOrder)
+                    .ThenInclude(p => p.Supplier)
+                .Include(d => d.PurchaseOrder)
+                    .ThenInclude(p => p.Staff)
+                .Include(d => d.PurchaseOrder)
+                    .ThenInclude(p => p.Items)
+                        .ThenInclude(i => i.Product)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
+                .FirstOrDefaultAsync(d => d.DeliveryId == id);
 
-            if (order == null) return null;
+            if (delivery == null) return null;
 
+            var order = delivery.PurchaseOrder;
             return new DeliveryViewModel
             {
-                PurchaseOrderId = order.PurchaseOrderId,
-                PurchaseOrderNumber = order.PurchaseOrderNumber,
-                Status = order.Status,
-                SupplierName = order.Supplier?.CompanyName,
-                OrderDate = order.OrderDate,
-                DeliveredDate = order.DeliveredDate,
-                CreatedByName = order.Staff?.StaffName,
-                Items = order.Items.Select(i => new DeliveryItemViewModel
+                DeliveryId = delivery.DeliveryId,
+                PurchaseOrderId = order?.PurchaseOrderId ?? 0,
+                PurchaseOrderNumber = order?.PurchaseOrderNumber,
+                Status = delivery.Status,
+                SupplierName = order?.Supplier?.CompanyName,
+                OrderDate = order?.OrderDate ?? DateTime.MinValue,
+                DeliveredDate = delivery.DeliveredDate,
+                CreatedByName = order?.Staff?.StaffName,
+                Items = order?.Items.Select(i => new DeliveryItemViewModel
                 {
                     ProductName = i.Product?.ProductName,
                     Brand = i.Product?.Brand,
-                    PartType = i.Product?.PartType,
+                    Category = i.Product?.Category?.CategoryName,
                     Quantity = i.Quantity
-                }).ToList()
+                }).ToList() ?? new List<DeliveryItemViewModel>()
             };
         }
 
         public async Task<Result> DeliverAsync(int id, int currentStaffId)
         {
-            PurchaseOrder? order = await _context.PurchaseOrders
-                .Include(p => p.Items).ThenInclude(i => i.Product)
-                .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
+            var delivery = await _context.Deliveries
+                .Include(d => d.PurchaseOrder)
+                    .ThenInclude(p => p.Items)
+                        .ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(d => d.DeliveryId == id);
 
+            if (delivery == null)
+                return Result.Failure(null, "The delivery could not be found.");
+
+            if (delivery.Status != "Pending")
+                return Result.Failure(null, $"Cannot mark delivery as delivered with status '{delivery.Status}'.");
+
+            var order = delivery.PurchaseOrder;
             if (order == null)
-                return Result.Failure(null, "The purchase order could not be found.");
-
-            if (order.Status != "Approved")
-                return Result.Failure(null, $"Cannot deliver a purchase order with status '{order.Status}'.");
+                return Result.Failure(null, "Associated purchase order not found.");
 
             if (order.Items.All(i => i.Product == null))
                 return Result.Failure(null, "The purchase order has no deliverable items.");
@@ -110,15 +130,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     item.Product.QuantityOnHand, item.Product.ReorderLevel);
             }
 
-            order.Status = "Delivered";
-            order.DeliveredDate = DateTime.Now;
-            order.DeliveredBy = currentStaffId;
-            order.UpdatedDate = DateTime.Now;
+            delivery.Status = "Delivered";
+            delivery.DeliveredDate = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
-            await _activityLogService.LogAsync("Deliver Purchase Order", "PurchaseOrder",
-                $"Delivered PO {order.PurchaseOrderNumber} (Approved -> Delivered)", currentStaffId);
+            await _activityLogService.LogAsync("Mark Delivery", "Delivery",
+                $"Delivery for PO {order.PurchaseOrderNumber} marked as Delivered", currentStaffId);
 
             await transaction.CommitAsync();
 

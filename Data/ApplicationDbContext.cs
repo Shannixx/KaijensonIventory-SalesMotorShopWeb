@@ -17,6 +17,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
         public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
         public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+        public DbSet<Delivery> Deliveries => Set<Delivery>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

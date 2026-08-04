@@ -19,7 +19,7 @@
     <div class="d-flex gap-2">
         @if (Model.Status == "Approved")
         {
-            <form asp-action="MarkDelivered" asp-route-id="@Model.PurchaseOrderId" method="post">
+            <form asp-action="MarkDelivered" asp-route-id="@Model.DeliveryId" method="post">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-success" onclick="return confirm('Mark this purchase order as delivered? Stock will be updated.');">
                     <i class="bi bi-check-all"></i> Mark as Delivered
@@ -81,7 +81,7 @@
                     <tr>
                         <th>#</th>
                         <th>Product</th>
-                        <th>Type</th>
+                        <th>Category</th>
                         <th>Brand</th>
                         <th>Quantity</th>
                     </tr>
@@ -94,7 +94,7 @@
                             <tr>
                                 <td>@idx</td>
                                 <td><span class="fw-medium">@item.ProductName</span></td>
-                                <td>@(item.PartType ?? "-")</td>
+                                <td>@(item.Category ?? "-")</td>
                                 <td>@(item.Brand ?? "-")</td>
                                 <td class="fw-semibold">@item.Quantity</td>
                             </tr>

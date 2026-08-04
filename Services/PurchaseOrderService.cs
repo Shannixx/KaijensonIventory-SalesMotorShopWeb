@@ -240,10 +240,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             if (order.Status != "Pending")
                 return Result.Failure(null, $"Cannot approve a purchase order with status '{order.Status}'.");
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             order.Status = "Approved";
             order.UpdatedDate = DateTime.Now;
-
             await _context.SaveChangesAsync();
+
+            // Create pending delivery record
+            var delivery = new Delivery
+            {
+                PurchaseOrderId = order.PurchaseOrderId,
+                Status = "Pending",
+                CreatedDate = DateTime.Now
+            };
+            _context.Deliveries.Add(delivery);
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
 
             await _activityLogService.LogAsync("Approve Purchase Order", "PurchaseOrder",
                 $"Approved PO {order.PurchaseOrderNumber} (Pending -> Approved)", currentStaffId);

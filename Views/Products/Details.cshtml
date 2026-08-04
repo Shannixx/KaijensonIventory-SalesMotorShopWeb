@@ -45,12 +45,12 @@
                     <tr><th style="width:200px;">Product ID</th><td>@Model.ProductId</td></tr>
                     <tr><th>Name</th><td>@Model.ProductName</td></tr>
                     <tr><th>Brand</th><td>@(Model.Brand ?? "-")</td></tr>
-                    <tr><th>Part Type</th><td>@(Model.PartType ?? "-")</td></tr>
+                    
                     <tr><th>Model Compatibility</th><td>@(Model.ModelCompatibility ?? "-")</td></tr>
                     <tr><th>Description</th><td>@(Model.Description ?? "-")</td></tr>
                     <tr><th>Category</th><td>@Model.Category?.CategoryName</td></tr>
                     <tr><th>Supplier</th><td><a asp-controller="Suppliers" asp-action="Details" asp-route-id="@Model.SupplierId">@Model.Supplier?.CompanyName</a> &middot; @Model.Supplier?.ContactNumber</td></tr>
-                    <tr><th>Price</th><td class="fw-semibold fs-5">@Model.Price.ToString("N2")</td></tr>
+                    
                     <tr><th>Current Stock</th><td>@Model.QuantityOnHand <span class="badge @badgeClass ms-2">@statusLabel</span></td></tr>
 
                     <tr><th>Created At</th><td>@Model.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td></tr>

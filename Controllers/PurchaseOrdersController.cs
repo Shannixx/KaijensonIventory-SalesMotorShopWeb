@@ -174,7 +174,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
 
             TempData["SuccessMessage"] = "Purchase order approved. Proceed to delivery.";
-            return RedirectToAction("Details", "Delivery", new { id });
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]

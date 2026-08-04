@@ -82,9 +82,9 @@
                     }
                     @if (item.Status == "Approved")
                     {
-                        <a asp-controller="Delivery" asp-action="Details" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-deliver" title="Delivery" aria-label="Delivery for @item.PurchaseOrderNumber"><i class="bi bi-truck"></i></a>
+
                     }
-                    <button type="button" class="btn btn-icon btn-icon-print" title="Print Purchase Order" aria-label="Print @item.PurchaseOrderNumber" onclick="openPrintPreview(@item.PurchaseOrderId, '@item.PurchaseOrderNumber')"><i class="bi bi-printer"></i></button>
+                    
                     @if (ViewBag.CanDelete == true)
                     {
                         <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form" style="display:inline;">
