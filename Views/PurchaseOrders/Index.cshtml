@@ -41,7 +41,7 @@
                         <th>PO Number</th>
                         <th>Supplier</th>
                         <th>Order Date</th>
-                        <th>Expected Delivery</th>
+                        
                         <th>Status</th>
                         <th>Total Amount</th>
                         <th class="actions-column actions-column-wide">Actions</th>
@@ -54,7 +54,7 @@
                             <td><span class="fw-medium">@item.PurchaseOrderNumber</span></td>
                             <td>@item.Supplier?.CompanyName</td>
                             <td>@item.OrderDate.ToString("MMM dd, yyyy")</td>
-                            <td>@(item.ExpectedDeliveryDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+
                             <td>
                                 @if (item.Status == "Pending") { <span class="badge bg-warning">Pending</span> }
                                 else if (item.Status == "Approved") { <span class="badge bg-primary">Approved</span> }
@@ -98,7 +98,7 @@
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="7" class="text-center py-4 text-muted">No purchase orders found.</td></tr>
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No purchase orders found.</td></tr>
                     }
                 </tbody>
             </table>

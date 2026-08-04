@@ -41,7 +41,8 @@
                         <thead>
                             <tr>
                                 <th style="width:45%;">Product</th>
-                                <th style="width:25%;">Brand</th>
+                                <th style="width:20%;">Brand</th>
+                        <th style="width:20%;">Category</th>
                                 <th style="width:20%;">Quantity</th>
                                 <th style="width:40px;"></th>
                             </tr>
@@ -82,7 +83,7 @@
             var options = '<option value="">-- Select Product --</option>';
             products.forEach(function (p) {
                 var selected = (data && data.productId == p.productId) ? 'selected' : '';
-                options += '<option value="' + p.productId + '" data-brand="' + (p.brand || '') + '" ' + selected + '>' + p.productName + '</option>';
+                options += '<option value="' + p.productId + '" data-brand="' + (p.brand || '') + '" data-category="' + (p.category || '') + '" ' + selected + '>' + p.productName + '</option>';
             });
             return options;
         }
