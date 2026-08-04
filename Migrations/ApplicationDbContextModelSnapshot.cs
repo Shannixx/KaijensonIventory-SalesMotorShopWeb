@@ -162,6 +162,35 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         });
                 });
 
+            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Delivery", b =>
+                {
+                    b.Property<int>("DeliveryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DeliveryId"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeliveredDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PurchaseOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("DeliveryId");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.ToTable("Deliveries");
+                });
+
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Mechanic", b =>
                 {
                     b.Property<int>("MechanicId")
@@ -482,6 +511,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Staff");
+                });
+
+            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Delivery", b =>
+                {
+                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrder", "PurchaseOrder")
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseOrder");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Product", b =>
