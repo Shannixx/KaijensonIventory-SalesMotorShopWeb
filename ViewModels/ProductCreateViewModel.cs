@@ -27,6 +27,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         [Display(Name = "Quantity On Hand")]
         public int QuantityOnHand { get; set; }
 
+        [Range(0, int.MaxValue, ErrorMessage = "Reorder level cannot be negative.")]
+        [Display(Name = "Reorder Level")]
+        public int ReorderLevel { get; set; }
+
         [StringLength(500)]
         [Display(Name = "Description")]
         public string? Description { get; set; }
@@ -42,5 +46,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public List<SelectListItem> Suppliers { get; set; } = new();
         public List<SelectListItem> Brands { get; set; } = new();
         public List<SelectListItem> PurchaseOrders { get; set; } = new();
+
+        [Range(0, 999999.99)]
+        [Display(Name = "Price")]
+        public decimal Price { get; set; }
     }
 }

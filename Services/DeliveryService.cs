@@ -19,6 +19,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
         {
             var deliveries = await _context.Deliveries
+                .Where(d => d.Status == "Pending")
                 .Include(d => d.PurchaseOrder)
                     .ThenInclude(p => p.Supplier)
                 .Include(d => d.PurchaseOrder)
@@ -135,6 +136,13 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
 
             delivery.Status = "Delivered";
             delivery.DeliveredDate = DateTime.Now;
+
+            // Update related purchase order status to Delivered
+            if (order != null)
+            {
+                order.Status = "Delivered";
+                order.UpdatedDate = DateTime.Now;
+            }
 
             await _context.SaveChangesAsync();
 
