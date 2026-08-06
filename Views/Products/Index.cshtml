@@ -38,6 +38,7 @@
                         <th>Name</th>
                         <th>Supplier</th>
                         <th>Brand</th>
+                        <th>Price</th>
                         <th>Category</th>
                         
                         <th>Stock</th>
@@ -53,6 +54,7 @@
                             <td><span class="fw-medium">@item.ProductName</span></td>
                             <td>@item.Supplier?.CompanyName</td>
                             <td>@(item.Brand ?? "-")</td>
+                            <td>@item.Price.ToString("C")</td>
                             <td>@item.Category?.CategoryName</td>
                             
                             <td>@item.QuantityOnHand</td>
