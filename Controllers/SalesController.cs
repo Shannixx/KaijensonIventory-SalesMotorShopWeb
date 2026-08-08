@@ -97,12 +97,29 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         }
 
         // GET: /Sales/Confirm
-        public IActionResult Confirm()
+        public async Task<IActionResult> Confirm()
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
 
             var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+            // Populate display fields by reloading product data
+            foreach (var item in cart.Items)
+            {
+                var product = await _productService.GetByIdAsync(item.ProductId);
+                if (product != null)
+                {
+                    item.ProductName = product.ProductName;
+                    item.UnitPrice = product.Price;
+                    item.Subtotal = product.Price * item.Quantity;
+                }
+                else
+                {
+                    item.ProductName = "[Removed]";
+                    item.UnitPrice = 0m;
+                    item.Subtotal = 0m;
+                }
+            }
             // Generate a checkout key and store it in TempData for the payment view
             var checkoutKey = Guid.NewGuid().ToString("N");
             TempData["CheckoutKey"] = checkoutKey;
