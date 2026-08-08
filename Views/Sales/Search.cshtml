@@ -15,7 +15,14 @@
     <a asp-action="Search" class="btn btn-outline-secondary mt-2 mt-sm-0 ms-sm-2">Clear</a>
 </form>
 <table class="table table-striped mt-3">
-    <thead><tr class="align-middle"><th>Name</th><th>Brand</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr></thead>
+    <thead><tr class="align-middle">
+    <th style="width:30%" class="text-start">Name</th>
+    <th style="width:15%" class="text-start">Brand</th>
+    <th style="width:15%" class="text-start">Category</th>
+    <th style="width:10%" class="text-end">Price</th>
+    <th style="width:10%" class="text-center">Stock</th>
+    <th style="width:20%" class="text-center">Action</th>
+</tr></thead>
     <tbody>
     @foreach (var p in Model.Items)
     {
@@ -28,8 +35,10 @@
             <td>
                 <form asp-action="AddToCart" method="post" class="d-inline">
                     <input type="hidden" name="productId" value="@p.ProductId" />
-                    <input type="number" name="quantity" min="1" max="@p.QuantityOnHand" value="@(cart.Items.FirstOrDefault(i => i.ProductId == p.ProductId)?.Quantity ?? 1)" class="form-control d-inline w-auto" />
-                    <button type="submit" class="btn btn-success btn-sm">Add</button>
+                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                        <input type="number" name="quantity" min="1" max="@p.QuantityOnHand" value="@(cart.Items.FirstOrDefault(i => i.ProductId == p.ProductId)?.Quantity ?? 1)" class="form-control w-50" style="max-width:80px;" />
+                        <button type="submit" class="btn btn-success btn-sm">Add</button>
+                    </div>
                 </form>
             </td>
         </tr>

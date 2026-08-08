@@ -246,57 +246,7 @@
                         preview.innerHTML = '<img src="' + e.target.result + '" style="max-height:100px;border-radius:8px;border:1px solid #E5E7EB;" />';
     };
 
-    // ------------------------------------------------------------
-    // SALES RECEIPT PRINT PREVIEW
-    // ------------------------------------------------------------
-    window.openReceiptPreview = function (saleId, invoiceNumber) {
-        var modalEl = document.getElementById('receiptPreviewModal');
-        if (!modalEl) return;
-        var bodyEl = document.getElementById('receiptPreviewBody');
-        var numberEl = document.getElementById('receiptPreviewNumber');
-        var printBtn = document.getElementById('receiptPrintBtn');
-        numberEl.textContent = invoiceNumber;
-        bodyEl.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted">Loading receipt preview...</p></div>';
-        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-        fetch('/Sales/PrintPreviewHtml/' + saleId)
-            .then(function (r) {
-                if (!r.ok) throw new Error('Failed to load receipt preview');
-                return r.text();
-            })
-            .then(function (html) {
-                bodyEl.innerHTML = html;
-            })
-            .catch(function () {
-                bodyEl.innerHTML = '<div class="alert alert-danger mb-0">Failed to load receipt preview. Please try again.</div>';
-            });
-        // Print button opens a new window with printable content
-        printBtn.onclick = function () {
-            var printContent = document.getElementById('receiptPreviewBody').innerHTML;
-            var printWindow = window.open('', '_blank', 'height=600,width=800');
-            printWindow.document.write('<!DOCTYPE html><html><head><title>Print - ' + invoiceNumber + '</title>');
-            printWindow.document.write('<link rel="stylesheet" href="/css/print.css" />');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(printContent);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(function () { printWindow.print(); }, 500);
-        };
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            bodyEl.innerHTML = '';
-        }, { once: true });
-    };
 
-    // Helper to open preview and directly print (used by Print button)
-    window.openReceiptPrint = function (saleId, invoiceNumber) {
-        window.openReceiptPreview(saleId, invoiceNumber);
-        // Wait a short time for content to load then trigger print
-        setTimeout(function () {
-            var printBtn = document.getElementById('receiptPrintBtn');
-            if (printBtn) printBtn.click();
-        }, 500);
-    };
 
 
                     reader.readAsDataURL(this.files[0]);
@@ -306,6 +256,72 @@
             });
         });
     }
+
+// ------------------------------------------------------------
+// SALES RECEIPT PRINT PREVIEW (global scope)
+// ------------------------------------------------------------
+function loadReceiptPreview(saleId, invoiceNumber) {
+    return new Promise(function (resolve, reject) {
+        var modalEl = document.getElementById('receiptPreviewModal');
+        if (!modalEl) { reject(new Error('Receipt preview modal not found')); return; }
+        var bodyEl = document.getElementById('receiptPreviewBody');
+        var numberEl = document.getElementById('receiptPreviewNumber');
+        var printBtn = document.getElementById('receiptPrintBtn');
+
+        numberEl.textContent = invoiceNumber;
+        bodyEl.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted">Loading receipt preview...</p></div>';
+        if (printBtn) printBtn.disabled = true;
+
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        fetch('/Sales/PrintPreviewHtml/' + saleId)
+            .then(function (r) {
+                if (!r.ok) throw new Error('Failed to load receipt preview');
+                return r.text();
+            })
+            .then(function (html) {
+                bodyEl.innerHTML = html;
+                if (printBtn) {
+                    printBtn.disabled = false;
+                    printBtn.onclick = function () {
+                        var printContent = document.getElementById('receiptPreviewBody').innerHTML;
+                        var printWindow = window.open('', '_blank', 'height=600,width=800');
+                        if (!printWindow) { alert('Popup blocked. Please allow popups for this site.'); return; }
+                        printWindow.document.write('<!DOCTYPE html><html><head><title>Print - ' + invoiceNumber + '</title>');
+                        printWindow.document.write('<link rel="stylesheet" href="/css/print.css" />');
+                        printWindow.document.write('</head><body>');
+                        printWindow.document.write(printContent);
+                        printWindow.document.write('</body></html>');
+                        printWindow.document.close();
+                        printWindow.focus();
+                        printWindow.onload = function () { printWindow.print(); };
+                    };
+                }
+                resolve(html);
+            })
+            .catch(function (e) {
+                bodyEl.innerHTML = '<div class="alert alert-danger mb-0">Failed to load receipt preview. Please try again.</div>';
+                reject(e);
+            });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            bodyEl.innerHTML = '';
+            if (printBtn) printBtn.disabled = false;
+        }, { once: true });
+    });
+}
+
+window.openReceiptPreview = function (saleId, invoiceNumber) {
+    loadReceiptPreview(saleId, invoiceNumber);
+};
+
+window.openReceiptPrint = function (saleId, invoiceNumber) {
+    loadReceiptPreview(saleId, invoiceNumber).then(function () {
+        var printBtn = document.getElementById('receiptPrintBtn');
+        if (printBtn) printBtn.click();
+    }).catch(function () {});
+};
 
     /* ───────────────────────────────────
        SHARED DELETE CONFIRMATION MODAL
