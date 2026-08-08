@@ -7,22 +7,30 @@
 @{
     ViewData["Title"] = "Product Search";
 }
-<h2>Product Search</h2>
-<a asp-action="Search" class="btn btn-outline-primary me-2"><i class="bi bi-house"></i> Home</a>
-<form method="get" asp-action="Search" class="d-flex flex-column flex-sm-row align-items-sm-end">
+<div class="page-header mb-3">
+    <div>
+        <h1>Product Search</h1>
+        <p>Search and add products to the purchase order.</p>
+    </div>
+    <a asp-action="Search" class="btn btn-outline-primary"><i class="bi bi-house"></i> Home</a>
+</div>
+<form method="get" asp-action="Search" class="d-flex flex-wrap align-items-center mb-3">
     <input type="text" name="query" class="form-control me-sm-2" placeholder="Search products..." value='@Context.Request.Query["query"]' />
     <button type="submit" class="btn btn-primary mt-2 mt-sm-0">Search</button>
     <a asp-action="Search" class="btn btn-outline-secondary mt-2 mt-sm-0 ms-sm-2">Clear</a>
 </form>
-<table class="table table-striped mt-3">
-    <thead><tr class="align-middle">
-    <th style="width:30%" class="text-start">Name</th>
-    <th style="width:15%" class="text-start">Brand</th>
-    <th style="width:15%" class="text-start">Category</th>
-    <th style="width:10%" class="text-end">Price</th>
-    <th style="width:10%" class="text-center">Stock</th>
-    <th style="width:20%" class="text-center">Action</th>
-</tr></thead>
+<div class="table-responsive mb-3">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th style="width:30%" class="text-start">Name</th>
+                <th style="width:15%" class="text-start">Brand</th>
+                <th style="width:15%" class="text-start">Category</th>
+                <th style="width:10%" class="text-end">Price</th>
+                <th style="width:10%" class="text-center">Stock</th>
+                <th style="width:20%" class="text-center">Action</th>
+            </tr>
+        </thead>
     <tbody>
     @foreach (var p in Model.Items)
     {
@@ -44,4 +52,4 @@
         </tr>
     }
     </tbody>
-</table>
+</table></div>

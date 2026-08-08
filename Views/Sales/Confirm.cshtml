@@ -5,9 +5,16 @@
     ViewData["Title"] = "Confirm Sale";
     var checkoutKey = ViewBag.CheckoutKey as string ?? Guid.NewGuid().ToString("N");
 }
-<h2>Confirm Sale</h2>
-<a asp-action="Search" class="btn btn-outline-primary me-2"><i class="bi bi-house"></i> Home</a>
-<a asp-action="Cart" class="btn btn-outline-secondary me-2">Back to Cart</a>
+<div class="page-header mb-3">
+    <div>
+        <h1>Confirm Sale</h1>
+        <p>Review the purchase summary before payment.</p>
+    </div>
+    <div>
+        <a asp-action="Search" class="btn btn-outline-primary me-2"><i class="bi bi-house"></i> Home</a>
+        <a asp-action="Cart" class="btn btn-outline-secondary">Back to Cart</a>
+    </div>
+</div>
 @if (!Model.Items.Any())
 {
     <p>No items in cart.</p>
