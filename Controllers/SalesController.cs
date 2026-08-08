@@ -39,25 +39,40 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         // POST: /Sales/AddToCart
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult AddToCart(int productId, int quantity)
+        public async Task<IActionResult> AddToCart(int productId, int quantity)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
 
-            if (quantity <= 0)
+            // Basic quantity validation
+            if (quantity < 1)
             {
                 TempData["ErrorMessage"] = "Quantity must be greater than zero.";
                 return RedirectToAction(nameof(Search));
             }
 
-            // Retrieve existing cart from session or create new
+            // Load product to validate existence and stock
+            var product = await _productService.GetByIdAsync(productId);
+            if (product == null)
+            {
+                TempData["ErrorMessage"] = "Product not found.";
+                return RedirectToAction(nameof(Search));
+            }
+
+            if (quantity > product.QuantityOnHand)
+            {
+                TempData["ErrorMessage"] = "Requested quantity exceeds available stock.";
+                return RedirectToAction(nameof(Search));
+            }
+
+            // Retrieve or create cart from session
             var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
 
-            // Add or update item
+            // Add or update item using SET behavior
             var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == productId);
             if (existingItem != null)
             {
-                existingItem.Quantity += quantity;
+                existingItem.Quantity = quantity; // set total desired quantity
             }
             else
             {

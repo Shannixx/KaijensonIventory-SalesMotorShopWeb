@@ -89,12 +89,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 Price = product.Price
             };
 
-            return await PopulateListsAsync(model);
+            return await PopulateEditListsAsync(model);
         }
 
         public async Task<ProductEditViewModel> PrepareEditViewModelAsync(ProductEditViewModel model)
         {
-            return await PopulateListsAsync(model);
+            return await PopulateEditListsAsync(model);
         }
 
         public async Task<Result> CreateAsync(ProductCreateViewModel model, int currentStaffId)
@@ -152,7 +152,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         public async Task<Result> UpdateAsync(ProductEditViewModel model, int currentStaffId)
         {
-            var errors = Validate(model);
+            var errors = ValidateEdit(model);
             if (errors.Any())
                 return Result.Failure(errors);
 
@@ -188,7 +188,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             existing.ModelCompatibility = model.ModelCompatibility;
             existing.Description = model.Description;
             existing.PurchaseOrderId = model.PurchaseOrderId;
-            existing.ReorderLevel = model.ReorderLevel;
+            
                 existing.Price = model.Price ?? existing.Price;
             existing.StockStatus = CalculateStockStatus(existing.QuantityOnHand, existing.ReorderLevel);
 
@@ -258,7 +258,53 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return model;
         }
 
+        private async Task<ProductEditViewModel> PopulateEditListsAsync(ProductEditViewModel model)
+        {
+            model.Categories = await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName)
+                .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.CategoryName })
+                .ToListAsync();
+
+            model.Suppliers = await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName)
+                .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
+                .ToListAsync();
+
+            model.Brands = await _context.Brands.AsNoTracking()
+                .OrderBy(b => b.Status == "Active" ? 0 : 1)
+                .ThenBy(b => b.BrandName)
+                .Select(b => new SelectListItem { Value = b.BrandName, Text = b.BrandName })
+                .ToListAsync();
+
+            model.PurchaseOrders = await _context.PurchaseOrders.AsNoTracking()
+                .OrderByDescending(p => p.CreatedDate)
+                .Select(p => new SelectListItem { Value = p.PurchaseOrderId.ToString(), Text = p.PurchaseOrderNumber })
+                .ToListAsync();
+
+            return model;
+        }
+
         private static List<ResultError> Validate(ProductCreateViewModel model)
+        {
+            var errors = new List<ResultError>();
+
+            if (string.IsNullOrWhiteSpace(model.ProductName))
+                errors.Add(new ResultError("ProductName", "Product name is required."));
+
+            if (string.IsNullOrWhiteSpace(model.Brand))
+                errors.Add(new ResultError("Brand", "Please select a brand."));
+
+            if (model.CategoryId <= 0)
+                errors.Add(new ResultError("CategoryId", "Please select a category."));
+
+            if (model.SupplierId <= 0)
+                errors.Add(new ResultError("SupplierId", "Please select a supplier."));
+
+            if (model.QuantityOnHand < 0)
+                errors.Add(new ResultError("QuantityOnHand", "Quantity cannot be negative."));
+
+            return errors;
+        }
+
+        private static List<ResultError> ValidateEdit(ProductEditViewModel model)
         {
             var errors = new List<ResultError>();
 

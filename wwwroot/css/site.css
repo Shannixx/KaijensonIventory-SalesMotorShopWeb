@@ -690,22 +690,7 @@ a:hover { color: var(--primary-hover); }
     white-space: nowrap;
 }
 
-.action-buttons .btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    margin: 0;
-    padding: 0;
-    line-height: 1;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    box-shadow: none;
-    text-decoration: none;
-}
+
 
 .action-buttons .btn-icon i {
     display: block;
@@ -739,15 +724,26 @@ a:hover { color: var(--primary-hover); }
         min-width: 120px;
     }
 
-    .action-buttons {
-        gap: 0;
-    }
+/* ─── Cart table specific layout ─── */
+.cart-table-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+.cart-table {
+    width: 100%;
+}
 
-    .action-buttons .btn-icon {
-        width: 30px;
-        height: 30px;
-        min-width: 30px;
-    }
+/* Cart table column proportions for desktop */
+.cart-table th:nth-child(1),
+.cart-table td:nth-child(1) { width: 45%; }   /* Product */
+.cart-table th:nth-child(2),
+.cart-table td:nth-child(2) { width: 15%; }   /* Price */
+.cart-table th:nth-child(3),
+.cart-table td:nth-child(3) { width: 26%; }   /* Quantity */
+.cart-table th:nth-child(4),
+.cart-table td:nth-child(4) { width: 14%; }   /* Subtotal */
+
 }
 
 /* ─── Icon Buttons for Table Row Actions ─── */
@@ -805,6 +801,20 @@ a:hover { color: var(--primary-hover); }
     background: var(--danger);
     color: #fff;
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* ─── Cart quantity controls (global) ─── */
+.cart-quantity-controls .btn-minus {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+.cart-quantity-controls .btn-plus {
+    color: var(--success);
+    border-color: var(--success);
+}
+.cart-quantity-controls .btn-delete {
+    color: var(--danger);
+    border-color: var(--danger);
 }
 
 .btn-icon-key {
@@ -1468,4 +1478,6 @@ textarea.form-control { min-height: 80px; resize: vertical; }
     .modal-backdrop {
         display: none !important;
     }
-}
+
+
+
