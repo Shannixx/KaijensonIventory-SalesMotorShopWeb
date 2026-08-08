@@ -85,7 +85,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 QuantityOnHand = product.QuantityOnHand,
                 Description = product.Description,
                 ModelCompatibility = product.ModelCompatibility,
-                PurchaseOrderId = product.PurchaseOrderId
+                PurchaseOrderId = product.PurchaseOrderId,
+                Price = product.Price
             };
 
             return await PopulateListsAsync(model);
@@ -132,7 +133,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 ModelCompatibility = model.ModelCompatibility,
                 PurchaseOrderId = model.PurchaseOrderId,
                 LeadTimeDays = 30,
-                Price = model.Price,
+                Price = model.Price.Value,
                 AverageCost = 0,
                 ReorderLevel = model.ReorderLevel,
                 StockStatus = CalculateStockStatus(model.QuantityOnHand, model.ReorderLevel),
@@ -188,7 +189,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             existing.Description = model.Description;
             existing.PurchaseOrderId = model.PurchaseOrderId;
             existing.ReorderLevel = model.ReorderLevel;
-                existing.Price = model.Price;
+                existing.Price = model.Price ?? existing.Price;
             existing.StockStatus = CalculateStockStatus(existing.QuantityOnHand, existing.ReorderLevel);
 
             await _context.SaveChangesAsync();
