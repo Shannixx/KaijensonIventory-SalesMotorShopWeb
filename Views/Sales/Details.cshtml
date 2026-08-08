@@ -1,4 +1,5 @@
 @model KaijensonIventory_SalesMotorShopWeb.ViewModels.SaleDetailsViewModel
+@using System.Globalization
 @{
     ViewData["Title"] = "Sale Details";
 }
@@ -8,20 +9,20 @@
 <p><strong>Staff:</strong> @Model.Transaction.Staff?.StaffName</p>
 <p><strong>Customer:</strong> @(string.IsNullOrWhiteSpace(Model.Transaction.CustomerName) ? "Walk‑in" : Model.Transaction.CustomerName)</p>
 <table class="table table-bordered">
-    <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr></thead>
+    <thead><tr><th>Product</th><th class="text-center">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Subtotal</th></tr></thead>
     <tbody>
     @foreach (var item in Model.Items)
     {
         <tr>
             <td>@item.Product.ProductName</td>
             <td>@item.Quantity</td>
-            <td>@item.UnitPrice:C</td>
-            <td>@item.Subtotal:C</td>
+            <td class="text-end">@item.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+            <td class="text-end">@item.Subtotal.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
         </tr>
     }
     </tbody>
 </table>
-<p><strong>Total:</strong> @Model.Transaction.TotalAmount:C</p>
-<p><strong>Paid:</strong> @Model.Transaction.AmountPaid:C</p>
-<p><strong>Change:</strong> @Model.Transaction.Change:C</p>
+<p><strong>Total:</strong> @Model.Transaction.TotalAmount.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</p>
+<p><strong>Paid:</strong> @Model.Transaction.AmountPaid.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</p>
+<p><strong>Change:</strong> @Model.Transaction.Change.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</p>
 <a asp-action="ReceiptPdf" asp-route-id="@Model.Transaction.TransactionId" class="btn btn-primary">Print Receipt</a>

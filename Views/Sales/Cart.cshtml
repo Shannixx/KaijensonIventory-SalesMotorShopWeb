@@ -10,22 +10,22 @@
 }
 else
 {
-    <table class="table table-bordered">
+    <div class="table-responsive"><table class="table table-bordered align-middle">
         <thead>
-            <tr><th>Product</th><th>Price</th><th>Quantity</th><th>Subtotal</th></tr>
+            <tr><th>Product</th><th class="text-end">Price</th><th class="text-center">Quantity</th><th class="text-end">Subtotal</th></tr>
         </thead>
         <tbody>
         @foreach (var item in Model.Items)
         {
             <tr>
                 <td>@item.ProductName</td>
-                <td>@item.UnitPrice:C</td>
+                <td class="text-end">@item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
                 <td>@item.Quantity</td>
-                <td>@item.Subtotal:C</td>
+                <td class="text-end">@item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
             </tr>
         }
         </tbody>
-    </table>
-    <a asp-action="Confirm" class="btn btn-success">Proceed to Confirm</a>
-    <a asp-action="Search" class="btn btn-secondary ml-2">Add More</a>
+    </table></div>
+    <a asp-action="Confirm" class="btn btn-primary me-2">Proceed to Confirm</a>
+    <a asp-action="Search" class="btn btn-outline-secondary">Add More</a>
 }
