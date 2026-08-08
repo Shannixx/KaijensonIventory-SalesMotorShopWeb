@@ -8,27 +8,34 @@
 <h2>Confirm Sale</h2>
 <a asp-action="Search" class="btn btn-outline-primary me-2"><i class="bi bi-house"></i> Home</a>
 <a asp-action="Cart" class="btn btn-outline-secondary me-2">Back to Cart</a>
-<table class="table table-striped">
-    <thead><tr><th>Product</th><th class="text-end">Price</th><th class="text-center">Qty</th><th class="text-end">Subtotal</th></tr></thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.ProductName</td>
-            <td class="text-end">@item.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
-            <td>@item.Quantity</td>
-            <td class="text-end">@item.Subtotal.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
-        </tr>
-    }
-    </tbody>
-</table>
-@{ var total = Model.Items.Sum(i => i.Subtotal); }
-<div class="mt-3 fw-bold text-end">TOTAL: @total.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</div>
-<form asp-action="ProcessPayment" method="post">
-    <input type="hidden" name="CheckoutKey" value="@checkoutKey" />
-    <div class="form-group">
-        <label>Amount Paid</label>
-        <input type="number" step="0.01" name="AmountPaid" class="form-control" required />
-    </div>
-    <button type="submit" class="btn btn-primary mt-2">Pay</button>
-</form>
+@if (!Model.Items.Any())
+{
+    <p>No items in cart.</p>
+    <a asp-action="Search" class="btn btn-primary">Browse Products</a>
+}
+else
+{
+    <div class="table-responsive"><table class="table table-striped align-middle">
+        <thead><tr><th>Product</th><th class="text-end">Price</th><th class="text-center">Qty</th><th class="text-end">Subtotal</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@item.ProductName</td>
+                <td class="text-end">@item.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                <td class="text-center">@item.Quantity</td>
+                <td class="text-end">@item.Subtotal.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
+    <div class="mt-3 fw-bold text-end">TOTAL: @Model.Items.Sum(i => i.Subtotal).ToString("C", CultureInfo.GetCultureInfo("en-PH"))</div>
+    <form asp-action="ProcessPayment" method="post">
+        <input type="hidden" name="CheckoutKey" value="@checkoutKey" />
+        <div class="form-group">
+            <label>Amount Paid</label>
+            <input type="number" step="0.01" name="AmountPaid" class="form-control" required />
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Pay</button>
+    </form>
+}
