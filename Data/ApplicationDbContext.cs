@@ -19,6 +19,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
         public DbSet<Delivery> Deliveries => Set<Delivery>();
 
+        // Sales entities (already present in DbContext)
+        public DbSet<SalesTransaction> SalesTransactions => Set<SalesTransaction>();
+        public DbSet<SalesItem> SalesItems => Set<SalesItem>();
+        public DbSet<Notification> Notifications => Set<Notification>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
