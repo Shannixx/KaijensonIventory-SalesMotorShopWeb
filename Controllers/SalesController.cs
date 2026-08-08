@@ -261,7 +261,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Receipt generation failed.");
+                _logger.LogError(ex, "Receipt generation failed: {ExceptionDetails}", ex.ToString());
                 TempData["ErrorMessage"] = "Receipt could not be generated. You can view the details page and retry.";
                 return RedirectToAction(nameof(Details), new { id });
             }
@@ -334,15 +334,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 });
 
                                 int idx = 1;
-                                foreach (var item in transaction.Items)
-                                {
-                                    table.Cell().Padding(5).Text(idx.ToString()).FontSize(10);
-                                    table.Cell().Padding(5).Text(item.Product?.ProductName ?? "").FontSize(10);
-                                    table.Cell().Padding(5).AlignRight().Text(item.Quantity.ToString()).FontSize(10);
-                                    table.Cell().Padding(5).AlignRight().Text(item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
-                                    table.Cell().Padding(5).AlignRight().Text(item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
-                                    idx++;
-                                }
+if (transaction.Items != null && transaction.Items.Any())
+                                          {
+                                              foreach (var item in transaction.Items)
+                                              {
+                                                  table.Cell().Padding(5).Text(idx.ToString()).FontSize(10);
+                                                  table.Cell().Padding(5).Text(item.Product?.ProductName ?? "").FontSize(10);
+                                                  table.Cell().Padding(5).AlignRight().Text(item.Quantity.ToString()).FontSize(10);
+                                                  table.Cell().Padding(5).AlignRight().Text(item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
+                                                  table.Cell().Padding(5).AlignRight().Text(item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
+                                                  idx++;
+                                              }
+                                          }
+                                          else
+                                          {
+                                              // No items – add a placeholder row
+                                              table.Cell().ColumnSpan(5).AlignCenter().Text("No items to display").FontSize(10);
+                                          }
 
                                 // Footer totals
                                 table.Cell().ColumnSpan(4).AlignRight().Text("Total:").Bold().FontSize(12);
