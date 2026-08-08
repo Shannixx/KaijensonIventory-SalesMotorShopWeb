@@ -1,0 +1,28 @@
+@model KaijensonIventory_SalesMotorShopWeb.ViewModels.CartViewModel
+@{
+    ViewData["Title"] = "Confirm Sale";
+    var checkoutKey = ViewBag.CheckoutKey as string ?? Guid.NewGuid().ToString("N");
+}
+<h2>Confirm Sale</h2>
+<table class="table table-striped">
+    <thead><tr><th>Product</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr></thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>@item.ProductName</td>
+            <td>@item.UnitPrice:C</td>
+            <td>@item.Quantity</td>
+            <td>@item.Subtotal:C</td>
+        </tr>
+    }
+    </tbody>
+</table>
+<form asp-action="ProcessPayment" method="post">
+    <input type="hidden" name="CheckoutKey" value="@checkoutKey" />
+    <div class="form-group">
+        <label>Amount Paid</label>
+        <input type="number" step="0.01" name="AmountPaid" class="form-control" required />
+    </div>
+    <button type="submit" class="btn btn-primary mt-2">Pay</button>
+</form>

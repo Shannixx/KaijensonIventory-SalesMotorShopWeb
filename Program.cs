@@ -15,6 +15,8 @@ builder.Services.AddSingleton<HashingService>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ISaleService, SaleService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 

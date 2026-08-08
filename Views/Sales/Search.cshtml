@@ -1,0 +1,31 @@
+@model KaijensonIventory_SalesMotorShopWeb.Services.ProductListResult
+@{
+    ViewData["Title"] = "Product Search";
+}
+<h2>Product Search</h2>
+<form method="get" asp-action="Search">
+    <input type="text" name="query" class="form-control" placeholder="Search products..." value="" />
+    <button type="submit" class="btn btn-primary mt-2">Search</button>
+</form>
+<table class="table table-striped mt-3">
+    <thead><tr><th>Name</th><th>Brand</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var p in Model.Items)
+    {
+        <tr>
+            <td>@p.ProductName</td>
+            <td>@p.Brand</td>
+            <td>@p.Category?.CategoryName</td>
+            <td>@p.Price:C</td>
+            <td>@p.QuantityOnHand</td>
+            <td>
+                <form asp-action="AddToCart" method="post" class="d-inline">
+                    <input type="hidden" name="productId" value="@p.ProductId" />
+                    <input type="number" name="quantity" min="1" max="@p.QuantityOnHand" value="1" class="form-control d-inline w-auto" />
+                    <button type="submit" class="btn btn-success btn-sm">Add</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

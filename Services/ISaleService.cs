@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
+using KaijensonIventory_SalesMotorShopWeb.Models;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Services
 {

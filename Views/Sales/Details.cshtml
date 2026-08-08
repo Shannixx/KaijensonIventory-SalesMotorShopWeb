@@ -1,0 +1,27 @@
+@model KaijensonIventory_SalesMotorShopWeb.ViewModels.SaleDetailsViewModel
+@{
+    ViewData["Title"] = "Sale Details";
+}
+<h2>Sale Details</h2>
+<p><strong>Invoice:</strong> @Model.Transaction.InvoiceNumber</p>
+<p><strong>Date:</strong> @Model.Transaction.TransactionDate</p>
+<p><strong>Staff:</strong> @Model.Transaction.Staff?.StaffName</p>
+<p><strong>Customer:</strong> @(string.IsNullOrWhiteSpace(Model.Transaction.CustomerName) ? "Walk‑in" : Model.Transaction.CustomerName)</p>
+<table class="table table-bordered">
+    <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr></thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>@item.Product.ProductName</td>
+            <td>@item.Quantity</td>
+            <td>@item.UnitPrice:C</td>
+            <td>@item.Subtotal:C</td>
+        </tr>
+    }
+    </tbody>
+</table>
+<p><strong>Total:</strong> @Model.Transaction.TotalAmount:C</p>
+<p><strong>Paid:</strong> @Model.Transaction.AmountPaid:C</p>
+<p><strong>Change:</strong> @Model.Transaction.Change:C</p>
+<a asp-action="ReceiptPdf" asp-route-id="@Model.Transaction.TransactionId" class="btn btn-primary">Print Receipt</a>
