@@ -26,4 +26,5 @@
 <p><strong>Total:</strong> @Model.Transaction.TotalAmount.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</p>
 <p><strong>Paid:</strong> @Model.Transaction.AmountPaid.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</p>
 <p><strong>Change:</strong> @Model.Transaction.Change.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</p>
-<a asp-action="ReceiptPdf" asp-route-id="@Model.Transaction.TransactionId" class="btn btn-primary" target="_blank">Print Receipt</a>
+<button type="button" class="btn btn-outline-primary me-2" onclick="openReceiptPreview(@Model.Transaction.TransactionId, '@Model.Transaction.InvoiceNumber')"><i class="bi bi-eye"></i> View Receipt</button>
+<button type="button" class="btn btn-primary" onclick="openReceiptPrint(@Model.Transaction.TransactionId, '@Model.Transaction.InvoiceNumber')"><i class="bi bi-printer"></i> Print Receipt</button>

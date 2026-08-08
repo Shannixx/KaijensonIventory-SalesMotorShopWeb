@@ -255,9 +255,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                // Use existing QuestPDF logic (similar to PurchaseOrders) – render from view
                 var pdfBytes = GeneratePdfBytes(transaction);
-                return File(pdfBytes, "application/pdf");
+                return File(pdfBytes, "application/pdf", $"Receipt-{transaction.InvoiceNumber}.pdf");
             }
             catch (Exception ex)
             {
@@ -265,6 +264,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "Receipt could not be generated. You can view the details page and retry.";
                 return RedirectToAction(nameof(Details), new { id });
             }
+        }
+
+        // GET: /Sales/PrintPreviewHtml/{id}
+        // Returns HTML fragment for receipt preview (used by modal)
+        public async Task<IActionResult> PrintPreviewHtml(int id)
+        {
+            var accessRedirect = RedirectIfNotAuthenticated();
+            if (accessRedirect != null) return accessRedirect;
+
+            var transaction = await _context.SalesTransactions
+                .Include(t => t.Items)
+                .ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(t => t.TransactionId == id);
+            if (transaction == null) return NotFound();
+
+            var viewModel = new SaleDetailsViewModel { Transaction = transaction, Items = transaction.Items };
+            return PartialView("_ReceiptPreview", viewModel);
         }
 
         // Helper to generate PDF (simplified – uses QuestPDF like other controllers)
