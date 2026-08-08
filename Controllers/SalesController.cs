@@ -111,6 +111,74 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         }
 
         // POST: /Sales/ProcessPayment
+        // New actions for cart quantity management
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult DecreaseQuantity(int productId)
+        {
+            var accessRedirect = RedirectIfNotAuthenticated();
+            if (accessRedirect != null) return accessRedirect;
+
+            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item != null)
+            {
+                if (item.Quantity > 1)
+                {
+                    item.Quantity -= 1;
+                }
+                else
+                {
+                    cart.Items.Remove(item);
+                }
+                HttpContext.Session.SetObject("Cart", cart);
+            }
+            return RedirectToAction(nameof(Cart));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> IncreaseQuantity(int productId)
+        {
+            var accessRedirect = RedirectIfNotAuthenticated();
+            if (accessRedirect != null) return accessRedirect;
+
+            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item != null)
+            {
+                var product = await _productService.GetByIdAsync(productId);
+                if (product != null && item.Quantity < product.QuantityOnHand)
+                {
+                    item.Quantity += 1;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Cannot increase quantity beyond available stock.";
+                }
+                HttpContext.Session.SetObject("Cart", cart);
+            }
+            return RedirectToAction(nameof(Cart));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RemoveItem(int productId)
+        {
+            var accessRedirect = RedirectIfNotAuthenticated();
+            if (accessRedirect != null) return accessRedirect;
+
+            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item != null)
+            {
+                cart.Items.Remove(item);
+                HttpContext.Session.SetObject("Cart", cart);
+            }
+            return RedirectToAction(nameof(Cart));
+        }
+
+        // POST: /Sales/ProcessPayment
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessPayment(PaymentViewModel model)
@@ -171,7 +239,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 // Use existing QuestPDF logic (similar to PurchaseOrders) – render from view
                 var pdfBytes = GeneratePdfBytes(transaction);
-                return File(pdfBytes, "application/pdf", $"Receipt-{transaction.InvoiceNumber}.pdf");
+                return File(pdfBytes, "application/pdf");
             }
             catch (Exception ex)
             {
