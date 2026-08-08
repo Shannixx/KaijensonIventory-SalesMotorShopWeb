@@ -6,6 +6,7 @@ using KaijensonIventory_SalesMotorShopWeb.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
+using System.Globalization;
 using QuestPDF.Infrastructure;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
@@ -269,52 +270,107 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         // Helper to generate PDF (simplified – uses QuestPDF like other controllers)
         private byte[] GeneratePdfBytes(SalesTransaction transaction)
         {
-            // Very basic PDF generation – for demo purposes
+            // Generate a professional printable receipt similar to Purchase Order PDF
             var doc = QuestPDF.Fluent.Document.Create(container =>
             {
                 container.Page(page =>
                 {
-                    page.Margin(20);
-                    page.Header().Text($"Receipt - {transaction.InvoiceNumber}").Bold().FontSize(20);
-                    page.Content().Column(col =>
+                    page.Size(QuestPDF.Helpers.PageSizes.A4);
+                    page.Margin(40);
+                    page.DefaultTextStyle(x => x.FontSize(10));
+
+                    // Header – shop name and receipt title with transaction info on right
+                    page.Header().Element(c =>
                     {
-                        col.Item().Text($"Date: {transaction.TransactionDate}");
-                        col.Item().Text($"Staff: {transaction.Staff?.StaffName}");
-                        col.Item().Text($"Customer: {transaction.CustomerName}");
-                        col.Item().Table(table =>
+                        c.Column(col =>
                         {
-                            table.ColumnsDefinition(columns =>
+                            col.Item().Row(row =>
                             {
-                                columns.RelativeColumn(4);
-                                columns.RelativeColumn(2);
-                                columns.RelativeColumn(2);
-                                columns.RelativeColumn(2);
+                                // Left side – shop name and document title
+                                row.RelativeItem().Column(left =>
+                                {
+                                    left.Item().Text("KAIJENSON MOTOR SHOP").FontSize(18).Bold();
+                                    left.Item().Text("Customer Purchase Order / Sales Receipt").FontSize(14);
+                                });
+                                // Right side – transaction details
+                                row.ConstantItem(250).Column(right =>
+                                {
+                                    right.Item().AlignRight().Text($"Invoice #: {transaction.InvoiceNumber}").Bold();
+                                    right.Item().AlignRight().Text($"Date: {transaction.TransactionDate:MMM dd, yyyy}");
+                                    right.Item().AlignRight().Text($"Staff: {transaction.Staff?.StaffName ?? ""}");
+                                    var cust = string.IsNullOrWhiteSpace(transaction.CustomerName) ? "Walk‑in" : transaction.CustomerName;
+                                    right.Item().AlignRight().Text($"Customer: {cust}");
+                                });
                             });
-                            table.Header(header =>
-                            {
-                                header.Cell().Element(CellStyle).Text("Product");
-                                header.Cell().Element(CellStyle).AlignRight().Text("Qty");
-                                header.Cell().Element(CellStyle).AlignRight().Text("Unit Price");
-                                header.Cell().Element(CellStyle).AlignRight().Text("Subtotal");
-                            });
-                            foreach (var item in transaction.Items)
-                            {
-                                table.Cell().Element(CellStyle).Text(item.Product.ProductName);
-                                table.Cell().Element(CellStyle).AlignRight().Text(item.Quantity.ToString());
-                                table.Cell().Element(CellStyle).AlignRight().Text(item.UnitPrice.ToString("C"));
-                                table.Cell().Element(CellStyle).AlignRight().Text(item.Subtotal.ToString("C"));
-                            }
-                            table.Cell().ColumnSpan(3).AlignRight().Text("Total:");
-                            table.Cell().AlignRight().Text(transaction.TotalAmount.ToString("C"));
+                            col.Item().PaddingVertical(10).LineHorizontal(1);
                         });
-                        col.Item().Text($"Amount Paid: {transaction.AmountPaid:C}");
-                        col.Item().Text($"Change: {transaction.Change:C}");
+                    });
+
+                    // Content – product table and financial summary
+                    page.Content().Element(c =>
+                    {
+                        c.Column(col =>
+                        {
+                            // Product table
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.ConstantColumn(25); // index
+                                    columns.RelativeColumn(4); // product
+                                    columns.RelativeColumn(2); // qty
+                                    columns.RelativeColumn(2); // unit price
+                                    columns.RelativeColumn(2); // subtotal
+                                });
+
+                                // Header row styling similar to PO
+                                table.Header(header =>
+                                {
+                                    header.Cell().Background("#FF7F11").Padding(5).Text("#").FontColor("#fff").FontSize(10).Bold();
+                                    header.Cell().Background("#FF7F11").Padding(5).Text("Product").FontColor("#fff").FontSize(10).Bold();
+                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Qty").FontColor("#fff").FontSize(10).Bold();
+                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Unit Price").FontColor("#fff").FontSize(10).Bold();
+                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Subtotal").FontColor("#fff").FontSize(10).Bold();
+                                });
+
+                                int idx = 1;
+                                foreach (var item in transaction.Items)
+                                {
+                                    table.Cell().Padding(5).Text(idx.ToString()).FontSize(10);
+                                    table.Cell().Padding(5).Text(item.Product?.ProductName ?? "").FontSize(10);
+                                    table.Cell().Padding(5).AlignRight().Text(item.Quantity.ToString()).FontSize(10);
+                                    table.Cell().Padding(5).AlignRight().Text(item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
+                                    table.Cell().Padding(5).AlignRight().Text(item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
+                                    idx++;
+                                }
+
+                                // Footer totals
+                                table.Cell().ColumnSpan(4).AlignRight().Text("Total:").Bold().FontSize(12);
+                                table.Cell().AlignRight().Text(transaction.TotalAmount.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).Bold().FontSize(12);
+                            });
+
+                            // Amount paid and change
+                            col.Item().PaddingTop(10).AlignRight().Text($"Amount Paid: {transaction.AmountPaid.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))}").Bold().FontSize(12);
+                            col.Item().AlignRight().Text($"Change: {transaction.Change.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))}").Bold().FontSize(12);
+
+                            // Footer thank‑you message
+                            col.Item().PaddingTop(30).AlignCenter().Text("Thank you for your purchase.").FontSize(10);
+                        });
+                    });
+
+                    // Footer – page number
+                    page.Footer().AlignCenter().Text(text =>
+                    {
+                        text.Span("Page ");
+                        text.CurrentPageNumber();
                     });
                 });
             });
 
-            static IContainer CellStyle(IContainer container) => container.BorderBottom(1).PaddingVertical(5).PaddingHorizontal(2);
-            return doc.GeneratePdf();
+            // Generate PDF bytes
+            using var ms = new System.IO.MemoryStream();
+            doc.GeneratePdf(ms);
+            return ms.ToArray();
         }
     }
 }
