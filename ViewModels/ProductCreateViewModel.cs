@@ -47,6 +47,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public List<SelectListItem> Brands { get; set; } = new();
         public List<SelectListItem> PurchaseOrders { get; set; } = new();
 
+        [Required(ErrorMessage = "Price is required.")]
         [Range(0, 999999.99)]
         [Display(Name = "Price")]
         public decimal Price { get; set; }

@@ -11,15 +11,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Company Name")]
         public string CompanyName { get; set; } = string.Empty;
 
-        [StringLength(150)]
+        [Required, StringLength(150)]
         [Display(Name = "Contact Person")]
         public string? ContactPerson { get; set; }
 
-        [StringLength(30)]
+        [Required, StringLength(30)]
         [Display(Name = "Contact Number")]
         public string? ContactNumber { get; set; }
 
-        [StringLength(250)]
+        [Required, StringLength(250)]
         public string? Address { get; set; }
 
         public ICollection<Product> Products { get; set; } = new List<Product>();

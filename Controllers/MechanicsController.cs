@@ -106,6 +106,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 ModelState.AddModelError("MechanicName", "Mechanic name is required.");
             }
+            if (string.IsNullOrWhiteSpace(mechanic.Specialization))
+            {
+                ModelState.AddModelError("Specialization", "Specialization is required.");
+            }
+            if (string.IsNullOrWhiteSpace(mechanic.ContactNumber))
+            {
+                ModelState.AddModelError("ContactNumber", "Contact number is required.");
+            }
+            if (string.IsNullOrWhiteSpace(mechanic.Address))
+            {
+                ModelState.AddModelError("Address", "Address is required.");
+            }
 
             if (ModelState.IsValid)
             {
@@ -175,6 +187,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (string.IsNullOrWhiteSpace(mechanic.MechanicName))
             {
                 ModelState.AddModelError("MechanicName", "Mechanic name is required.");
+            }
+            if (string.IsNullOrWhiteSpace(mechanic.Specialization))
+            {
+                ModelState.AddModelError("Specialization", "Specialization is required.");
+            }
+            if (string.IsNullOrWhiteSpace(mechanic.ContactNumber))
+            {
+                ModelState.AddModelError("ContactNumber", "Contact number is required.");
+            }
+            if (string.IsNullOrWhiteSpace(mechanic.Address))
+            {
+                ModelState.AddModelError("Address", "Address is required.");
             }
 
             if (ModelState.IsValid)

@@ -69,21 +69,7 @@
                     {
                         <a asp-action="Edit" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-edit" title="Edit Purchase Order" aria-label="Edit @item.PurchaseOrderNumber"><i class="bi bi-pencil"></i></a>
                     }
-                    @if (item.Status == "Pending")
-                    {
-                        <form asp-action="Approve" asp-route-id="@item.PurchaseOrderId" method="post" style="display:inline;">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-icon btn-icon-approve" title="Approve Purchase Order" aria-label="Approve @item.PurchaseOrderNumber"><i class="bi bi-check-lg"></i></button>
-                        </form>
-                        <form asp-action="Cancel" asp-route-id="@item.PurchaseOrderId" method="post" style="display:inline;">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-icon btn-icon-cancel" title="Cancel Purchase Order" aria-label="Cancel @item.PurchaseOrderNumber"><i class="bi bi-x-lg"></i></button>
-                        </form>
-                    }
-                    @if (item.Status == "Approved")
-                    {
 
-                    }
                     
                     @if (ViewBag.CanDelete == true)
                     {

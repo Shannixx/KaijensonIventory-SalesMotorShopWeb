@@ -157,45 +157,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Approve(int id)
-        {
-            var accessCheck = CheckAccess();
-            if (accessCheck != null) return accessCheck;
 
-            var result = await _purchaseOrderService.ApproveAsync(id, GetCurrentStaffId());
 
-            if (!result.Succeeded)
-            {
-                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message
-                    ?? "An error occurred while approving the purchase order. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
 
-            TempData["SuccessMessage"] = "Purchase order approved. Proceed to delivery.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Cancel(int id)
-        {
-            var accessCheck = CheckAccess();
-            if (accessCheck != null) return accessCheck;
-
-            var result = await _purchaseOrderService.CancelAsync(id, GetCurrentStaffId());
-
-            if (!result.Succeeded)
-            {
-                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message
-                    ?? "An error occurred while cancelling the purchase order. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            TempData["SuccessMessage"] = "Purchase order cancelled.";
-            return RedirectToAction(nameof(Index));
-        }
 
         [HttpGet]
         public async Task<JsonResult> GetSupplierInfo(int id)

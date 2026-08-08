@@ -109,6 +109,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     ModelState.AddModelError("CompanyName", "Company name is required.");
                 }
+                if (string.IsNullOrWhiteSpace(supplier.ContactPerson))
+                {
+                    ModelState.AddModelError("ContactPerson", "Contact person is required.");
+                }
+                if (string.IsNullOrWhiteSpace(supplier.ContactNumber))
+                {
+                    ModelState.AddModelError("ContactNumber", "Contact number is required.");
+                }
+                if (string.IsNullOrWhiteSpace(supplier.Address))
+                {
+                    ModelState.AddModelError("Address", "Address is required.");
+                }
 
                 if (ModelState.IsValid)
                 {

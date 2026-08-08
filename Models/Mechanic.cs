@@ -11,14 +11,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Mechanic Name")]
         public string MechanicName { get; set; } = string.Empty;
 
-        [StringLength(100)]
+        [Required, StringLength(100)]
         public string? Specialization { get; set; }
 
-        [StringLength(30)]
+        [Required, StringLength(30)]
         [Display(Name = "Contact Number")]
         public string? ContactNumber { get; set; }
 
-        [StringLength(250)]
+        [Required, StringLength(250)]
         public string? Address { get; set; }
     }
 }

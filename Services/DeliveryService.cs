@@ -19,7 +19,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
         {
             var deliveries = await _context.Deliveries
-                .Where(d => d.Status == "Pending")
                 .Include(d => d.PurchaseOrder)
                     .ThenInclude(p => p.Supplier)
                 .Include(d => d.PurchaseOrder)

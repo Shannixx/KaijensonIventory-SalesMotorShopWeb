@@ -177,6 +177,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
             _context.PurchaseOrders.Add(order);
             await _context.SaveChangesAsync();
+
+            // Create pending delivery record linked to the newly created PO
+            var delivery = new Delivery
+            {
+                PurchaseOrderId = order.PurchaseOrderId,
+                Status = "Pending",
+                CreatedDate = DateTime.Now
+            };
+            _context.Deliveries.Add(delivery);
+            await _context.SaveChangesAsync();
+
             await transaction.CommitAsync();
 
             await _activityLogService.LogAsync("Create Purchase Order", "PurchaseOrder",
@@ -229,62 +240,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return Result.Success();
         }
 
-        public async Task<Result> ApproveAsync(int id, int currentStaffId)
-        {
-            PurchaseOrder? order = await _context.PurchaseOrders
-                .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
 
-            if (order == null)
-                return Result.Failure(null, "The purchase order could not be found.");
 
-            if (order.Status != "Pending")
-                return Result.Failure(null, $"Cannot approve a purchase order with status '{order.Status}'.");
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
-            order.Status = "Approved";
-            order.UpdatedDate = DateTime.Now;
-            await _context.SaveChangesAsync();
-
-            // Create pending delivery record
-            var delivery = new Delivery
-            {
-                PurchaseOrderId = order.PurchaseOrderId,
-                Status = "Pending",
-                CreatedDate = DateTime.Now
-            };
-            _context.Deliveries.Add(delivery);
-            await _context.SaveChangesAsync();
-
-            await transaction.CommitAsync();
-
-            await _activityLogService.LogAsync("Approve Purchase Order", "PurchaseOrder",
-                $"Approved PO {order.PurchaseOrderNumber} (Pending -> Approved)", currentStaffId);
-
-            return Result.Success();
-        }
-
-        public async Task<Result> CancelAsync(int id, int currentStaffId)
-        {
-            PurchaseOrder? order = await _context.PurchaseOrders
-                .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
-
-            if (order == null)
-                return Result.Failure(null, "The purchase order could not be found.");
-
-            if (order.Status != "Pending")
-                return Result.Failure(null, $"Cannot cancel a purchase order with status '{order.Status}'.");
-
-            order.Status = "Cancelled";
-            order.UpdatedDate = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-
-            await _activityLogService.LogAsync("Cancel Purchase Order", "PurchaseOrder",
-                $"Cancelled PO {order.PurchaseOrderNumber} (Pending -> Cancelled)", currentStaffId);
-
-            return Result.Success();
-        }
 
         public async Task<Result> DeleteAsync(int id, int currentStaffId)
         {

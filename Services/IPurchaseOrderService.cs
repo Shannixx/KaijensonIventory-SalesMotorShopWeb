@@ -19,9 +19,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         Task<Result> UpdateAsync(PurchaseOrderViewModel model, int currentStaffId);
 
-        Task<Result> ApproveAsync(int id, int currentStaffId);
 
-        Task<Result> CancelAsync(int id, int currentStaffId);
 
         Task<Result> DeleteAsync(int id, int currentStaffId);
 
