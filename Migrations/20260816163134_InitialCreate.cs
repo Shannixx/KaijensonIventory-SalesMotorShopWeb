@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     /// <inheritdoc />
@@ -12,19 +14,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Backups",
+                name: "Brands",
                 columns: table => new
                 {
-                    BackupId = table.Column<int>(type: "int", nullable: false)
+                    BrandId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    BackupType = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    BackupFile = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    BackupDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false)
+                    BrandName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CountryOrigin = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Backups", x => x.BackupId);
+                    table.PrimaryKey("PK_Brands", x => x.BrandId);
                 });
 
             migrationBuilder.CreateTable(
@@ -47,9 +48,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     MechanicId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MechanicName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Specialization = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    ContactNumber = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true)
+                    Specialization = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    ContactNumber = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -81,9 +82,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     SupplierId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     CompanyName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    ContactPerson = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
-                    ContactNumber = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true)
+                    ContactPerson = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    ContactNumber = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -148,6 +149,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     TransactionId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     InvoiceNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    CheckoutKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     CustomerName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -163,42 +165,65 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         column: x => x.StaffId,
                         principalTable: "Staff",
                         principalColumn: "StaffId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PurchaseOrders",
+                columns: table => new
+                {
+                    PurchaseOrderId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PurchaseOrderNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    SupplierId = table.Column<int>(type: "int", nullable: false),
+                    OrderDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpectedDeliveryDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeliveredDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeliveredBy = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PurchaseOrders", x => x.PurchaseOrderId);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrders_Staff_CreatedBy",
+                        column: x => x.CreatedBy,
+                        principalTable: "Staff",
+                        principalColumn: "StaffId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrders_Suppliers_SupplierId",
+                        column: x => x.SupplierId,
+                        principalTable: "Suppliers",
+                        principalColumn: "SupplierId",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ServiceTransactions",
+                name: "Deliveries",
                 columns: table => new
                 {
-                    ServiceTxnId = table.Column<int>(type: "int", nullable: false)
+                    DeliveryId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CustomerName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Make = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Model = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Year = table.Column<int>(type: "int", nullable: true),
-                    PlateNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    ServiceDescription = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ServiceFee = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PurchaseOrderId = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    MechanicId = table.Column<int>(type: "int", nullable: false),
-                    StaffId = table.Column<int>(type: "int", nullable: false)
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DeliveredDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ServiceTransactions", x => x.ServiceTxnId);
+                    table.PrimaryKey("PK_Deliveries", x => x.DeliveryId);
                     table.ForeignKey(
-                        name: "FK_ServiceTransactions_Mechanics_MechanicId",
-                        column: x => x.MechanicId,
-                        principalTable: "Mechanics",
-                        principalColumn: "MechanicId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ServiceTransactions_Staff_StaffId",
-                        column: x => x.StaffId,
-                        principalTable: "Staff",
-                        principalColumn: "StaffId",
-                        onDelete: ReferentialAction.Restrict);
+                        name: "FK_Deliveries_PurchaseOrders_PurchaseOrderId",
+                        column: x => x.PurchaseOrderId,
+                        principalTable: "PurchaseOrders",
+                        principalColumn: "PurchaseOrderId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -207,13 +232,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 {
                     ProductId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    IsSerialized = table.Column<bool>(type: "bit", nullable: false),
                     ProductName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Brand = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ModelCompatibility = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PartType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    PurchaseOrderId = table.Column<int>(type: "int", nullable: true),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     QuantityOnHand = table.Column<int>(type: "int", nullable: false),
                     ReorderLevel = table.Column<int>(type: "int", nullable: false),
+                    LeadTimeDays = table.Column<int>(type: "int", nullable: false),
+                    UseAutoReorder = table.Column<bool>(type: "bit", nullable: false),
+                    LastRecalcDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastSaleDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastStockInDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     StockStatus = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    ImagePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    AverageCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CategoryId = table.Column<int>(type: "int", nullable: false),
                     SupplierId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
@@ -226,6 +261,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         column: x => x.CategoryId,
                         principalTable: "Categories",
                         principalColumn: "CategoryId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Products_PurchaseOrders_PurchaseOrderId",
+                        column: x => x.PurchaseOrderId,
+                        principalTable: "PurchaseOrders",
+                        principalColumn: "PurchaseOrderId",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Products_Suppliers_SupplierId",
@@ -254,8 +295,37 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         name: "FK_Notifications_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
+                        principalColumn: "ProductId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PurchaseOrderItems",
+                columns: table => new
+                {
+                    PurchaseOrderItemId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PurchaseOrderId = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    ReceivedQuantity = table.Column<int>(type: "int", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Subtotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PurchaseOrderItems", x => x.PurchaseOrderItemId);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrderItems_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
                         principalColumn: "ProductId",
-                        onDelete: ReferentialAction.SetNull);
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrderItems_PurchaseOrders_PurchaseOrderId",
+                        column: x => x.PurchaseOrderId,
+                        principalTable: "PurchaseOrders",
+                        principalColumn: "PurchaseOrderId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -278,7 +348,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "ProductId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_SalesItems_SalesTransactions_TransactionId",
                         column: x => x.TransactionId,
@@ -288,66 +358,83 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ServicePartsUsed",
+                name: "SerialUnits",
                 columns: table => new
                 {
-                    PartUsedId = table.Column<int>(type: "int", nullable: false)
+                    SerialUnitId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ServiceTxnId = table.Column<int>(type: "int", nullable: false),
+                    SerialNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ProductId = table.Column<int>(type: "int", nullable: false),
-                    Quantity = table.Column<int>(type: "int", nullable: false)
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    SalesTransactionId = table.Column<int>(type: "int", nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SoldDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ServicePartsUsed", x => x.PartUsedId);
+                    table.PrimaryKey("PK_SerialUnits", x => x.SerialUnitId);
                     table.ForeignKey(
-                        name: "FK_ServicePartsUsed_Products_ProductId",
+                        name: "FK_SerialUnits_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "ProductId",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_ServicePartsUsed_ServiceTransactions_ServiceTxnId",
-                        column: x => x.ServiceTxnId,
-                        principalTable: "ServiceTransactions",
-                        principalColumn: "ServiceTxnId",
-                        onDelete: ReferentialAction.Cascade);
+                        name: "FK_SerialUnits_SalesTransactions_SalesTransactionId",
+                        column: x => x.SalesTransactionId,
+                        principalTable: "SalesTransactions",
+                        principalColumn: "TransactionId",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
-                name: "StockIns",
+                name: "DeliveryItems",
                 columns: table => new
                 {
-                    StockInId = table.Column<int>(type: "int", nullable: false)
+                    DeliveryItemId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ProductId = table.Column<int>(type: "int", nullable: false),
-                    SupplierId = table.Column<int>(type: "int", nullable: false),
-                    QuantityReceived = table.Column<int>(type: "int", nullable: false),
-                    DeliveryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Remarks = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                    StaffId = table.Column<int>(type: "int", nullable: false)
+                    DeliveryId = table.Column<int>(type: "int", nullable: false),
+                    PurchaseOrderItemId = table.Column<int>(type: "int", nullable: false),
+                    ReceivedQuantity = table.Column<int>(type: "int", nullable: false),
+                    ReceivedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_StockIns", x => x.StockInId);
+                    table.PrimaryKey("PK_DeliveryItems", x => x.DeliveryItemId);
                     table.ForeignKey(
-                        name: "FK_StockIns_Products_ProductId",
-                        column: x => x.ProductId,
-                        principalTable: "Products",
-                        principalColumn: "ProductId",
-                        onDelete: ReferentialAction.Restrict);
+                        name: "FK_DeliveryItems_Deliveries_DeliveryId",
+                        column: x => x.DeliveryId,
+                        principalTable: "Deliveries",
+                        principalColumn: "DeliveryId",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_StockIns_Staff_StaffId",
-                        column: x => x.StaffId,
-                        principalTable: "Staff",
-                        principalColumn: "StaffId",
+                        name: "FK_DeliveryItems_PurchaseOrderItems_PurchaseOrderItemId",
+                        column: x => x.PurchaseOrderItemId,
+                        principalTable: "PurchaseOrderItems",
+                        principalColumn: "PurchaseOrderItemId",
                         onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_StockIns_Suppliers_SupplierId",
-                        column: x => x.SupplierId,
-                        principalTable: "Suppliers",
-                        principalColumn: "SupplierId",
-                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.InsertData(
+                table: "Brands",
+                columns: new[] { "BrandId", "BrandName", "CountryOrigin", "Status" },
+                values: new object[,]
+                {
+                    { 1, "Honda", "Japan", "Active" },
+                    { 2, "Yamaha", "Japan", "Active" },
+                    { 3, "Suzuki", "Japan", "Active" },
+                    { 4, "Kawasaki", "Japan", "Active" },
+                    { 5, "Kymco", "Taiwan", "Active" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Categories",
+                columns: new[] { "CategoryId", "CategoryName" },
+                values: new object[,]
+                {
+                    { 1, "Lubricant" },
+                    { 2, "Accessories" },
+                    { 3, "SpareParts" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -356,10 +443,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 column: "StaffId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Brands_BrandName",
+                table: "Brands",
+                column: "BrandName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Categories_CategoryName",
                 table: "Categories",
                 column: "CategoryName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Deliveries_PurchaseOrderId",
+                table: "Deliveries",
+                column: "PurchaseOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DeliveryItems_DeliveryId",
+                table: "DeliveryItems",
+                column: "DeliveryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DeliveryItems_PurchaseOrderItemId",
+                table: "DeliveryItems",
+                column: "PurchaseOrderItemId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_ProductId",
@@ -372,8 +480,39 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Products_PurchaseOrderId",
+                table: "Products",
+                column: "PurchaseOrderId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Products_SupplierId",
                 table: "Products",
+                column: "SupplierId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrderItems_ProductId",
+                table: "PurchaseOrderItems",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrderItems_PurchaseOrderId",
+                table: "PurchaseOrderItems",
+                column: "PurchaseOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrders_CreatedBy",
+                table: "PurchaseOrders",
+                column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrders_PurchaseOrderNumber",
+                table: "PurchaseOrders",
+                column: "PurchaseOrderNumber",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrders_SupplierId",
+                table: "PurchaseOrders",
                 column: "SupplierId");
 
             migrationBuilder.CreateIndex(
@@ -392,14 +531,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 column: "StaffId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServicePartsUsed_ProductId",
-                table: "ServicePartsUsed",
+                name: "IX_SerialUnits_ProductId",
+                table: "SerialUnits",
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServicePartsUsed_ServiceTxnId",
-                table: "ServicePartsUsed",
-                column: "ServiceTxnId");
+                name: "IX_SerialUnits_SalesTransactionId",
+                table: "SerialUnits",
+                column: "SalesTransactionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SerialUnits_SerialNumber",
+                table: "SerialUnits",
+                column: "SerialNumber",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Services_CategoryId",
@@ -412,35 +557,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 column: "MechanicId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServiceTransactions_MechanicId",
-                table: "ServiceTransactions",
-                column: "MechanicId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ServiceTransactions_StaffId",
-                table: "ServiceTransactions",
-                column: "StaffId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Staff_UserName",
                 table: "Staff",
                 column: "UserName",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_StockIns_ProductId",
-                table: "StockIns",
-                column: "ProductId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_StockIns_StaffId",
-                table: "StockIns",
-                column: "StaffId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_StockIns_SupplierId",
-                table: "StockIns",
-                column: "SupplierId");
         }
 
         /// <inheritdoc />
@@ -450,7 +570,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 name: "ActivityLogs");
 
             migrationBuilder.DropTable(
-                name: "Backups");
+                name: "Brands");
+
+            migrationBuilder.DropTable(
+                name: "DeliveryItems");
 
             migrationBuilder.DropTable(
                 name: "Notifications");
@@ -459,31 +582,34 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                 name: "SalesItems");
 
             migrationBuilder.DropTable(
-                name: "ServicePartsUsed");
+                name: "SerialUnits");
 
             migrationBuilder.DropTable(
                 name: "Services");
 
             migrationBuilder.DropTable(
-                name: "StockIns");
+                name: "Deliveries");
+
+            migrationBuilder.DropTable(
+                name: "PurchaseOrderItems");
 
             migrationBuilder.DropTable(
                 name: "SalesTransactions");
 
             migrationBuilder.DropTable(
-                name: "ServiceTransactions");
+                name: "Mechanics");
 
             migrationBuilder.DropTable(
                 name: "Products");
 
             migrationBuilder.DropTable(
-                name: "Mechanics");
+                name: "Categories");
+
+            migrationBuilder.DropTable(
+                name: "PurchaseOrders");
 
             migrationBuilder.DropTable(
                 name: "Staff");
-
-            migrationBuilder.DropTable(
-                name: "Categories");
 
             migrationBuilder.DropTable(
                 name: "Suppliers");
