@@ -324,6 +324,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+                    b.Property<bool>("IsSerialized")
+                        .IsRequired()
+                        .HasColumnType("bit");
 
                     b.Property<int>("SupplierId")
                         .HasColumnType("int");
@@ -421,6 +424,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
+                        .HasColumnType("int");
+                    b.Property<int>("ReceivedQuantity")
                         .HasColumnType("int");
 
                     b.Property<decimal>("Subtotal")
@@ -618,6 +623,75 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.HasKey("SupplierId");
 
                     b.ToTable("Suppliers");
+
+                    // SerialUnit entity
+                    modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.SerialUnit", b =>
+                    {
+                        b.Property<int>("SerialUnitId")
+                            .ValueGeneratedOnAdd()
+                            .HasColumnType("int");
+
+                        SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SerialUnitId"));
+
+                        b.Property<string>("SerialNumber")
+                            .IsRequired()
+                            .HasMaxLength(100)
+                            .HasColumnType("nvarchar(100)");
+
+                        b.Property<int>("ProductId")
+                            .HasColumnType("int");
+
+                        b.Property<string>("Status")
+                            .IsRequired()
+                            .HasMaxLength(20)
+                            .HasColumnType("nvarchar(20)")
+                            .HasDefaultValueSql("('Available')");
+
+                        b.Property<int?>("SalesTransactionId")
+                            .HasColumnType("int");
+
+                        b.Property<DateTime>("CreatedDate")
+                            .HasColumnType("datetime2")
+                            .HasDefaultValueSql("GETDATE()");
+
+                        b.Property<DateTime?>("SoldDate")
+                            .HasColumnType("datetime2");
+
+                        b.HasKey("SerialUnitId");
+                        b.HasIndex("SerialNumber").IsUnique();
+                        b.HasIndex("ProductId");
+                        b.HasIndex("SalesTransactionId");
+                        b.ToTable("SerialUnits");
+                    });
+
+                    // DeliveryItem entity
+                    modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.DeliveryItem", b =>
+                    {
+                        b.Property<int>("DeliveryItemId")
+                            .ValueGeneratedOnAdd()
+                            .HasColumnType("int");
+
+                        SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DeliveryItemId"));
+
+                        b.Property<int>("DeliveryId")
+                            .HasColumnType("int");
+
+                        b.Property<int>("PurchaseOrderItemId")
+                            .HasColumnType("int");
+
+                        b.Property<int>("ReceivedQuantity")
+                            .IsRequired()
+                            .HasColumnType("int");
+
+                        b.Property<DateTime>("ReceivedDate")
+                            .HasColumnType("datetime2")
+                            .HasDefaultValueSql("GETDATE()");
+
+                        b.HasKey("DeliveryItemId");
+                        b.HasIndex("DeliveryId");
+                        b.HasIndex("PurchaseOrderItemId");
+                        b.ToTable("DeliveryItems");
+                    });
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.ActivityLog", b =>
