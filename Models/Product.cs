@@ -5,6 +5,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 {
     public class Product
     {
+        // Indicates whether each unit of this product requires a serial number tracking
+        public bool IsSerialized { get; set; } = false;
         [Key]
         public int ProductId { get; set; }
 

@@ -46,6 +46,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public List<SelectListItem> Suppliers { get; set; } = new();
         public List<SelectListItem> Brands { get; set; } = new();
         public List<SelectListItem> PurchaseOrders { get; set; } = new();
+        public bool IsSerialized { get; set; }
 
         [Required(ErrorMessage = "Price is required.")]
         [Range(0, 999999.99, ErrorMessage = "Price must be between 0 and 999,999.99")]

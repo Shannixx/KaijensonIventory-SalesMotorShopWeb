@@ -39,15 +39,17 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
                     OrderDate = d.PurchaseOrder != null ? d.PurchaseOrder.OrderDate : DateTime.MinValue,
                     DeliveredDate = d.DeliveredDate,
                     CreatedByName = d.PurchaseOrder != null && d.PurchaseOrder.Staff != null ? d.PurchaseOrder.Staff.StaffName : null,
-                    Items = d.PurchaseOrder != null
-                        ? d.PurchaseOrder.Items.Select(i => new DeliveryItemViewModel
-                        {
-                            ProductName = i.Product != null ? i.Product.ProductName : null,
-                            Brand = i.Product != null ? i.Product.Brand : null,
-                            Category = i.Product != null && i.Product.Category != null ? i.Product.Category.CategoryName : null,
-                            Quantity = i.Quantity
-                        }).ToList()
-                        : new List<DeliveryItemViewModel>()
+Items = d.PurchaseOrder != null
+                ? d.PurchaseOrder.Items.Select(i => new DeliveryItemViewModel
+                {
+                    ProductName = i.Product != null ? i.Product.ProductName : null,
+                    Brand = i.Product != null ? i.Product.Brand : null,
+                    Category = i.Product != null && i.Product.Category != null ? i.Product.Category.CategoryName : null,
+                    Quantity = i.Quantity,
+                    ReceivedQuantity = i.ReceivedQuantity,
+                    PurchaseOrderItemId = i.PurchaseOrderItemId
+                }).ToList()
+                : new List<DeliveryItemViewModel>()
                 })
                 .ToListAsync();
 
@@ -86,12 +88,14 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
                     ProductName = i.Product?.ProductName,
                     Brand = i.Product?.Brand,
                     Category = i.Product?.Category?.CategoryName,
-                    Quantity = i.Quantity
+                    Quantity = i.Quantity,
+                    ReceivedQuantity = i.ReceivedQuantity,
+                    PurchaseOrderItemId = i.PurchaseOrderItemId
                 }).ToList() ?? new List<DeliveryItemViewModel>()
             };
         }
 
-        public async Task<Result> DeliverAsync(int id, int currentStaffId)
+        public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId)
         {
             var delivery = await _context.Deliveries
                 .Include(d => d.PurchaseOrder)
@@ -103,7 +107,7 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
             if (delivery == null)
                 return Result.Failure(null, "The delivery could not be found.");
 
-            if (delivery.Status != "Pending")
+            if (delivery.Status != "Pending" && delivery.Status != "Partially Delivered")
                 return Result.Failure(null, $"Cannot mark delivery as delivered with status '{delivery.Status}'.");
 
             var order = delivery.PurchaseOrder;
@@ -115,38 +119,74 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
+            
             foreach (var item in order.Items.Where(i => i.Product != null))
             {
-                int previousQty = item.Product!.QuantityOnHand;
+                // Determine how many units remain to be received for this PO item
+                int remaining = item.Quantity - item.ReceivedQuantity;
+                if (remaining <= 0)
+                    continue; // already fully received
 
-                item.Product.QuantityOnHand += item.Quantity;
+                // Determine receive quantity from input (if provided) otherwise default to remaining
+                int receiveNow = 0;
+                if (receiveQuantities != null && receiveQuantities.TryGetValue(item.PurchaseOrderItemId, out var requested))
+                {
+                    receiveNow = requested;
+                }
+
+                if (receiveNow <= 0)
+                    continue; // nothing to receive for this item
+
+                if (receiveNow > remaining)
+                {
+                    return Result.Failure(null, $"Receive quantity {receiveNow} exceeds remaining {remaining} for item {item.PurchaseOrderItemId}.");
+                }
+
+                // Update product inventory
+                int previousQty = item.Product!.QuantityOnHand;
+                item.Product.QuantityOnHand += receiveNow;
                 item.Product.LastStockInDate = DateTime.Now;
 
                 decimal unitCost = item.Product.Price > 0 ? item.Product.Price : item.Product.AverageCost;
                 item.Product.AverageCost = CalculateNewAverageCost(
                     previousQty,
                     item.Product.AverageCost,
-                    item.Quantity,
+                    receiveNow,
                     unitCost);
 
                 item.Product.StockStatus = CalculateStockStatus(
                     item.Product.QuantityOnHand, item.Product.ReorderLevel);
+
+                // Update PO item received quantity
+                item.ReceivedQuantity += receiveNow;
+
+                // Record delivery item history
+                var deliveryItem = new DeliveryItem
+                {
+                    DeliveryId = delivery.DeliveryId,
+                    PurchaseOrderItemId = item.PurchaseOrderItemId,
+                    ReceivedQuantity = receiveNow,
+                    ReceivedDate = DateTime.Now
+                };
+                _context.DeliveryItems.Add(deliveryItem);
+
+                
             }
 
-            delivery.Status = "Delivered";
-            delivery.DeliveredDate = DateTime.Now;
+            // Determine delivery and order status based on remaining quantities
+            bool allReceived = order.Items.All(i => i.ReceivedQuantity >= i.Quantity);
+            delivery.Status = allReceived ? "Delivered" : "Partially Delivered";
+            if (allReceived)
+                delivery.DeliveredDate = DateTime.Now;
 
-            // Update related purchase order status to Delivered
-            if (order != null)
-            {
-                order.Status = "Delivered";
-                order.UpdatedDate = DateTime.Now;
-            }
+            // Update purchase order status
+            order.Status = allReceived ? "Delivered" : "Partially Delivered";
+            order.UpdatedDate = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
             await _activityLogService.LogAsync("Mark Delivery", "Delivery",
-                $"Delivery for PO {order.PurchaseOrderNumber} marked as Delivered", currentStaffId);
+                $"Delivery for PO {order.PurchaseOrderNumber} processed. Status: {delivery.Status}", currentStaffId);
 
             await transaction.CommitAsync();
 

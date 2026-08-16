@@ -134,6 +134,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 PurchaseOrderId = model.PurchaseOrderId,
                 LeadTimeDays = 30,
                 Price = model.Price.Value,
+                IsSerialized = model.IsSerialized,
                 AverageCost = 0,
                 ReorderLevel = model.ReorderLevel,
                 StockStatus = CalculateStockStatus(model.QuantityOnHand, model.ReorderLevel),

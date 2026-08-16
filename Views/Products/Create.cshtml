@@ -55,6 +55,12 @@
                     <input asp-for="Price" class="form-control" />
                     <span asp-validation-for="Price" class="text-danger small"></span>
                 </div>
+                <div class="col-md-4">
+                    <div class="form-check mt-2">
+                        <input asp-for="IsSerialized" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label" asp-for="IsSerialized">Serialized Product</label>
+                    </div>
+                </div>
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-app-primary">

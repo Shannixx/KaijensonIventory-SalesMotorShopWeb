@@ -100,6 +100,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     item.ProductName = product.ProductName;
                     item.UnitPrice = product.Price;
                     item.Subtotal = product.Price * item.Quantity;
+                    item.IsSerialized = product.IsSerialized;
                 }
                 else
                 {
@@ -128,6 +129,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     item.ProductName = product.ProductName;
                     item.UnitPrice = product.Price;
                     item.Subtotal = product.Price * item.Quantity;
+                    item.IsSerialized = product.IsSerialized;
                 }
                 else
                 {
@@ -222,6 +224,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (!ModelState.IsValid) return View("Confirm");
 
             var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+            // Transfer serial numbers from the posted model into the cart
+            cart.SerialNumbers = model.SerialNumbers ?? new Dictionary<int, List<string>>();
             var staffId = GetCurrentStaffId();
 
             try
@@ -321,12 +325,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 row.RelativeItem().Column(left =>
                                 {
                                     left.Item().Text("KAIJENSON MOTOR SHOP").FontSize(18).Bold();
-                                    left.Item().Text("Customer Purchase Order / Sales Receipt").FontSize(14);
+                                    left.Item().Text("Sales Receipt").FontSize(14);
                                 });
                                 // Right side – transaction details
                                 row.ConstantItem(250).Column(right =>
                                 {
-                                    right.Item().AlignRight().Text($"Invoice #: {transaction.InvoiceNumber}").Bold();
+                                    right.Item().AlignRight().Text($"Receipt #: {transaction.InvoiceNumber}").Bold();
                                     right.Item().AlignRight().Text($"Date: {transaction.TransactionDate:MMM dd, yyyy}");
                                     right.Item().AlignRight().Text($"Staff: {transaction.Staff?.StaffName ?? ""}");
                                     var cust = string.IsNullOrWhiteSpace(transaction.CustomerName) ? "Walk‑in" : transaction.CustomerName;

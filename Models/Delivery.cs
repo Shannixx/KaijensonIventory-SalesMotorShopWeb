@@ -19,5 +19,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         // Navigation property (optional)
         public PurchaseOrder? PurchaseOrder { get; set; }
+        public ICollection<DeliveryItem> Items { get; set; } = new List<DeliveryItem>();
     }
 }

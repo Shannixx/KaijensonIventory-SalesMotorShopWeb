@@ -8,6 +8,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         Task<DeliveryViewModel?> GetDeliveryDetailsAsync(int id);
 
-        Task<Result> DeliverAsync(int id, int currentStaffId);
+        Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId);
     }
 }

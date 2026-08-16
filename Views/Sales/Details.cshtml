@@ -10,7 +10,7 @@
     </div>
     <a asp-action="Search" class="btn btn-outline-primary"><i class="bi bi-house"></i> Home</a>
 </div>
-<p><strong>Invoice:</strong> @Model.Transaction.InvoiceNumber</p>
+<p><strong>Receipt #:</strong> @Model.Transaction.InvoiceNumber</p>
 <p><strong>Date:</strong> @Model.Transaction.TransactionDate</p>
 <p><strong>Staff:</strong> @Model.Transaction.Staff?.StaffName</p>
 <p><strong>Customer:</strong> @(string.IsNullOrWhiteSpace(Model.Transaction.CustomerName) ? "Walk‑in" : Model.Transaction.CustomerName)</p>

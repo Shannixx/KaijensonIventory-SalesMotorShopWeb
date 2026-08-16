@@ -18,5 +18,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public List<SelectListItem> Suppliers { get; set; } = new();
         public List<SelectListItem> Brands { get; set; } = new();
         public List<SelectListItem> PurchaseOrders { get; set; } = new();
+        public bool IsSerialized { get; set; }
     }
 }

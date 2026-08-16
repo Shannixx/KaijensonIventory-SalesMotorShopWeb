@@ -71,6 +71,25 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 var subtotal = unitPrice * cartItem.Quantity;
                 serverTotal += subtotal;
 
+                // Serialized product validation
+if (product.IsSerialized)
+                 {
+                     if (cart.SerialNumbers == null || !cart.SerialNumbers.TryGetValue(product.ProductId, out var serialList))
+                         throw new InvalidOperationException($"Serial numbers are required for serialized product {product.ProductName}.");
+                     // Normalize serial numbers: trim whitespace
+                     var normalizedSerials = serialList.Select(s => s.Trim()).ToList();
+                     // Reject empty or whitespace‑only serials after trimming
+                     if (normalizedSerials.Any(s => string.IsNullOrWhiteSpace(s)))
+                         throw new InvalidOperationException($"Serial numbers cannot be empty or whitespace for product {product.ProductName}.");
+                     if (normalizedSerials.Count != cartItem.Quantity)
+                         throw new InvalidOperationException($"Number of serials ({normalizedSerials.Count}) does not match quantity ({cartItem.Quantity}) for product {product.ProductName}.");
+                     // Ensure serials are unique within this list after normalization
+                     if (normalizedSerials.Distinct().Count() != normalizedSerials.Count)
+                         throw new InvalidOperationException($"Duplicate serial numbers provided for product {product.ProductName}.");
+                     // Replace original list with normalized for later processing
+                     cart.SerialNumbers[product.ProductId] = normalizedSerials;
+                 }
+
                 // Prepare SalesItem
                 var salesItem = new SalesItem
                 {
@@ -113,6 +132,34 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 transaction.Items.Add(item);
             }
 
+            // Create SerialUnit records for serialized products
+            foreach (var cartItem in cart.Items)
+            {
+                var product = affectedProducts.First(p => p.ProductId == cartItem.ProductId);
+                if (product.IsSerialized)
+                {
+                    var serialList = cart.SerialNumbers[product.ProductId];
+                    foreach (var serial in serialList)
+                    {
+                        // Ensure serial is not already used in another sale
+                        if (await _context.SerialUnits.AnyAsync(s => s.SerialNumber == serial))
+                        {
+                            throw new InvalidOperationException($"Serial number '{serial}' has already been used in another transaction.");
+                        }
+                        var serialUnit = new SerialUnit
+                        {
+                            SerialNumber = serial,
+                            ProductId = product.ProductId,
+                            SalesTransactionId = transaction.TransactionId,
+                            Status = "Sold",
+                            SoldDate = DateTime.Now,
+                            CreatedDate = DateTime.Now
+                        };
+                        _context.SerialUnits.Add(serialUnit);
+                    }
+                }
+            }
+
             // Update inventory and status with notification handling
             foreach (var product in affectedProducts)
             {
@@ -151,7 +198,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             await _activityLogService.LogAsync(
                 "Sale",
                 "Sales",
-                $"Invoice {transaction.InvoiceNumber}, Total ₱{transaction.TotalAmount}",
+                $"Receipt #{transaction.InvoiceNumber}, Total ₱{transaction.TotalAmount}",
                 staffId);
 
             await tx.CommitAsync();

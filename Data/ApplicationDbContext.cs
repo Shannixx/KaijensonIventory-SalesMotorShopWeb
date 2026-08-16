@@ -18,6 +18,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
         public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
         public DbSet<Delivery> Deliveries => Set<Delivery>();
+        public DbSet<SerialUnit> SerialUnits => Set<SerialUnit>();
+        public DbSet<DeliveryItem> DeliveryItems => Set<DeliveryItem>();
 
         // Sales entities (already present in DbContext)
         public DbSet<SalesTransaction> SalesTransactions => Set<SalesTransaction>();
@@ -69,6 +71,36 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
 
             modelBuilder.Entity<PurchaseOrderItem>()
                 .HasOne(i => i.Product).WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
+
+            // Serial unit unique constraint
+            modelBuilder.Entity<SerialUnit>()
+                .HasIndex(s => s.SerialNumber).IsUnique();
+
+            // SerialUnit relationships
+            modelBuilder.Entity<SerialUnit>()
+                .HasOne(s => s.Product)
+                .WithMany()
+                .HasForeignKey(s => s.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SerialUnit>()
+                .HasOne(s => s.SalesTransaction)
+                .WithMany()
+                .HasForeignKey(s => s.SalesTransactionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // DeliveryItem relationships
+            modelBuilder.Entity<DeliveryItem>()
+                .HasOne(di => di.Delivery)
+                .WithMany(d => d.Items)
+                .HasForeignKey(di => di.DeliveryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DeliveryItem>()
+                .HasOne(di => di.PurchaseOrderItem)
+                .WithMany()
+                .HasForeignKey(di => di.PurchaseOrderItemId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Category>().HasData(
                 new Category { CategoryId = 1, CategoryName = "Lubricant" },

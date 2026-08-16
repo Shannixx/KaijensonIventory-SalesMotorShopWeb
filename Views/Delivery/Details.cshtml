@@ -6,10 +6,10 @@
         "Pending" => "bg-warning",
         "Approved" => "bg-primary",
         "Delivered" => "bg-success",
+        "Partially Delivered" => "bg-warning",
         "Cancelled" => "bg-danger",
         _ => "bg-secondary"
-    };
-}
+    };}
 
 <div class="page-header">
     <div>
@@ -17,15 +17,45 @@
         <p>Delivery details.</p>
     </div>
     <div class="d-flex gap-2">
-        @if (Model.Status == "Pending")
-        {
-            <form asp-action="MarkDelivered" asp-route-id="@Model.DeliveryId" method="post">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-success" onclick="return confirm('Mark this purchase order as delivered? Stock will be updated.');">
-                    <i class="bi bi-check-all"></i> Mark as Delivered
-                </button>
-            </form>
-        }
+        @{
+    var showForm = (Model.Status == "Pending" || Model.Status == "Partially Delivered") && Model.Items.Any(i => i.Quantity - i.ReceivedQuantity > 0);
+}
+@if (showForm)
+{
+    <form asp-action="Receive" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="DeliveryId" value="@Model.DeliveryId" />
+        <table class="table table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Ordered</th>
+                    <th>Received</th>
+                    <th>Remaining</th>
+                    <th>Receive Now</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    var remaining = item.Quantity - item.ReceivedQuantity;
+                    <tr>
+                        <td>@item.ProductName</td>
+                        <td>@item.Quantity</td>
+                        <td>@item.ReceivedQuantity</td>
+                        <td>@remaining</td>
+                        <td>
+                            <input type="number" name="ReceiveQuantities[@item.PurchaseOrderItemId]" min="0" max="@remaining" class="form-control" value="@remaining" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-success" onclick="return confirm('Process this delivery? Stock will be updated.');">
+            <i class="bi bi-check-all"></i> Receive
+        </button>
+    </form>
+}
         <a asp-action="Index" class="btn btn-outline-secondary">Back to Delivery</a>
     </div>
 </div>

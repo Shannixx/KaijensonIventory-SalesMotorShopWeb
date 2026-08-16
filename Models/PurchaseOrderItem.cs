@@ -16,6 +16,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Range(1, int.MaxValue)]
         public int Quantity { get; set; }
 
+        // Quantity that has been received so far via deliveries
+        public int ReceivedQuantity { get; set; } = 0;
+
         [Range(0, 999999.99)]
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }

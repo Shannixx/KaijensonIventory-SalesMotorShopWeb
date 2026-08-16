@@ -41,5 +41,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 
         [Display(Name = "Quantity")]
         public int Quantity { get; set; }
+
+        // Cumulative received quantity for this PO item
+        public int ReceivedQuantity { get; set; }
+
+        // Remaining quantity to receive
+        public int Remaining => Quantity - ReceivedQuantity;
+
+        // Identifier for PO item (needed for receiving)
+        public int PurchaseOrderItemId { get; set; }
     }
 }
