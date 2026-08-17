@@ -109,18 +109,37 @@ if (product.IsSerialized)
             var change = amountPaid - serverTotal;
 
             // Create SalesTransaction
-            var transaction = new SalesTransaction
-            {
-                InvoiceNumber = $"INV-{Guid.NewGuid():N}",
-                CheckoutKey = checkoutKey,
-                CustomerName = cart.CustomerName ?? string.Empty,
-                TransactionDate = DateTime.Now,
-                TotalAmount = serverTotal,
-                AmountPaid = amountPaid,
-                Change = change,
-                StaffId = staffId,
-                Items = new List<SalesItem>()
-            };
+            // Generate receipt number in format MMM-XXYY (month, transaction count, total quantity)
+                var transactionDate = DateTime.Now;
+                var monthStart = new DateTime(transactionDate.Year, transactionDate.Month, 1);
+                var monthEnd = monthStart.AddMonths(1);
+                var monthTransactionCount = await _context.SalesTransactions
+                    .Where(t => t.TransactionDate >= monthStart && t.TransactionDate < monthEnd)
+                    .CountAsync();
+                var transactionNumber = monthTransactionCount + 1;
+                // Ensure transaction number is within allowed range 1‑99
+                if (transactionNumber < 1 || transactionNumber > 99)
+                    throw new InvalidOperationException($"Transaction number {transactionNumber} is out of allowed range (1-99).");
+                var monthPart = transactionDate.Month.ToString("D3"); // 3‑digit month
+                var transactionPart = transactionNumber.ToString("D2"); // 2‑digit transaction within month
+                var totalQuantity = cart.Items.Sum(i => i.Quantity);
+                // Ensure total quantity is within allowed range 1‑99
+                if (totalQuantity < 1 || totalQuantity > 99)
+                    throw new InvalidOperationException($"Total quantity {totalQuantity} is out of allowed range (1-99).");
+                var totalQtyPart = totalQuantity.ToString("D2"); // 2‑digit total quantity
+                var receiptNumber = $"{monthPart}-{transactionPart}{totalQtyPart}";
+                var transaction = new SalesTransaction
+                {
+                    InvoiceNumber = receiptNumber,
+                    CheckoutKey = checkoutKey,
+                    CustomerName = cart.CustomerName ?? string.Empty,
+                    TransactionDate = DateTime.Now,
+                    TotalAmount = serverTotal,
+                    AmountPaid = amountPaid,
+                    Change = change,
+                    StaffId = staffId,
+                    Items = new List<SalesItem>()
+                };
 
             _context.SalesTransactions.Add(transaction);
             await _context.SaveChangesAsync(); // to get TransactionId

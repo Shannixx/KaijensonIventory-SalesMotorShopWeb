@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using System.Globalization;
+using System.Collections.Generic;
 using QuestPDF.Infrastructure;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
@@ -166,6 +167,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     cart.Items.Remove(item);
                 }
+                // Clear any stored serial numbers for this product since quantity changed
+                cart.SerialNumbers.Remove(productId);
                 HttpContext.Session.SetObject("Cart", cart);
             }
             return RedirectToAction(nameof(Cart));
@@ -191,10 +194,127 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     TempData["ErrorMessage"] = "Cannot increase quantity beyond available stock.";
                 }
+                // Clear any stored serial numbers for this product since quantity changed
+                cart.SerialNumbers.Remove(productId);
                 HttpContext.Session.SetObject("Cart", cart);
             }
             return RedirectToAction(nameof(Cart));
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SaveSerialNumbers([FromForm] Dictionary<int, List<string>> SerialNumbers)
+        {
+            var accessRedirect = RedirectIfNotAuthenticated();
+            if (accessRedirect != null) return accessRedirect;
+
+            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+
+            if (SerialNumbers == null)
+            {
+                TempData["ErrorMessage"] = "Serial numbers were not provided.";
+                return RedirectToAction(nameof(Cart));
+            }
+
+            var cleaned = new Dictionary<int, List<string>>();
+            var errors = new List<string>();
+
+            foreach (var kvp in SerialNumbers)
+            {
+                var productId = kvp.Key;
+                var serialList = kvp.Value.Select(s => s?.Trim() ?? string.Empty).ToList();
+
+                var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+                if (cartItem == null)
+                {
+                    errors.Add($"Product {productId} is not in the cart.");
+                    continue;
+                }
+
+                if (!cartItem.IsSerialized)
+                {
+                    errors.Add($"Product {cartItem.ProductName} does not require serial numbers.");
+                    continue;
+                }
+
+                if (serialList.Count != cartItem.Quantity)
+                {
+                    errors.Add($"Serial count ({serialList.Count}) does not match quantity ({cartItem.Quantity}) for product {cartItem.ProductName}.");
+                }
+
+                if (serialList.Any(s => string.IsNullOrWhiteSpace(s)))
+                {
+                    errors.Add($"Serial numbers cannot be empty for product {cartItem.ProductName}.");
+                }
+
+                if (serialList.Distinct().Count() != serialList.Count)
+                {
+                    errors.Add($"Duplicate serial numbers provided for product {cartItem.ProductName}.");
+                }
+
+                cleaned[productId] = serialList;
+            }
+
+            if (errors.Any())
+            {
+                TempData["ErrorMessage"] = string.Join(" ", errors);
+                // Do not overwrite existing valid serial data
+                return RedirectToAction(nameof(Cart));
+            }
+
+            cart.SerialNumbers = cleaned;
+            HttpContext.Session.SetObject("Cart", cart);
+            return RedirectToAction(nameof(Confirm));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessPayment(PaymentViewModel model)
+        {
+            var accessRedirect = RedirectIfNotAuthenticated();
+            if (accessRedirect != null) return accessRedirect;
+
+            if (!ModelState.IsValid) return View("Confirm");
+
+            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+            var staffId = GetCurrentStaffId();
+
+            // Validate serial numbers for serialized items before processing payment
+            var serialErrors = new List<string>();
+            foreach (var item in cart.Items.Where(i => i.IsSerialized))
+            {
+                if (!cart.SerialNumbers.TryGetValue(item.ProductId, out var serials))
+                {
+                    serialErrors.Add($"Serial numbers are required for {item.ProductName}.");
+                    continue;
+                }
+                if (serials.Count != item.Quantity)
+                    serialErrors.Add($"Serial count ({serials.Count}) does not match quantity ({item.Quantity}) for {item.ProductName}.");
+                if (serials.Any(s => string.IsNullOrWhiteSpace(s)))
+                    serialErrors.Add($"Serial numbers cannot be empty for {item.ProductName}.");
+                if (serials.Distinct().Count() != serials.Count)
+                    serialErrors.Add($"Duplicate serial numbers for {item.ProductName}.");
+            }
+            if (serialErrors.Any())
+            {
+                TempData["ErrorMessage"] = string.Join(" ", serialErrors);
+                return RedirectToAction(nameof(Cart));
+            }
+
+            try
+            {
+                var transaction = await _saleService.ProcessSaleAsync(cart, model.AmountPaid, model.CheckoutKey, staffId);
+                HttpContext.Session.Remove("Cart");
+                return RedirectToAction(nameof(Details), new { id = transaction.TransactionId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing sale.");
+                TempData["ErrorMessage"] = ex.Message;
+                return RedirectToAction(nameof(Cart));
+            }
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -213,35 +333,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return RedirectToAction(nameof(Cart));
         }
 
-        // POST: /Sales/ProcessPayment
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcessPayment(PaymentViewModel model)
-        {
-            var accessRedirect = RedirectIfNotAuthenticated();
-            if (accessRedirect != null) return accessRedirect;
-
-            if (!ModelState.IsValid) return View("Confirm");
-
-            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
-            // Transfer serial numbers from the posted model into the cart
-            cart.SerialNumbers = model.SerialNumbers ?? new Dictionary<int, List<string>>();
-            var staffId = GetCurrentStaffId();
-
-            try
-            {
-                var transaction = await _saleService.ProcessSaleAsync(cart, model.AmountPaid, model.CheckoutKey, staffId);
-                // Clear cart after successful sale
-                HttpContext.Session.Remove("Cart");
-                return RedirectToAction(nameof(Details), new { id = transaction.TransactionId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing sale.");
-                TempData["ErrorMessage"] = ex.Message;
-                return RedirectToAction(nameof(Cart));
-            }
-        }
 
         // GET: /Sales/Details/{id}
         public async Task<IActionResult> Details(int id)

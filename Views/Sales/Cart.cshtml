@@ -50,7 +50,21 @@ else
     </table></div></div>
 <div class="mt-3 fw-bold text-end mb-2">TOTAL: @Model.Items.Sum(i => i.Subtotal).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</div>
 <div class="mt-2">
-    <a asp-action="Confirm" class="btn btn-primary me-2">Proceed to Confirm</a>
-    <a asp-action="Search" class="btn btn-app-secondary">Back to Purchase Order</a>
+<form asp-action="SaveSerialNumbers" method="post">
+    @Html.AntiForgeryToken()
+    @foreach (var item in Model.Items.Where(i => i.IsSerialized))
+    {
+        <div class="mt-3">
+            <label>Serial Numbers for @item.ProductName (Qty: @item.Quantity)</label>
+            @for (int i = 0; i < item.Quantity; i++)
+            {
+                var existing = Model.SerialNumbers != null && Model.SerialNumbers.TryGetValue(item.ProductId, out var list) && list.Count > i ? list[i] : "";
+                <input type="text" name="SerialNumbers[@item.ProductId][@i]" value="@existing" class="form-control mb-1" />
+            }
+        </div>
+    }
+    <button type="submit" class="btn btn-primary me-2 mt-2">Proceed to Confirm</button>
+</form>
+<a asp-action="Search" class="btn btn-app-secondary">Back to Purchase Order</a>
 </div>
 }
