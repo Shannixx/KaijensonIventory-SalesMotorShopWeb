@@ -96,11 +96,16 @@
                         <a asp-controller="Services" asp-action="Index" class="nav-link @(IsActive("Services") ? "active" : "")" data-title="Service" aria-current="@ActiveAttr("Services")">
                             <i class="bi bi-gear"></i><span>Service</span>
                         </a>
-                        <li class="nav-item">
-                            <a asp-controller="Sales" asp-action="Search" class="nav-link @(IsActive("Sales") ? "active" : "")" data-title="Customer Purchase Order" aria-current="@ActiveAttr("Sales")">
-                                <i class="bi bi-cart-plus"></i><span>Customer Purchase Order</span>
-                            </a>
-                        </li>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-controller="Sales" asp-action="Search" class="nav-link @(IsActive("Sales") ? "active" : "")" data-title="Customer Purchase Order" aria-current="@ActiveAttr("Sales")">
+                            <i class="bi bi-cart-plus"></i><span>Customer Purchase Order</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a asp-controller="Reports" asp-action="Index" class="nav-link @(IsActive("Reports") ? "active" : "")" data-title="Reports" aria-current="@ActiveAttr("Reports")">
+                            <i class="bi bi-bar-chart"></i><span>Reports</span>
+                        </a>
                     </li>
                     @if (isAdmin)
                     {

@@ -1,0 +1,137 @@
+@model KaijensonIventory_SalesMotorShopWeb.ViewModels.ReportsPageViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Reports";
+}
+<h2>Reports</h2>
+<form method="get" class="form-inline mb-4">
+    <div class="form-group mr-2">
+        <label asp-for="Filter.StartDate" class="mr-1">Start Date</label>
+        <input asp-for="Filter.StartDate" class="form-control" type="date" />
+    </div>
+    <div class="form-group mr-2">
+        <label asp-for="Filter.EndDate" class="mr-1">End Date</label>
+        <input asp-for="Filter.EndDate" class="form-control" type="date" />
+    </div>
+    <div class="form-group mr-2">
+        <label asp-for="Filter.ProductId" class="mr-1">Product</label>
+        <select asp-for="Filter.ProductId" class="form-control" asp-items='@(new SelectList(ViewBag.Products, "ProductId", "ProductName", Model.Filter.ProductId))'>
+            <option value="">All Products</option>
+        </select>
+    </div>
+    <div class="form-group mr-2">
+        <label asp-for="Filter.CategoryId" class="mr-1">Category</label>
+        <select asp-for="Filter.CategoryId" class="form-control" asp-items='@(new SelectList(ViewBag.Categories, "CategoryId", "CategoryName", Model.Filter.CategoryId))'>
+            <option value="">All Categories</option>
+        </select>
+    </div>
+    <div class="form-group mr-2">
+        <label asp-for="Filter.SerialNumber" class="mr-1">Serial</label>
+        <input asp-for="Filter.SerialNumber" class="form-control" type="text" placeholder="Serial number" />
+    </div>
+    <button type="submit" class="btn btn-primary">Generate</button>
+</form>
+<hr />
+<h3>Current Stock</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Product</th><th>Category</th><th>Qty On Hand</th><th>Status</th><th>Reorder Level</th></tr></thead>
+    <tbody>
+    @if (Model.InventoryReport.Items != null && Model.InventoryReport.Items.Any())
+    {
+        foreach (var item in Model.InventoryReport.Items)
+        {
+            <tr>
+                <td>@item.ProductName</td>
+                <td>@item.CategoryName</td>
+                <td>@item.QuantityOnHand</td>
+                <td>@item.StockStatus</td>
+                <td>@item.ReorderLevel</td>
+            </tr>
+        }
+    }
+    else
+    {
+        <tr><td colspan="5" class="text-center">No records found for the selected filters.</td></tr>
+    }
+    </tbody>
+</table>
+<h3>Sales Performance</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Transactions</th><th>Total Qty Sold</th><th>Total Revenue</th></tr></thead>
+    <tbody>
+        <tr>
+            <td>@Model.SalesPerformanceReport.TransactionCount</td>
+            <td>@Model.SalesPerformanceReport.TotalQuantitySold</td>
+            <td>@Model.SalesPerformanceReport.TotalRevenue.ToString("C")</td>
+        </tr>
+    </tbody>
+</table>
+<h3>Revenue</h3>
+<p>Total Revenue: <strong>@Model.RevenueReport.TotalRevenue.ToString("C")</strong></p>
+<h3>Most Sold Products</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+    <tbody>
+    @if (Model.MostSoldProducts != null && Model.MostSoldProducts.Any())
+    {
+        foreach (var p in Model.MostSoldProducts)
+        {
+            <tr>
+                <td>@p.ProductName</td>
+                <td>@p.QuantitySold</td>
+                <td>@p.Revenue.ToString("C")</td>
+            </tr>
+        }
+    }
+    else
+    {
+        <tr><td colspan="3" class="text-center">No records found for the selected filters.</td></tr>
+    }
+    </tbody>
+</table>
+<h3>Stock Movements</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Reference</th></tr></thead>
+    <tbody>
+    @if (Model.StockMovements != null && Model.StockMovements.Any())
+    {
+        foreach (var m in Model.StockMovements)
+        {
+            <tr>
+                <td>@m.Date.ToShortDateString()</td>
+                <td>@m.ProductName</td>
+                <td>@m.MovementType</td>
+                <td>@m.Quantity</td>
+                <td>@m.Reference</td>
+            </tr>
+        }
+    }
+    else
+    {
+        <tr><td colspan="5" class="text-center">No records found for the selected filters.</td></tr>
+    }
+    </tbody>
+</table>
+<h3>Serial Numbers</h3>
+<table class="table table-sm table-striped">
+    <thead><tr><th>Serial</th><th>Product</th><th>Status</th><th>Sale Id</th><th>Sale Date</th></tr></thead>
+    <tbody>
+    @if (Model.SerialNumberReport != null && Model.SerialNumberReport.Any())
+    {
+        foreach (var s in Model.SerialNumberReport)
+        {
+            <tr>
+                <td>@s.SerialNumber</td>
+                <td>@s.ProductName</td>
+                <td>@s.Status</td>
+                <td>@(s.SaleId?.ToString() ?? "-")</td>
+                <td>@(s.SaleDate?.ToShortDateString() ?? "-")</td>
+            </tr>
+        }
+    }
+    else
+    {
+        <tr><td colspan="5" class="text-center">No records found for the selected filters.</td></tr>
+    }
+    </tbody>
+</table>

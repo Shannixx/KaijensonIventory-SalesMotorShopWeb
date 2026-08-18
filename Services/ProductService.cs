@@ -86,7 +86,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 Description = product.Description,
                 ModelCompatibility = product.ModelCompatibility,
                 PurchaseOrderId = product.PurchaseOrderId,
-                Price = product.Price
+                Price = product.Price,
+                IsSerialized = product.IsSerialized
             };
 
             return await PopulateEditListsAsync(model);
@@ -190,7 +191,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             existing.Description = model.Description;
             existing.PurchaseOrderId = model.PurchaseOrderId;
             
-                existing.Price = model.Price ?? existing.Price;
+                existing.IsSerialized = model.IsSerialized;
+            existing.Price = model.Price ?? existing.Price;
             existing.StockStatus = CalculateStockStatus(existing.QuantityOnHand, existing.ReorderLevel);
 
             await _context.SaveChangesAsync();
