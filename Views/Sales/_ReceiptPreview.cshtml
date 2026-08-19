@@ -43,6 +43,12 @@
                         <td class="text-end">@item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
                     </tr>
                     idx++;
+                    if (Model.SerialNumbersByProduct != null && Model.SerialNumbersByProduct.TryGetValue(item.ProductId, out var serialList) && serialList.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="ps-4"><strong>Serial Numbers:</strong> @string.Join(", ", serialList)</td>
+                        </tr>
+                    }
                 }
                 @if (!Model.Items.Any())
                 {

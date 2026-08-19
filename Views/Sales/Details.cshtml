@@ -18,15 +18,21 @@
     <table class="table table-bordered align-middle">
     <thead><tr><th>Product</th><th class="text-center">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Subtotal</th></tr></thead>
     <tbody>
-    @foreach (var item in Model.Items)
+@foreach (var item in Model.Items)
+{
+    <tr>
+        <td>@item.Product.ProductName</td>
+        <td>@item.Quantity</td>
+        <td class="text-end">@item.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+        <td class="text-end">@item.Subtotal.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+    </tr>
+    @if (Model.SerialNumbersByProduct != null && Model.SerialNumbersByProduct.TryGetValue(item.ProductId, out var serialList) && serialList.Any())
     {
         <tr>
-            <td>@item.Product.ProductName</td>
-            <td>@item.Quantity</td>
-            <td class="text-end">@item.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
-            <td class="text-end">@item.Subtotal.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+            <td colspan="4" class="ps-4"><strong>Serial Numbers:</strong> @string.Join(", ", serialList)</td>
         </tr>
     }
+}
     </tbody>
 </table></div>
 <p><strong>Total:</strong> @Model.Transaction.TotalAmount.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</p>

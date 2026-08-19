@@ -30,13 +30,7 @@
             <h3 class="metric-value" data-countup="@Model.OutOfStockCount">0</h3>
         </div>
     </div>
-    <div class="metric-card">
-        <div class="metric-icon secondary"><i class="bi bi-arrow-repeat"></i></div>
-        <div class="metric-info">
-            <p class="metric-label">Below Reorder</p>
-            <h3 class="metric-value" data-countup="@Model.LowStockRequireReorder">0</h3>
-        </div>
-    </div>
+
     <div class="metric-card">
         <div class="metric-icon info"><i class="bi bi-currency-dollar"></i></div>
         <div class="metric-info">
@@ -86,19 +80,19 @@
         <div class="dashboard-card-body p-0">
             <div class="table-container">
                 <table class="table">
-                    <thead><tr><th>Product</th><th>Qty</th><th>Reorder</th></tr></thead>
+                    <thead><tr><th>Product</th><th>Qty</th></tr></thead>
                     <tbody>
                         @foreach (var p in Model.RecentLowStockProducts)
                         {
                             <tr>
                                 <td><a asp-controller="Products" asp-action="Details" asp-route-id="@p.ProductId">@p.ProductName</a></td>
                                 <td class="text-danger fw-semibold">@p.QuantityOnHand</td>
-                                <td>@p.ReorderLevel</td>
+                                
                             </tr>
                         }
                         @if (!Model.RecentLowStockProducts.Any())
                         {
-                            <tr><td colspan="3" class="text-center py-4 text-muted">No low stock items.</td></tr>
+                            <tr><td colspan="2" class="text-center py-4 text-muted">No low stock items.</td></tr>
                         }
                     </tbody>
                 </table>

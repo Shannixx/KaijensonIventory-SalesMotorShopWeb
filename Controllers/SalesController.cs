@@ -74,10 +74,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (existingItem != null)
             {
                 existingItem.Quantity = quantity; // set total desired quantity
+                existingItem.IsSerialized = product.IsSerialized;
             }
             else
             {
-                cart.Items.Add(new SaleItemViewModel { ProductId = productId, Quantity = quantity });
+                cart.Items.Add(new SaleItemViewModel { ProductId = productId, Quantity = quantity, IsSerialized = product.IsSerialized });
             }
 
             HttpContext.Session.SetObject("Cart", cart);
@@ -110,6 +111,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     item.Subtotal = 0m;
                 }
             }
+
+            // Persist any updates back to session
+            HttpContext.Session.SetObject("Cart", cart);
 
             return View(cart);
         }
@@ -203,7 +207,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult SaveSerialNumbers([FromForm] Dictionary<int, List<string>> SerialNumbers)
+        public async Task<IActionResult> SaveSerialNumbers([FromForm] Dictionary<int, List<string>> SerialNumbers)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
@@ -219,41 +223,49 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var cleaned = new Dictionary<int, List<string>>();
             var errors = new List<string>();
 
-            foreach (var kvp in SerialNumbers)
-            {
-                var productId = kvp.Key;
-                var serialList = kvp.Value.Select(s => s?.Trim() ?? string.Empty).ToList();
-
-                var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == productId);
-                if (cartItem == null)
+foreach (var kvp in SerialNumbers)
                 {
-                    errors.Add($"Product {productId} is not in the cart.");
-                    continue;
-                }
+                    var productId = kvp.Key;
+                    var serialList = kvp.Value.Select(s => s?.Trim() ?? string.Empty).ToList();
 
-                if (!cartItem.IsSerialized)
-                {
-                    errors.Add($"Product {cartItem.ProductName} does not require serial numbers.");
-                    continue;
-                }
+                    var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+                    if (cartItem == null)
+                    {
+                        errors.Add($"Product {productId} is not in the cart.");
+                        continue;
+                    }
 
-                if (serialList.Count != cartItem.Quantity)
-                {
-                    errors.Add($"Serial count ({serialList.Count}) does not match quantity ({cartItem.Quantity}) for product {cartItem.ProductName}.");
-                }
+                    // Verify product serialization from database
+                    var product = await _productService.GetByIdAsync(productId);
+                    bool isSerialized = product?.IsSerialized ?? false;
+                    // Update cart item flag to stay in sync
+                    cartItem.IsSerialized = isSerialized;
 
-                if (serialList.Any(s => string.IsNullOrWhiteSpace(s)))
-                {
-                    errors.Add($"Serial numbers cannot be empty for product {cartItem.ProductName}.");
-                }
+                    if (!isSerialized)
+                    {
+                        // Ensure any stale serial numbers are cleared
+                        cart.SerialNumbers.Remove(productId);
+                        // Non-serialized product: no serial numbers required
+                        continue;
+                    }
 
-                if (serialList.Distinct().Count() != serialList.Count)
-                {
-                    errors.Add($"Duplicate serial numbers provided for product {cartItem.ProductName}.");
-                }
+                    if (serialList.Count != cartItem.Quantity)
+                    {
+                        errors.Add($"Serial count ({serialList.Count}) does not match quantity ({cartItem.Quantity}) for product {cartItem.ProductName}.");
+                    }
 
-                cleaned[productId] = serialList;
-            }
+                    if (serialList.Any(s => string.IsNullOrWhiteSpace(s)))
+                    {
+                        errors.Add($"Serial numbers cannot be empty for product {cartItem.ProductName}.");
+                    }
+
+                    if (serialList.Distinct().Count() != serialList.Count)
+                    {
+                        errors.Add($"Duplicate serial numbers provided for product {cartItem.ProductName}.");
+                    }
+
+                    cleaned[productId] = serialList;
+                }
 
             if (errors.Any())
             {
@@ -281,8 +293,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             // Validate serial numbers for serialized items before processing payment
             var serialErrors = new List<string>();
-            foreach (var item in cart.Items.Where(i => i.IsSerialized))
+            foreach (var item in cart.Items)
             {
+                // Load product to determine serialization
+                var product = await _productService.GetByIdAsync(item.ProductId);
+                bool isSerialized = product?.IsSerialized ?? false;
+                // Sync cart flag
+                item.IsSerialized = isSerialized;
+
+                if (!isSerialized)
+                {
+                    // No serial numbers required for this product
+                    continue;
+                }
+
                 if (!cart.SerialNumbers.TryGetValue(item.ProductId, out var serials))
                 {
                     serialErrors.Add($"Serial numbers are required for {item.ProductName}.");
@@ -347,7 +371,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             if (transaction == null) return NotFound();
 
-            var viewModel = new SaleDetailsViewModel { Transaction = transaction, Items = transaction.Items };
+            // Load serial numbers for this transaction, grouped by product
+            var serials = await _context.SerialUnits
+                .Where(s => s.SalesTransactionId == id)
+                .GroupBy(s => s.ProductId)
+                .ToDictionaryAsync(g => g.Key, g => g.Select(s => s.SerialNumber).ToList());
+
+            var viewModel = new SaleDetailsViewModel {
+                Transaction = transaction,
+                Items = transaction.Items,
+                SerialNumbersByProduct = serials
+            };
             return View(viewModel);
         }
 
@@ -389,7 +423,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 .FirstOrDefaultAsync(t => t.TransactionId == id);
             if (transaction == null) return NotFound();
 
-            var viewModel = new SaleDetailsViewModel { Transaction = transaction, Items = transaction.Items };
+            var serials = await _context.SerialUnits
+    .Where(s => s.SalesTransactionId == id)
+    .GroupBy(s => s.ProductId)
+    .ToDictionaryAsync(g => g.Key, g => g.Select(s => s.SerialNumber).ToList());
+var viewModel = new SaleDetailsViewModel { Transaction = transaction, Items = transaction.Items, SerialNumbersByProduct = serials };
             return PartialView("_ReceiptPreview", viewModel);
         }
 
@@ -438,8 +476,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         c.Column(col =>
                         {
                             // Product table
-                            col.Item().Table(table =>
-                            {
+col.Item().Table(table => { var serials = _context.SerialUnits.Where(s => s.SalesTransactionId == transaction.TransactionId).GroupBy(s => s.ProductId).ToDictionary(g => g.Key, g => g.Select(s => s.SerialNumber).ToList());
                                 table.ColumnsDefinition(columns =>
                                 {
                                     columns.ConstantColumn(25); // index
@@ -462,15 +499,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 int idx = 1;
 if (transaction.Items != null && transaction.Items.Any())
                                           {
-                                              foreach (var item in transaction.Items)
-                                              {
-                                                  table.Cell().Padding(5).Text(idx.ToString()).FontSize(10);
-                                                  table.Cell().Padding(5).Text(item.Product?.ProductName ?? "").FontSize(10);
-                                                  table.Cell().Padding(5).AlignRight().Text(item.Quantity.ToString()).FontSize(10);
-                                                  table.Cell().Padding(5).AlignRight().Text(item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
-                                                  table.Cell().Padding(5).AlignRight().Text(item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
-                                                  idx++;
-                                              }
+foreach (var item in transaction.Items)
+                                                {
+                                                    table.Cell().Padding(5).Text(idx.ToString()).FontSize(10);
+                                                    table.Cell().Padding(5).Text(item.Product?.ProductName ?? "").FontSize(10);
+                                                    table.Cell().Padding(5).AlignRight().Text(item.Quantity.ToString()).FontSize(10);
+                                                    table.Cell().Padding(5).AlignRight().Text(item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
+                                                    table.Cell().Padding(5).AlignRight().Text(item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
+                                                    idx++;
+                                                    // Serial numbers row if applicable
+                                                    if (serials != null && serials.TryGetValue(item.ProductId, out var sList) && sList.Any())
+                                                    {
+                                                        table.Cell().ColumnSpan(5).Padding(5).Text($"Serial: {string.Join(", ", sList)}").FontSize(8);
+                                                    }
+                                                }
                                           }
                                           else
                                           {

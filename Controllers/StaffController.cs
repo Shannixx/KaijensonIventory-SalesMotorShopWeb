@@ -3,6 +3,7 @@ using KaijensonIventory_SalesMotorShopWeb.Models;
 using KaijensonIventory_SalesMotorShopWeb.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
@@ -101,49 +102,35 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("StaffName,UserName,ContactNumber,Address,Role")] Staff staff, string Password, string ConfirmPassword)
+        public async Task<IActionResult> Create(StaffCreateViewModel model)
         {
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
 
             try
             {
-                if (string.IsNullOrWhiteSpace(Password))
-                {
-                    ModelState.AddModelError("Password", "Password is required.");
-                }
-                else if (Password != ConfirmPassword)
-                {
-                    ModelState.AddModelError("ConfirmPassword", "Passwords do not match.");
-                }
-                else if (Password.Length < 6)
-                {
-                    ModelState.AddModelError("Password", "Password must be at least 6 characters.");
-                }
-
-                if (string.IsNullOrWhiteSpace(staff.UserName))
-                {
-                    ModelState.AddModelError("UserName", "Username is required.");
-                }
-                else if (await _context.Staff.AnyAsync(s => s.UserName == staff.UserName))
+                // Additional validation: username uniqueness
+                if (await _context.Staff.AnyAsync(s => s.UserName == model.UserName))
                 {
                     ModelState.AddModelError("UserName", "Username already exists.");
                 }
 
-                if (string.IsNullOrWhiteSpace(staff.StaffName))
-                {
-                    ModelState.AddModelError("StaffName", "Staff name is required.");
-                }
-
                 if (ModelState.IsValid)
                 {
-                    staff.PasswordHash = _hashing.HashPassword(Password);
-                    if (string.IsNullOrEmpty(staff.Role)) staff.Role = "Manager";
+                    var staff = new Staff
+                    {
+                        StaffName = model.StaffName,
+                        UserName = model.UserName,
+                        ContactNumber = model.ContactNumber,
+                        Address = model.Address,
+                        Role = model.Role,
+                        PasswordHash = _hashing.HashPassword(model.Password)
+                    };
 
                     _context.Staff.Add(staff);
                     await _context.SaveChangesAsync();
 
-                    _context.ActivityLogs.Add(new ActivityLog
+                    await _context.ActivityLogs.AddAsync(new ActivityLog
                     {
                         Action = "Create Staff",
                         Module = "Staff",
@@ -157,13 +144,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                return View(staff);
+                return View(model);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating staff");
                 TempData["ErrorMessage"] = "An error occurred while creating staff. Please try again.";
-                return View(staff);
+                return View(model);
             }
         }
 
