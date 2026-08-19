@@ -135,7 +135,7 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
             if (!string.IsNullOrWhiteSpace(filter.SerialNumber))
             {
                 var trimmed = filter.SerialNumber.Trim();
-                serials = serials.Where(s => s.SerialNumber.Contains(trimmed, StringComparison.OrdinalIgnoreCase)).ToList();
+                serials = serials.Where(s => string.Equals(s.SerialNumber, trimmed, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
             var viewModel = new ReportsPageViewModel

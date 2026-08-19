@@ -87,7 +87,7 @@
 </table></div></div></div>
 <div class="card report-section-card"><div class="card-header">Most Sold Products</div><div class="card-body">
 <div class="table-responsive"><table class="table table-sm table-striped">
-    <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+    <thead><tr><th>Product</th><th>Qty Sold</th><th>Unit Price</th><th>Revenue</th></tr></thead>
     <tbody>
 @if (Model.MostSoldProducts != null && Model.MostSoldProducts.Any())
     {
@@ -96,13 +96,14 @@
             <tr>
                 <td>@p.ProductName</td>
                 <td>@p.QuantitySold</td>
+                <td>@p.UnitPrice.ToString("C")</td>
                 <td>@p.Revenue.ToString("C")</td>
             </tr>
         }
     }
     else
     {
-        <tr><td colspan="3" class="text-center">No records found for the selected filters.</td></tr>
+        <tr><td colspan="4" class="text-center">No records found for the selected filters.</td></tr>
     }
     </tbody>
 </table></div></div></div>

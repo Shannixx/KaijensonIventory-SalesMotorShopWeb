@@ -74,7 +74,8 @@ var startInclusive = start.Date;
                 {
                     ProductId = g.Key,
                     QuantitySold = g.Sum(i => i.Quantity),
-                    Revenue = g.Sum(i => i.Quantity * i.UnitPrice)
+                    Revenue = g.Sum(i => i.Quantity * i.UnitPrice),
+                    UnitPrice = g.Sum(i => i.Quantity * i.UnitPrice) / (decimal)g.Sum(i => i.Quantity)
                 })
                 .OrderByDescending(x => x.QuantitySold)
                 .Take(100)
@@ -88,7 +89,8 @@ var startInclusive = start.Date;
             {
                 ProductName = products.ContainsKey(d.ProductId) ? products[d.ProductId] : "[Deleted]",
                 QuantitySold = d.QuantitySold,
-                Revenue = d.Revenue
+                Revenue = d.Revenue,
+                UnitPrice = d.UnitPrice
             }).ToList();
         }
 
