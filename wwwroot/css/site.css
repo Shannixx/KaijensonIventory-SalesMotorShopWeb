@@ -1152,6 +1152,35 @@ a:hover { color: var(--primary-hover); }
     letter-spacing: 0.02em;
 }
 
+/* Reports filter specific */
+.report-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: var(--space-md);
+    align-items: end;
+}
+
+.report-filter-field {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 991.98px) {
+    .report-filter-grid {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .report-filter-grid {
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+    }
+}
+@media (max-width: 575.98px) {
+    .report-filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .form-control, .form-select {
     font-family: var(--font-body);
     font-size: 13.5px;
