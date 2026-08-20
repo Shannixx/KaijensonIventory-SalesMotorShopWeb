@@ -1,19 +1,18 @@
-@model KaijensonIventory_SalesMotorShopWeb.Services.ProductListResult
+@model KaijensonIventory_SalesMotorShopWeb.ViewModels.CustomerPurchaseOrderViewModel
 @using KaijensonIventory_SalesMotorShopWeb.Extensions
 @using System.Linq
 @using KaijensonIventory_SalesMotorShopWeb.ViewModels
 @{
-    var cart = Context.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+    var cart = Model.Cart;
 }
 @{
     ViewData["Title"] = "Product Search";
 }
 <div class="page-header mb-3">
     <div>
-        <h1>Product Search</h1>
+        <h1>Customer Purchase Order</h1>
         <p>Search and add products to the purchase order.</p>
     </div>
-    
 </div>
 @await Html.PartialAsync("_SearchToolbar", new SearchToolbarViewModel {
     ActionName = "Search",
@@ -24,41 +23,118 @@
     ClearActionName = "Search",
     ClearControllerName = "Sales"
 })
-<div class="table-responsive mb-3">
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th style="width:30%" class="text-start">Name</th>
-                <th style="width:15%" class="text-start">Brand</th>
-                <th style="width:15%" class="text-start">Category</th>
-                <th style="width:10%" class="text-end">Price</th>
-                <th style="width:10%" class="text-center">Stock</th>
-                <th style="width:20%" class="text-center">How Many to Buy</th>
-            </tr>
-        </thead>
-    <tbody>
-    @foreach (var p in Model.Items)
-    {
-        <tr class="align-middle">
-            <td>@p.ProductName</td>
-            <td>@p.Brand</td>
-            <td>@p.Category?.CategoryName</td>
-            <td class="text-end">@p.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
-            <td class="text-center">@p.QuantityOnHand</td>
-            <td>
-<form asp-action="AddToCart" method="post" class="d-inline" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
-                     <input type="hidden" name="productId" value="@p.ProductId" />
-                     <div class="d-flex align-items-center gap-2 justify-content-center">
-                         @{
-                             var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == p.ProductId);
-                             var inputValue = cartItem?.Quantity ?? 1;
-                         }
-                         <input type="number" name="quantity" min="1" max="@p.QuantityOnHand" value="@inputValue" class="form-control w-50" style="max-width:80px;" />
-                         <button type="submit" class="btn btn-success btn-sm">Add</button>
-                     </div>
-                 </form>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table></div>
+<div class="row">
+    <div class="col-md-8">
+        <div class="table-responsive mb-3">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th style="width:30%" class="text-start">Name</th>
+                        <th style="width:15%" class="text-start">Brand</th>
+                        <th style="width:15%" class="text-start">Category</th>
+                        <th style="width:10%" class="text-end">Price</th>
+                        <th style="width:10%" class="text-center">Stock</th>
+                        <th style="width:20%" class="text-center">How Many to Buy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Products.Items)
+                    {
+                        <tr class="align-middle">
+                            <td>@p.ProductName</td>
+                            <td>@p.Brand</td>
+                            <td>@p.Category?.CategoryName</td>
+                            <td class="text-end">@p.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
+                            <td class="text-center">@p.QuantityOnHand</td>
+                            <td>
+                                <form asp-action="AddToCart" method="post" class="d-inline" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
+                                    <input type="hidden" name="productId" value="@p.ProductId" />
+                                    <input type="hidden" name="query" value="@Model.SearchQuery" />
+                                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                                        @{ var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == p.ProductId);
+                                           var inputValue = cartItem?.Quantity ?? 1; }
+                                        <input type="number" name="quantity" min="1" max="@p.QuantityOnHand" value="@inputValue" class="form-control w-50" style="max-width:80px;" />
+                                        <button type="submit" class="btn btn-success btn-sm">Add</button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Current Cart</h5>
+            </div>
+            <div class="card-body p-0">
+                @if (!cart.Items.Any())
+                {
+                    <p class="p-3">Your cart is empty.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead>
+                                <tr><th>Product</th><th class="text-end">Price</th><th class="text-center">Qty</th><th class="text-end">Subtotal</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in cart.Items)
+                                {
+                                    <tr>
+                                        <td>@item.ProductName</td>
+                                        <td class="text-end">@item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
+                                        <td class="text-center cart-quantity-controls">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <form asp-action="DecreaseQuantity" method="post" class="d-inline">
+                                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                                    <input type="hidden" name="query" value="@Model.SearchQuery" />
+                                                    <button type="submit" class="btn btn-icon btn-minus" aria-label="Decrease quantity"><i class="bi bi-dash"></i></button>
+                                                </form>
+                                                <span class="mx-2">@item.Quantity</span>
+                                                <form asp-action="IncreaseQuantity" method="post" class="d-inline">
+                                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                                    <input type="hidden" name="query" value="@Model.SearchQuery" />
+                                                    <button type="submit" class="btn btn-icon btn-plus" aria-label="Increase quantity"><i class="bi bi-plus"></i></button>
+                                                </form>
+                                                <form asp-action="RemoveItem" method="post" class="d-inline ms-2">
+                                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                                    <input type="hidden" name="query" value="@Model.SearchQuery" />
+                                                    <button type="submit" class="btn btn-icon btn-delete" aria-label="Remove item"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">@item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 fw-bold text-end mb-2">TOTAL: @cart.Items.Sum(i => i.Subtotal).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</div>
+                    <div class="mt-2">
+                        <form asp-action="SaveSerialNumbers" method="post">
+                            <input type="hidden" name="query" value="@Model.SearchQuery" />
+                            @Html.AntiForgeryToken()
+                            @foreach (var item in cart.Items.Where(i => i.IsSerialized))
+                            {
+                                <div class="mt-3">
+                                    <label>Serial Numbers for @item.ProductName (Qty: @item.Quantity)</label>
+                                    @for (int i = 0; i < item.Quantity; i++)
+                                    {
+                                        var existing = cart.SerialNumbers != null && cart.SerialNumbers.TryGetValue(item.ProductId, out var list) && list.Count > i ? list[i] : "";
+                                        <input type="text" name="SerialNumbers[@item.ProductId][@i]" value="@existing" class="form-control mb-1" />
+                                    }
+                                </div>
+                            }
+                            <button type="submit" class="btn btn-primary me-2 mt-2">Proceed to Confirm</button>
+                        </form>
+                        <a asp-action="Search" class="btn btn-app-secondary mt-2">Back to Purchase Order</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

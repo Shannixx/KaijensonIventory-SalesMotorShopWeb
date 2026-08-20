@@ -26,6 +26,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public string? CreatedByName { get; set; }
 
         public List<DeliveryItemViewModel> Items { get; set; } = new();
+
+        // New delivery history entries (one per receiving event)
+        public List<DeliveryHistoryViewModel> History { get; set; } = new();
     }
 
     public class DeliveryItemViewModel
@@ -50,5 +53,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 
         // Identifier for PO item (needed for receiving)
         public int PurchaseOrderItemId { get; set; }
+    }
+
+    public class DeliveryHistoryViewModel
+    {
+        public string? PurchaseOrderNumber { get; set; }
+        public DateTime OrderDate { get; set; }
+        public string? ProductName { get; set; }
+        public DateTime DateReceived { get; set; }
+        public int QuantityReceived { get; set; }
+        public string? StatusAfter { get; set; }
     }
 }

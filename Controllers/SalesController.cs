@@ -34,13 +34,41 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (accessRedirect != null) return accessRedirect;
 
             var results = await _productService.GetPagedAsync(query, null, 1);
-            return View(results);
+            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+            // Refresh cart product data
+            foreach (var item in cart.Items)
+            {
+                var product = await _productService.GetByIdAsync(item.ProductId);
+                if (product != null)
+                {
+                    item.ProductName = product.ProductName;
+                    item.UnitPrice = product.Price;
+                    item.Subtotal = product.Price * item.Quantity;
+                    item.IsSerialized = product.IsSerialized;
+                }
+                else
+                {
+                    item.ProductName = "[Removed]";
+                    item.UnitPrice = 0m;
+                    item.Subtotal = 0m;
+                }
+            }
+            // Persist any updates back to session
+            HttpContext.Session.SetObject("Cart", cart);
+
+            var viewModel = new CustomerPurchaseOrderViewModel
+            {
+                Products = results,
+                Cart = cart,
+                SearchQuery = query
+            };
+            return View(viewModel);
         }
 
         // POST: /Sales/AddToCart
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddToCart(int productId, int quantity)
+        public async Task<IActionResult> AddToCart(int productId, int quantity, string? query = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
@@ -49,7 +77,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (quantity < 1)
             {
                 TempData["ErrorMessage"] = "Quantity must be greater than zero.";
-                return RedirectToAction(nameof(Search));
+                return RedirectToAction(nameof(Search), new { query });
             }
 
             // Load product to validate existence and stock
@@ -57,13 +85,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (product == null)
             {
                 TempData["ErrorMessage"] = "Product not found.";
-                return RedirectToAction(nameof(Search));
+                return RedirectToAction(nameof(Search), new { query });
             }
 
             if (quantity > product.QuantityOnHand)
             {
                 TempData["ErrorMessage"] = "Requested quantity exceeds available stock.";
-                return RedirectToAction(nameof(Search));
+                return RedirectToAction(nameof(Search), new { query });
             }
 
             // Retrieve or create cart from session
@@ -82,7 +110,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
 
             HttpContext.Session.SetObject("Cart", cart);
-            return RedirectToAction(nameof(Cart));
+            return RedirectToAction(nameof(Search), new { query });
         }
 
         // GET: /Sales/Cart
@@ -154,7 +182,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         // New actions for cart quantity management
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult DecreaseQuantity(int productId)
+        public IActionResult DecreaseQuantity(int productId, string? query = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
@@ -175,12 +203,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 cart.SerialNumbers.Remove(productId);
                 HttpContext.Session.SetObject("Cart", cart);
             }
-            return RedirectToAction(nameof(Cart));
+            return RedirectToAction(nameof(Search), new { query });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> IncreaseQuantity(int productId)
+        public async Task<IActionResult> IncreaseQuantity(int productId, string? query = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
@@ -202,12 +230,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 cart.SerialNumbers.Remove(productId);
                 HttpContext.Session.SetObject("Cart", cart);
             }
-            return RedirectToAction(nameof(Cart));
+            return RedirectToAction(nameof(Search), new { query });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveSerialNumbers([FromForm] Dictionary<int, List<string>> SerialNumbers)
+        public async Task<IActionResult> SaveSerialNumbers([FromForm] Dictionary<int, List<string>> SerialNumbers, string? query = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
@@ -217,7 +245,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (SerialNumbers == null)
             {
                 TempData["ErrorMessage"] = "Serial numbers were not provided.";
-                return RedirectToAction(nameof(Cart));
+                return RedirectToAction(nameof(Search), new { query });
             }
 
             var cleaned = new Dictionary<int, List<string>>();
@@ -271,7 +299,7 @@ foreach (var kvp in SerialNumbers)
             {
                 TempData["ErrorMessage"] = string.Join(" ", errors);
                 // Do not overwrite existing valid serial data
-                return RedirectToAction(nameof(Cart));
+                return RedirectToAction(nameof(Search), new { query });
             }
 
             cart.SerialNumbers = cleaned;
@@ -281,7 +309,7 @@ foreach (var kvp in SerialNumbers)
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcessPayment(PaymentViewModel model)
+        public async Task<IActionResult> ProcessPayment(PaymentViewModel model, string? query = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
@@ -322,7 +350,7 @@ foreach (var kvp in SerialNumbers)
             if (serialErrors.Any())
             {
                 TempData["ErrorMessage"] = string.Join(" ", serialErrors);
-                return RedirectToAction(nameof(Cart));
+                return RedirectToAction(nameof(Search), new { query });
             }
 
             try
@@ -335,14 +363,14 @@ foreach (var kvp in SerialNumbers)
             {
                 _logger.LogError(ex, "Error processing sale.");
                 TempData["ErrorMessage"] = ex.Message;
-                return RedirectToAction(nameof(Cart));
+                return RedirectToAction(nameof(Search), new { query });
             }
         }
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult RemoveItem(int productId)
+        public IActionResult RemoveItem(int productId, string? query = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
@@ -354,7 +382,7 @@ foreach (var kvp in SerialNumbers)
                 cart.Items.Remove(item);
                 HttpContext.Session.SetObject("Cart", cart);
             }
-            return RedirectToAction(nameof(Cart));
+            return RedirectToAction(nameof(Search), new { query });
         }
 
 

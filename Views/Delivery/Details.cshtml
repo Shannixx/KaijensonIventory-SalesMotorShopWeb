@@ -9,7 +9,8 @@
         "Partially Delivered" => "bg-warning",
         "Cancelled" => "bg-danger",
         _ => "bg-secondary"
-    };}
+    };
+}
 
 <div class="page-header">
     <div>
@@ -18,44 +19,44 @@
     </div>
     <div class="d-flex gap-2">
         @{
-    var showForm = (Model.Status == "Pending" || Model.Status == "Partially Delivered") && Model.Items.Any(i => i.Quantity - i.ReceivedQuantity > 0);
-}
-@if (showForm)
-{
-    <form asp-action="Receive" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="DeliveryId" value="@Model.DeliveryId" />
-        <table class="table table-bordered mt-3">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Ordered</th>
-                    <th>Received</th>
-                    <th>Remaining</th>
-                    <th>Receive Now</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model.Items)
-                {
-                    var remaining = item.Quantity - item.ReceivedQuantity;
-                    <tr>
-                        <td>@item.ProductName</td>
-                        <td>@item.Quantity</td>
-                        <td>@item.ReceivedQuantity</td>
-                        <td>@remaining</td>
-                        <td>
-                            <input type="number" name="ReceiveQuantities[@item.PurchaseOrderItemId]" min="0" max="@remaining" class="form-control" value="@remaining" />
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-success" onclick="return confirm('Process this delivery? Stock will be updated.');">
-            <i class="bi bi-check-all"></i> Receive
-        </button>
-    </form>
-}
+            var showForm = (Model.Status == "Pending" || Model.Status == "Partially Delivered") && Model.Items.Any(i => i.Quantity - i.ReceivedQuantity > 0);
+        }
+        @if (showForm)
+        {
+            <form asp-action="Receive" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="DeliveryId" value="@Model.DeliveryId" />
+                <table class="table table-bordered mt-3">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Ordered</th>
+                            <th>Received</th>
+                            <th>Remaining</th>
+                            <th>Receive Now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            var remaining = item.Quantity - item.ReceivedQuantity;
+                            <tr>
+                                <td>@item.ProductName</td>
+                                <td>@item.Quantity</td>
+                                <td>@item.ReceivedQuantity</td>
+                                <td>@remaining</td>
+                                <td>
+                                    <input type="number" name="ReceiveQuantities[@item.PurchaseOrderItemId]" min="0" max="@remaining" class="form-control" value="@remaining" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-success" onclick="return confirm('Process this delivery? Stock will be updated.');">
+                    <i class="bi bi-check-all"></i> Receive
+                </button>
+            </form>
+        }
         <a asp-action="Index" class="btn btn-outline-secondary">Back to Delivery</a>
     </div>
 </div>
@@ -138,5 +139,47 @@
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <span>Delivery History</span>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.History.Any())
+        {
+            <p class="p-3 text-center text-muted">No receiving history recorded.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>PO Number</th>
+<th>Order Date</th>
+                         <th>Product</th>
+                         <th>Date Received</th>
+                            <th>Qty Received</th>
+                            <th>Status After</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in Model.History)
+                        {
+                            <tr>
+                                <td>@(h.PurchaseOrderNumber ?? "-")</td>
+                                <td>@h.OrderDate.ToString("MMM dd, yyyy")</td>
+                                <td>@(h.ProductName ?? "-")</td>
+                                <td>@h.DateReceived.ToString("MMM dd, yyyy")</td>
+                                <td>@h.QuantityReceived</td>
+                                <td>@h.StatusAfter</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </div>
 </div>

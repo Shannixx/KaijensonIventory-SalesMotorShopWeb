@@ -73,6 +73,38 @@ Items = d.PurchaseOrder != null
             if (delivery == null) return null;
 
             var order = delivery.PurchaseOrder;
+            // Load delivery items (receiving events) for history
+            var deliveryItems = await _context.DeliveryItems
+                .Where(di => di.DeliveryId == id)
+                .OrderBy(di => di.ReceivedDate)
+                .ToListAsync();
+
+            var cumulative = new Dictionary<int, int>(); // PO item ID -> cumulative received
+            var history = new List<DeliveryHistoryViewModel>();
+            foreach (var di in deliveryItems)
+            {
+                var poItem = order?.Items.FirstOrDefault(i => i.PurchaseOrderItemId == di.PurchaseOrderItemId);
+                int orderedQty = poItem?.Quantity ?? 0;
+                int prev = cumulative.ContainsKey(di.PurchaseOrderItemId) ? cumulative[di.PurchaseOrderItemId] : 0;
+                int newCum = prev + di.ReceivedQuantity;
+                cumulative[di.PurchaseOrderItemId] = newCum;
+
+                // Calculate overall PO status after this receiving event
+                int totalOrdered = order?.Items.Sum(i => i.Quantity) ?? 0;
+                int totalReceived = cumulative.Values.Sum();
+                string statusAfter = totalReceived >= totalOrdered ? "Delivered" : "Partially Delivered";
+
+                history.Add(new DeliveryHistoryViewModel
+                {
+                    PurchaseOrderNumber = order?.PurchaseOrderNumber,
+                    OrderDate = order?.OrderDate ?? DateTime.MinValue,
+                    ProductName = poItem?.Product?.ProductName,
+                    DateReceived = di.ReceivedDate,
+                    QuantityReceived = di.ReceivedQuantity,
+                    StatusAfter = statusAfter
+                });
+            }
+
             return new DeliveryViewModel
             {
                 DeliveryId = delivery.DeliveryId,
@@ -91,7 +123,8 @@ Items = d.PurchaseOrder != null
                     Quantity = i.Quantity,
                     ReceivedQuantity = i.ReceivedQuantity,
                     PurchaseOrderItemId = i.PurchaseOrderItemId
-                }).ToList() ?? new List<DeliveryItemViewModel>()
+                }).ToList() ?? new List<DeliveryItemViewModel>(),
+                History = history
             };
         }
 

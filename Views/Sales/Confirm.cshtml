@@ -37,6 +37,7 @@ else
     </table></div>
     <div class="mt-3 fw-bold text-end">TOTAL: @Model.Items.Sum(i => i.Subtotal).ToString("C", CultureInfo.GetCultureInfo("en-PH"))</div>
 <form asp-action="ProcessPayment" method="post">
+          <input type="hidden" name="query" value="@Context.Request.Query["query"]" />
          @Html.AntiForgeryToken()
          <input type="hidden" name="CheckoutKey" value="@checkoutKey" />
          <div class="form-group">
