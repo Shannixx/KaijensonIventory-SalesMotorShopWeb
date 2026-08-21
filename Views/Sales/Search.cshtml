@@ -23,49 +23,67 @@
     ClearActionName = "Search",
     ClearControllerName = "Sales"
 })
-<div class="row">
+<div class="cpo-page row">
     <div class="col-md-8">
-        <div class="table-responsive mb-3">
-            <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th style="width:30%" class="text-start">Name</th>
-                        <th style="width:15%" class="text-start">Brand</th>
-                        <th style="width:15%" class="text-start">Category</th>
-                        <th style="width:10%" class="text-end">Price</th>
-                        <th style="width:10%" class="text-center">Stock</th>
-                        <th style="width:20%" class="text-center">How Many to Buy</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in Model.Products.Items)
-                    {
-                        <tr class="align-middle">
-                            <td>@p.ProductName</td>
-                            <td>@p.Brand</td>
-                            <td>@p.Category?.CategoryName</td>
-                            <td class="text-end">@p.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
-                            <td class="text-center">@p.QuantityOnHand</td>
-                            <td>
-                                <form asp-action="AddToCart" method="post" class="d-inline" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
-                                    <input type="hidden" name="productId" value="@p.ProductId" />
-                                    <input type="hidden" name="query" value="@Model.SearchQuery" />
-                                    <div class="d-flex align-items-center gap-2 justify-content-center">
-                                        @{ var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == p.ProductId);
-                                           var inputValue = cartItem?.Quantity ?? 1; }
-                                        <input type="number" name="quantity" min="1" max="@p.QuantityOnHand" value="@inputValue" class="form-control w-50" style="max-width:80px;" />
-                                        <button type="submit" class="btn btn-success btn-sm">Add</button>
-                                    </div>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="card cpo-product-card">
+            <div class="card-header"><h5>Products</h5></div>
+            <div class="card-body p-0">
+                <div class="table-responsive mb-3">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width:30%" class="text-start">Name</th>
+                                <th style="width:15%" class="text-start">Brand</th>
+                                <th style="width:15%" class="text-start">Category</th>
+                                <th style="width:10%" class="text-end">Price</th>
+                                <th style="width:10%" class="text-center">Stock</th>
+                                <th style="width:20%" class="text-center">How Many to Buy</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.Products.Items)
+                            {
+                                <tr class="align-middle">
+                                    <td>@p.ProductName</td>
+                                    <td>@p.Brand</td>
+                                    <td>@p.Category?.CategoryName</td>
+                                    <td class="text-end">@p.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
+                                    <td class="text-center">
+                                        @if (p.QuantityOnHand > 5)
+                                        {
+                                            <span class="badge bg-success">Available</span>
+                                        }
+                                        else if (p.QuantityOnHand > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark">Low Stock</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Out of Stock</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <form asp-action="AddToCart" method="post" class="d-inline" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
+                                            <input type="hidden" name="productId" value="@p.ProductId" />
+                                            <input type="hidden" name="query" value="@Model.SearchQuery" />
+                                            <div class="cpo-product-actions">
+                                                @{ var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == p.ProductId);
+                                                   var inputValue = cartItem?.Quantity ?? 1; }
+                                                <input type="number" name="quantity" min="1" max="@p.QuantityOnHand" value="@inputValue" class="form-control w-50" style="max-width:80px;" />
+                                                <button type="submit" class="btn btn-primary btn-sm">Add</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card">
+        <div class="card cpo-cart-card">
             <div class="card-header">
                 <h5>Current Cart</h5>
             </div>
@@ -113,14 +131,14 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="mt-3 fw-bold text-end mb-2">TOTAL: @cart.Items.Sum(i => i.Subtotal).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</div>
+                    <div class="cpo-total mt-3 mb-2">TOTAL: @cart.Items.Sum(i => i.Subtotal).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</div>
                     <div class="mt-2">
                         <form asp-action="SaveSerialNumbers" method="post">
                             <input type="hidden" name="query" value="@Model.SearchQuery" />
                             @Html.AntiForgeryToken()
                             @foreach (var item in cart.Items.Where(i => i.IsSerialized))
                             {
-                                <div class="mt-3">
+                                <div class="cpo-serial-section mt-3">
                                     <label>Serial Numbers for @item.ProductName (Qty: @item.Quantity)</label>
                                     @for (int i = 0; i < item.Quantity; i++)
                                     {

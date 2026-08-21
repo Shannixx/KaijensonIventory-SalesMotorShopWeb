@@ -150,6 +150,69 @@ a:hover { color: var(--primary-hover); }
 /* ===================================================================
    2. SIDEBAR
    =================================================================== */
+
+/* ==== CPO Scoped Styles ==== */
+.cpo-page {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-lg);
+}
+.cpo-product-card, .cpo-cart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-md);
+}
+.cpo-product-card .card-header, .cpo-cart-card .card-header {
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+.cpo-product-card table th, .cpo-cart-card table th {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+.cpo-product-card table tr:hover {
+    background: var(--primary-subtle);
+}
+.cpo-product-card .product-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+.cpo-product-card .brand-category {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.cpo-product-card .price {
+    color: var(--primary);
+    font-weight: 600;
+}
+.cpo-product-card .stock-badge {
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+}
+.cpo-product-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+.cpo-total {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-align: right;
+    margin-top: var(--space-md);
+}
+.cpo-serial-section {
+    margin-top: var(--space-md);
+}
+.cpo-serial-section label {
+    font-weight: 500;
+    display: block;
+    margin-bottom: var(--space-xs);
+}
 .sidebar {
     position: fixed;
     top: 0;

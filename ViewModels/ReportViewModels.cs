@@ -63,4 +63,29 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public int? SaleId { get; set; }
         public DateTime? SaleDate { get; set; }
     }
+
+    // New view models
+    public class RevenueTrendItemViewModel
+    {
+        public DateTime Period { get; set; }
+        public decimal Revenue { get; set; }
+        public int UnitsSold { get; set; }
+    }
+
+    public class SalesByCategoryViewModel
+    {
+        public string CategoryName { get; set; } = string.Empty;
+        public decimal Revenue { get; set; }
+        public int UnitsSold { get; set; }
+    }
+
+    public class LowStockAlertViewModel
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public int QuantityOnHand { get; set; }
+        public int ReorderLevel { get; set; }
+        public string StockStatus { get; set; } = string.Empty;
+    }
+
+
 }

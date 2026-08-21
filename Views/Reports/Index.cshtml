@@ -41,6 +41,10 @@
                 <button type="submit" class="btn btn-primary w-100">Generate</button>
             </div>
         </form>
+        <div class="report-export-buttons mb-3 mt-2">
+            <a asp-action="ExportCsv" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn btn-outline-primary me-2">Export CSV</a>
+            <a asp-action="ExportPdf" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn btn-outline-secondary">Export PDF</a>
+        </div>
     </div>
 </div>
 
@@ -49,6 +53,8 @@
     <div class="metric-card"><div class="metric-info"><p class="metric-label">Total Revenue</p><h3 class="metric-value">@Model.RevenueReport.TotalRevenue.ToString("C")</h3></div></div>
     <div class="metric-card"><div class="metric-info"><p class="metric-label">Total Qty Sold</p><h3 class="metric-value">@Model.SalesPerformanceReport.TotalQuantitySold</h3></div></div>
     <div class="metric-card"><div class="metric-info"><p class="metric-label">Transactions</p><h3 class="metric-value">@Model.SalesPerformanceReport.TransactionCount</h3></div></div>
+    <div class="metric-card"><div class="metric-info"><p class="metric-label">Inventory Value</p><h3 class="metric-value">@Model.TotalInventoryValue.ToString("C")</h3></div></div>
+    <div class="metric-card"><div class="metric-info"><p class="metric-label">Low Stock Items</p><h3 class="metric-value">@Model.LowStockItemCount</h3></div></div>
 </div>
 <hr />
 <div class="card report-section-card"><div class="card-header">Current Stock</div><div class="card-body">
@@ -153,3 +159,56 @@
     }
     </tbody>
 </table></div></div></div>
+
+<!-- Revenue Trend -->
+<div class="card report-section-card"><div class="card-header">Revenue Trend</div><div class="card-body"><canvas id="revenueTrendChart" height="100"></canvas></div></div>
+<!-- Sales By Category -->
+<div class="card report-section-card"><div class="card-header">Sales By Category</div><div class="card-body"><canvas id="salesByCategoryChart" height="100"></canvas></div></div>
+<div class="card report-section-card"><div class="card-header">Sales By Category</div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Category</th><th>Revenue</th><th>Units Sold</th></tr></thead><tbody>@if (Model.SalesByCategory != null && Model.SalesByCategory.Any()) { foreach (var c in Model.SalesByCategory) { <tr><td>@c.CategoryName</td><td>@c.Revenue.ToString("C")</td><td>@c.UnitsSold</td></tr> } } else { <tr><td colspan="3" class="text-center">No records found for the selected filters.</td></tr> }</tbody></table></div></div></div>
+<!-- Low Stock Alerts -->
+<div class="card report-section-card"><div class="card-header">Low Stock Alerts</div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Product</th><th>Qty On Hand</th><th>Reorder Level</th><th>Status</th></tr></thead><tbody>@if (Model.LowStockAlerts != null && Model.LowStockAlerts.Any()) { foreach (var a in Model.LowStockAlerts) { <tr><td>@a.ProductName</td><td>@a.QuantityOnHand</td><td>@a.ReorderLevel</td><td>@a.StockStatus</td></tr> } } else { <tr><td colspan="4" class="text-center">No low stock alerts.</td></tr> }</tbody></table></div></div></div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('revenueTrendChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(r => r.Period.ToString("yyyy-MM-dd")))),
+                datasets: [
+                    {
+                        label: 'Revenue',
+                        data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(r => r.Revenue))),
+                        borderColor: '#007bff',
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Date' } },
+                    y: { display: true, title: { display: true, text: 'Amount' } }
+                }
+            }
+        });
+    </script>
+    <script>
+        const catCtx = document.getElementById('salesByCategoryChart').getContext('2d');
+        const catChart = new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesByCategory.Select(c => c.CategoryName)))
+                datasets: [{
+                    label: 'Revenue by Category',
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesByCategory.Select(c => c.Revenue))),
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#20c997']
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    </script>
+}

@@ -5,6 +5,9 @@ using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
@@ -28,44 +31,311 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                 TempData["ErrorMessage"] = "Access denied. Manager or Owner required.";
                 return RedirectToAction("Index", "Dashboard");
             }
-
-            // Ensure defaults if not provided
+            // Ensure defaults
             if (filter.StartDate == default) filter.StartDate = DateTime.Today.AddMonths(-1);
             if (filter.EndDate == default) filter.EndDate = DateTime.Today;
-
             // Validate dates
             if (filter.StartDate > filter.EndDate)
             {
                 ModelState.AddModelError(string.Empty, "Start Date must be before End Date.");
-                // Repopulate selections for view
                 ViewBag.Products = await _context.Products.OrderBy(p => p.ProductName).ToListAsync();
                 ViewBag.Categories = await _context.Categories.OrderBy(c => c.CategoryName).ToListAsync();
-                var errorViewModel = new ReportsPageViewModel { Filter = filter };
-                return View(errorViewModel);
+                var errorVm = new ReportsPageViewModel { Filter = filter };
+                return View(errorVm);
             }
-
-            // Populate optional filter selections
+            // Populate filter selections
             ViewBag.Products = await _context.Products.OrderBy(p => p.ProductName).ToListAsync();
             ViewBag.Categories = await _context.Categories.OrderBy(c => c.CategoryName).ToListAsync();
+            var viewModel = await BuildReportViewModelAsync(filter);
+            return View(viewModel);
+        }
 
-            // Use half‑open date range
+        // GET: /Reports/ExportCsv
+        [HttpGet]
+        public async Task<IActionResult> ExportCsv([FromQuery] ReportFilterViewModel filter)
+        {
+            // Reuse same filter handling as Index
+            var viewModel = await BuildReportViewModelAsync(filter);
+            // Build CSV content
+            var sb = new System.Text.StringBuilder();
+            // Helper to escape CSV fields
+            string Escape(string s)
+            {
+                if (s == null) return "";
+                bool mustQuote = s.Contains(',') || s.Contains('"') || s.Contains('\n') || s.Contains('\r');
+                if (mustQuote)
+                {
+                    s = s.Replace("\"", "\"\"");
+                    return $"\"{s}\"";
+                }
+                return s;
+            }
+            // Summary KPIs
+            sb.AppendLine("Summary KPIs");
+            sb.AppendLine(string.Join(",", new[] { "Total Revenue", "Total Qty Sold", "Transactions", "Inventory Value", "Low Stock Items" }));
+            sb.AppendLine(string.Join(",", new[] {
+                viewModel.RevenueReport.TotalRevenue.ToString("F2"),
+                viewModel.SalesPerformanceReport.TotalQuantitySold.ToString(),
+                viewModel.SalesPerformanceReport.TransactionCount.ToString(),
+                viewModel.TotalInventoryValue.ToString("F2"),
+                viewModel.LowStockItemCount.ToString()
+            }));
+            sb.AppendLine();
+            // Inventory
+            sb.AppendLine("Inventory");
+            sb.AppendLine(string.Join(",", new[] { "Product", "Category", "Qty On Hand", "Status" }));
+            foreach (var i in viewModel.InventoryReport.Items)
+            {
+                sb.AppendLine(string.Join(",", new[] { Escape(i.ProductName), Escape(i.CategoryName), i.QuantityOnHand.ToString(), Escape(i.StockStatus) }));
+            }
+            sb.AppendLine();
+            // Most Sold Products
+            sb.AppendLine("Most Sold Products");
+            sb.AppendLine(string.Join(",", new[] { "Product", "Qty Sold", "Unit Price", "Revenue" }));
+            foreach (var p in viewModel.MostSoldProducts)
+            {
+                sb.AppendLine(string.Join(",", new[] { Escape(p.ProductName), p.QuantitySold.ToString(), p.UnitPrice.ToString("F2"), p.Revenue.ToString("F2") }));
+            }
+            sb.AppendLine();
+            // Revenue Trend (only dates and revenue)
+            sb.AppendLine("Revenue Trend");
+            sb.AppendLine(string.Join(",", new[] { "Period", "Revenue" }));
+            foreach (var r in viewModel.RevenueTrend)
+            {
+                sb.AppendLine(string.Join(",", new[] { r.Period.ToString("yyyy-MM-dd"), r.Revenue.ToString("F2") }));
+            }
+            sb.AppendLine();
+            // Sales By Category
+            sb.AppendLine("Sales By Category");
+            sb.AppendLine(string.Join(",", new[] { "Category", "Revenue", "Units Sold" }));
+            foreach (var c in viewModel.SalesByCategory)
+            {
+                sb.AppendLine(string.Join(",", new[] { Escape(c.CategoryName), c.Revenue.ToString("F2"), c.UnitsSold.ToString() }));
+            }
+            sb.AppendLine();
+            // Low Stock Alerts
+            sb.AppendLine("Low Stock Alerts");
+            sb.AppendLine(string.Join(",", new[] { "Product", "Qty On Hand", "Reorder Level", "Status" }));
+            foreach (var a in viewModel.LowStockAlerts)
+            {
+                sb.AppendLine(string.Join(",", new[] { Escape(a.ProductName), a.QuantityOnHand.ToString(), a.ReorderLevel.ToString(), Escape(a.StockStatus) }));
+            }
+            sb.AppendLine();
+            // Stock Movements
+            sb.AppendLine("Stock Movements");
+            sb.AppendLine(string.Join(",", new[] { "Date", "Product", "Type", "Qty", "Reference" }));
+            foreach (var m in viewModel.StockMovements)
+            {
+                sb.AppendLine(string.Join(",", new[] { m.Date.ToString("yyyy-MM-dd"), Escape(m.ProductName), Escape(m.MovementType), m.Quantity.ToString(), Escape(m.Reference) }));
+            }
+            sb.AppendLine();
+            // Serial Numbers
+            sb.AppendLine("Serial Numbers");
+            sb.AppendLine(string.Join(",", new[] { "Serial", "Product", "Status", "Sale Id", "Sale Date" }));
+            foreach (var s in viewModel.SerialNumberReport)
+            {
+                sb.AppendLine(string.Join(",", new[] { Escape(s.SerialNumber), Escape(s.ProductName), Escape(s.Status), s.SaleId?.ToString() ?? "-", s.SaleDate?.ToString("yyyy-MM-dd") ?? "-" }));
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+            var fileName = $"Report_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            return File(bytes, "text/csv", fileName);
+        }
+
+        // GET: /Reports/ExportPdf
+        [HttpGet]
+        public async Task<IActionResult> ExportPdf([FromQuery] ReportFilterViewModel filter)
+        {
+            var viewModel = await BuildReportViewModelAsync(filter);
+            var doc = QuestPDF.Fluent.Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(QuestPDF.Helpers.PageSizes.A4);
+                    page.Margin(40);
+                    page.DefaultTextStyle(x => x.FontSize(10));
+                    // Header
+                    page.Header().Element(c =>
+                    {
+                        c.Column(col =>
+                        {
+                            col.Item().AlignCenter().Text("KAJENSON MOTOR SHOP - Reports").Bold().FontSize(16);
+                            col.Item().AlignCenter().Text($"Period: {viewModel.Filter.StartDate:yyyy-MM-dd} to {viewModel.Filter.EndDate:yyyy-MM-dd}");
+                        });
+                    });
+                    // Content
+                    page.Content().PaddingVertical(10).Column(col =>
+                    {
+                        // KPIs table
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); });
+                            table.Cell().Element(container => container.Padding(2)).Text("Total Revenue");
+                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.RevenueReport.TotalRevenue.ToString("C"));
+                            table.Cell().Element(container => container.Padding(2)).Text("Units Sold");
+                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.SalesPerformanceReport.TotalQuantitySold.ToString());
+                            table.Cell().Element(container => container.Padding(2)).Text("Transactions");
+                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.SalesPerformanceReport.TransactionCount.ToString());
+                            table.Cell().Element(container => container.Padding(2)).Text("Inventory Value");
+                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.TotalInventoryValue.ToString("C"));
+                            table.Cell().Element(container => container.Padding(2)).Text("Low Stock Items");
+                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.LowStockItemCount.ToString());
+                        });
+
+
+
+                        // Render additional sections with real data
+                        // Inventory Section
+                        col.Item().PaddingTop(10).Text("Inventory").Bold();
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                            // Header
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Category").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty On Hand").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
+                            foreach (var i in viewModel.InventoryReport.Items)
+                            {
+                                table.Cell().Element(Container => Container.Padding(2)).Text(i.ProductName);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(i.CategoryName);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(i.QuantityOnHand.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text(i.StockStatus);
+                            }
+                        });
+
+                        // Most Sold Products Section
+                        col.Item().PaddingTop(10).Text("Most Sold Products").Bold();
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty Sold").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Unit Price").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
+                            foreach (var p in viewModel.MostSoldProducts)
+                            {
+                                table.Cell().Element(Container => Container.Padding(2)).Text(p.ProductName);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(p.QuantitySold.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text(p.UnitPrice.ToString("C"));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(p.Revenue.ToString("C"));
+                            }
+                        });
+
+                        // Revenue Trend Section
+                        col.Item().PaddingTop(10).Text("Revenue Trend").Bold();
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); });
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Period").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
+                            foreach (var r in viewModel.RevenueTrend)
+                            {
+                                table.Cell().Element(Container => Container.Padding(2)).Text(r.Period.ToString("yyyy-MM-dd"));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(r.Revenue.ToString("C"));
+                            }
+                        });
+
+                        // Sales By Category Section
+                        col.Item().PaddingTop(10).Text("Sales By Category").Bold();
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Category").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Units Sold").Bold();
+                            foreach (var c in viewModel.SalesByCategory)
+                            {
+                                table.Cell().Element(Container => Container.Padding(2)).Text(c.CategoryName);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(c.Revenue.ToString("C"));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(c.UnitsSold.ToString());
+                            }
+                        });
+
+                        // Low Stock Alerts Section
+                        col.Item().PaddingTop(10).Text("Low Stock Alerts").Bold();
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty On Hand").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Reorder Level").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
+                            foreach (var a in viewModel.LowStockAlerts)
+                            {
+                                table.Cell().Element(Container => Container.Padding(2)).Text(a.ProductName);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(a.QuantityOnHand.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text(a.ReorderLevel.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text(a.StockStatus);
+                            }
+                        });
+
+                        // Stock Movements Section
+                        col.Item().PaddingTop(10).Text("Stock Movements").Bold();
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Date").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Type").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Reference").Bold();
+                            foreach (var m in viewModel.StockMovements)
+                            {
+                                table.Cell().Element(Container => Container.Padding(2)).Text(m.Date.ToString("yyyy-MM-dd"));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(m.ProductName);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(m.MovementType);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(m.Quantity.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text(m.Reference);
+                            }
+                        });
+
+                        // Serial Numbers Section
+                        col.Item().PaddingTop(10).Text("Serial Numbers").Bold();
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Serial").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Sale Id").Bold();
+                            table.Cell().Element(Container => Container.Padding(2)).Text("Sale Date").Bold();
+                            foreach (var s in viewModel.SerialNumberReport)
+                            {
+                                table.Cell().Element(Container => Container.Padding(2)).Text(s.SerialNumber);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(s.ProductName);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(s.Status);
+                                table.Cell().Element(Container => Container.Padding(2)).Text(s.SaleId?.ToString() ?? "-");
+                                table.Cell().Element(Container => Container.Padding(2)).Text(s.SaleDate?.ToString("yyyy-MM-dd") ?? "-");
+                            }
+                        });
+                    });
+                });
+            });
+            var pdfBytes = doc.GeneratePdf();
+            var fileName = $"Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+
+        // Private helper to construct the same view model used by Index
+        private async Task<ReportsPageViewModel> BuildReportViewModelAsync(ReportFilterViewModel filter)
+        {
+            // Replicate the logic from Index (excluding view rendering)
+            // Ensure defaults
+            if (filter.StartDate == default) filter.StartDate = DateTime.Today.AddMonths(-1);
+            if (filter.EndDate == default) filter.EndDate = DateTime.Today;
             var start = filter.StartDate.Date;
             var end = filter.EndDate.Date;
-
             var inventory = await _reportService.GetInventoryReportAsync(start, end);
             var mostSold = await _reportService.GetMostSoldProductsAsync(start, end);
             var stockMovements = await _reportService.GetStockMovementsAsync(start, end);
             var serials = await _reportService.GetSerialNumberReportAsync(start, end);
-
-            // Sales Performance & Revenue with optional product/category filters
             SalesPerformanceReportViewModel salesPerf;
             RevenueReportViewModel revenue;
-
             var startInclusive = start;
             var endExclusive = end.AddDays(1);
             var salesQuery = _context.SalesTransactions
                 .Where(t => t.TransactionDate >= startInclusive && t.TransactionDate < endExclusive);
-
             if (filter.ProductId.HasValue || filter.CategoryId.HasValue)
             {
                 var productIdsQuery = _context.Products.AsQueryable();
@@ -74,22 +344,14 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                 if (filter.CategoryId.HasValue)
                     productIdsQuery = productIdsQuery.Where(p => p.CategoryId == filter.CategoryId.Value);
                 var productIds = await productIdsQuery.Select(p => p.ProductId).ToListAsync();
-
                 var salesItems = _context.SalesItems
                     .Where(si => productIds.Contains(si.ProductId) && si.Transaction.TransactionDate >= startInclusive && si.Transaction.TransactionDate < endExclusive);
-
                 var transactionIds = await salesItems.Select(si => si.TransactionId).Distinct().ToListAsync();
                 var transactionCount = await _context.SalesTransactions
                     .Where(t => transactionIds.Contains(t.TransactionId)).CountAsync();
                 var totalQuantity = await salesItems.SumAsync(si => si.Quantity);
                 var totalRevenue = await salesItems.SumAsync(si => si.Quantity * si.UnitPrice);
-
-                salesPerf = new SalesPerformanceReportViewModel
-                {
-                    TransactionCount = transactionCount,
-                    TotalQuantitySold = totalQuantity,
-                    TotalRevenue = totalRevenue
-                };
+                salesPerf = new SalesPerformanceReportViewModel { TransactionCount = transactionCount, TotalQuantitySold = totalQuantity, TotalRevenue = totalRevenue };
                 revenue = new RevenueReportViewModel { TotalRevenue = totalRevenue };
             }
             else
@@ -97,8 +359,6 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                 salesPerf = await _reportService.GetSalesPerformanceReportAsync(start, end);
                 revenue = await _reportService.GetRevenueReportAsync(start, end);
             }
-
-            // Apply optional product filter to other reports
             if (filter.ProductId.HasValue)
             {
                 var product = await _context.Products.FindAsync(filter.ProductId.Value);
@@ -111,8 +371,6 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                     serials = serials.Where(s => s.ProductName == productName).ToList();
                 }
             }
-
-            // Apply optional category filter
             if (filter.CategoryId.HasValue)
             {
                 var category = await _context.Categories.FindAsync(filter.CategoryId.Value);
@@ -120,7 +378,6 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                 {
                     var categoryName = category.CategoryName;
                     inventory.Items = inventory.Items.Where(i => i.CategoryName == categoryName).ToList();
-
                     var categoryProductNames = await _context.Products
                         .Where(p => p.CategoryId == filter.CategoryId.Value)
                         .Select(p => p.ProductName)
@@ -130,15 +387,17 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                     serials = serials.Where(s => categoryProductNames.Contains(s.ProductName)).ToList();
                 }
             }
-
-            // Serial number filter
             if (!string.IsNullOrWhiteSpace(filter.SerialNumber))
             {
                 var trimmed = filter.SerialNumber.Trim();
                 serials = serials.Where(s => string.Equals(s.SerialNumber, trimmed, StringComparison.OrdinalIgnoreCase)).ToList();
             }
-
-            var viewModel = new ReportsPageViewModel
+            var totalInventoryValue = await _reportService.GetTotalInventoryValueAsync(start, end, filter.ProductId, filter.CategoryId);
+            var lowStockItemCount = await _reportService.GetLowStockItemCountAsync(start, end, filter.ProductId, filter.CategoryId);
+            var lowStockAlerts = await _reportService.GetLowStockAlertsAsync(start, end, filter.ProductId, filter.CategoryId);
+            var revenueTrend = await _reportService.GetRevenueTrendAsync(start, end, filter.ProductId, filter.CategoryId);
+            var salesByCategory = await _reportService.GetSalesByCategoryAsync(start, end, filter.ProductId, filter.CategoryId);
+            return new ReportsPageViewModel
             {
                 Filter = filter,
                 InventoryReport = inventory,
@@ -146,10 +405,14 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                 RevenueReport = revenue,
                 MostSoldProducts = mostSold,
                 StockMovements = stockMovements,
-                SerialNumberReport = serials
+                SerialNumberReport = serials,
+                TotalInventoryValue = totalInventoryValue,
+                LowStockItemCount = lowStockItemCount,
+                LowStockAlerts = lowStockAlerts,
+                RevenueTrend = revenueTrend,
+                SalesByCategory = salesByCategory
             };
-
-            return View(viewModel);
         }
+
     }
 }

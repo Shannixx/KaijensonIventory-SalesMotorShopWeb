@@ -127,7 +127,7 @@ var sales = await _context.SalesItems
             return combined;
         }
 
-        public async Task<List<SerialNumberReportViewModel>> GetSerialNumberReportAsync(DateTime start, DateTime end)
+public async Task<List<SerialNumberReportViewModel>> GetSerialNumberReportAsync(DateTime start, DateTime end)
         {
             var startInclusive = start.Date;
             var endExclusive = end.Date.AddDays(1);
@@ -147,5 +147,100 @@ var sales = await _context.SalesItems
                 .ToListAsync();
             return data;
         }
+
+public async Task<decimal> GetTotalInventoryValueAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
+        {
+            // Calculate inventory value, applying optional product and category filters
+            var query = _context.Products.AsQueryable();
+            if (productId.HasValue)
+                query = query.Where(p => p.ProductId == productId.Value);
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            var total = await query.SumAsync(p => p.QuantityOnHand * p.AverageCost);
+            return total;
+        }
+
+        public async Task<int> GetLowStockItemCountAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
+        {
+            var query = _context.Products.AsQueryable();
+            if (productId.HasValue)
+                query = query.Where(p => p.ProductId == productId.Value);
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            var count = await query.CountAsync(p => p.QuantityOnHand <= p.ReorderLevel);
+            return count;
+        }
+
+        public async Task<List<LowStockAlertViewModel>> GetLowStockAlertsAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
+        {
+            var query = _context.Products.AsQueryable();
+            if (productId.HasValue)
+                query = query.Where(p => p.ProductId == productId.Value);
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            var alerts = await query
+                .Where(p => p.QuantityOnHand <= p.ReorderLevel)
+                .Select(p => new LowStockAlertViewModel
+                {
+                    ProductName = p.ProductName,
+                    QuantityOnHand = p.QuantityOnHand,
+                    ReorderLevel = p.ReorderLevel,
+                    StockStatus = p.StockStatus
+                })
+                .ToListAsync();
+            return alerts;
+        }
+
+        public async Task<List<RevenueTrendItemViewModel>> GetRevenueTrendAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
+        {
+            var startInclusive = start.Date;
+            var endExclusive = end.Date.AddDays(1);
+            // Build base query for sales items within date range
+            var itemsQuery = _context.SalesItems
+                .Where(si => si.Transaction.TransactionDate >= startInclusive && si.Transaction.TransactionDate < endExclusive)
+                .AsQueryable();
+            if (productId.HasValue)
+                itemsQuery = itemsQuery.Where(si => si.ProductId == productId.Value);
+            if (categoryId.HasValue)
+                itemsQuery = itemsQuery.Where(si => si.Product.CategoryId == categoryId.Value);
+            var data = await itemsQuery
+                .GroupBy(si => si.Transaction.TransactionDate.Date)
+                .Select(g => new RevenueTrendItemViewModel
+                {
+                    Period = g.Key,
+                    Revenue = g.Sum(si => si.Quantity * si.UnitPrice),
+                    UnitsSold = g.Sum(si => si.Quantity)
+                })
+                .OrderBy(r => r.Period)
+                .ToListAsync();
+            return data;
+        }
+
+        public async Task<List<SalesByCategoryViewModel>> GetSalesByCategoryAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
+        {
+            var startInclusive = start.Date;
+            var endExclusive = end.Date.AddDays(1);
+            var itemsQuery = _context.SalesItems
+                .Where(si => si.Transaction.TransactionDate >= startInclusive && si.Transaction.TransactionDate < endExclusive)
+                .AsQueryable();
+            if (productId.HasValue)
+                itemsQuery = itemsQuery.Where(si => si.ProductId == productId.Value);
+            if (categoryId.HasValue)
+                itemsQuery = itemsQuery.Where(si => si.Product.CategoryId == categoryId.Value);
+            var data = await itemsQuery
+                .Include(i => i.Product)
+                .ThenInclude(p => p.Category)
+                .GroupBy(i => i.Product.Category.CategoryName)
+                .Select(g => new SalesByCategoryViewModel
+                {
+                    CategoryName = g.Key,
+                    Revenue = g.Sum(i => i.Quantity * i.UnitPrice),
+                    UnitsSold = g.Sum(i => i.Quantity)
+                })
+                .OrderByDescending(s => s.Revenue)
+                .ToListAsync();
+            return data;
+        }
+
     }
 }
