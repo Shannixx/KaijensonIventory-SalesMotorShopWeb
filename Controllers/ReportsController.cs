@@ -171,13 +171,13 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                         {
                             table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); });
                             table.Cell().Element(container => container.Padding(2)).Text("Total Revenue");
-                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.RevenueReport.TotalRevenue.ToString("C"));
+                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.RevenueReport.TotalRevenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
                             table.Cell().Element(container => container.Padding(2)).Text("Units Sold");
                             table.Cell().Element(container => container.Padding(2)).Text(viewModel.SalesPerformanceReport.TotalQuantitySold.ToString());
                             table.Cell().Element(container => container.Padding(2)).Text("Transactions");
                             table.Cell().Element(container => container.Padding(2)).Text(viewModel.SalesPerformanceReport.TransactionCount.ToString());
                             table.Cell().Element(container => container.Padding(2)).Text("Inventory Value");
-                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.TotalInventoryValue.ToString("C"));
+                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.TotalInventoryValue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
                             table.Cell().Element(container => container.Padding(2)).Text("Low Stock Items");
                             table.Cell().Element(container => container.Padding(2)).Text(viewModel.LowStockItemCount.ToString());
                         });
@@ -217,8 +217,8 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                             {
                                 table.Cell().Element(Container => Container.Padding(2)).Text(p.ProductName);
                                 table.Cell().Element(Container => Container.Padding(2)).Text(p.QuantitySold.ToString());
-                                table.Cell().Element(Container => Container.Padding(2)).Text(p.UnitPrice.ToString("C"));
-                                table.Cell().Element(Container => Container.Padding(2)).Text(p.Revenue.ToString("C"));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(p.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(p.Revenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
                             }
                         });
 
@@ -232,7 +232,7 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                             foreach (var r in viewModel.RevenueTrend)
                             {
                                 table.Cell().Element(Container => Container.Padding(2)).Text(r.Period.ToString("yyyy-MM-dd"));
-                                table.Cell().Element(Container => Container.Padding(2)).Text(r.Revenue.ToString("C"));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(r.Revenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
                             }
                         });
 
@@ -247,7 +247,7 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                             foreach (var c in viewModel.SalesByCategory)
                             {
                                 table.Cell().Element(Container => Container.Padding(2)).Text(c.CategoryName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(c.Revenue.ToString("C"));
+                                table.Cell().Element(Container => Container.Padding(2)).Text(c.Revenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
                                 table.Cell().Element(Container => Container.Padding(2)).Text(c.UnitsSold.ToString());
                             }
                         });

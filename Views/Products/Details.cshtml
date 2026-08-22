@@ -1,5 +1,6 @@
 @model Product
-@{
+@{ 
+@using System.Globalization
     ViewData["Title"] = "Product Details";
     string badgeClass = Model.StockStatus switch
     {
@@ -53,7 +54,7 @@
                     
                     <tr><th>Current Stock</th><td>@Model.QuantityOnHand <span class="badge @badgeClass ms-2">@statusLabel</span></td></tr>
 
-                    <tr><th>Price</th><td>@Model.Price.ToString("C")</td></tr>
+                    <tr><th>Price</th><td>@Model.Price.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td></tr>
                     <tr><th>Created At</th><td>@Model.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td></tr>
                 </table>
             </div>

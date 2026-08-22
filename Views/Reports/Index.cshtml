@@ -1,5 +1,6 @@
 @model KaijensonIventory_SalesMotorShopWeb.ViewModels.ReportsPageViewModel
 @using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Globalization
 @{
     ViewData["Title"] = "Reports";
 }
@@ -50,10 +51,10 @@
 
 
 <div class="dashboard-metrics">
-    <div class="metric-card"><div class="metric-info"><p class="metric-label">Total Revenue</p><h3 class="metric-value">@Model.RevenueReport.TotalRevenue.ToString("C")</h3></div></div>
+    <div class="metric-card"><div class="metric-info"><p class="metric-label">Total Revenue</p><h3 class="metric-value">@Model.RevenueReport.TotalRevenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</h3></div></div>
     <div class="metric-card"><div class="metric-info"><p class="metric-label">Total Qty Sold</p><h3 class="metric-value">@Model.SalesPerformanceReport.TotalQuantitySold</h3></div></div>
     <div class="metric-card"><div class="metric-info"><p class="metric-label">Transactions</p><h3 class="metric-value">@Model.SalesPerformanceReport.TransactionCount</h3></div></div>
-    <div class="metric-card"><div class="metric-info"><p class="metric-label">Inventory Value</p><h3 class="metric-value">@Model.TotalInventoryValue.ToString("C")</h3></div></div>
+    <div class="metric-card"><div class="metric-info"><p class="metric-label">Inventory Value</p><h3 class="metric-value">@Model.TotalInventoryValue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</h3></div></div>
     <div class="metric-card"><div class="metric-info"><p class="metric-label">Low Stock Items</p><h3 class="metric-value">@Model.LowStockItemCount</h3></div></div>
 </div>
 <hr />
@@ -87,7 +88,7 @@
         <tr>
             <td>@Model.SalesPerformanceReport.TransactionCount</td>
             <td>@Model.SalesPerformanceReport.TotalQuantitySold</td>
-            <td>@Model.SalesPerformanceReport.TotalRevenue.ToString("C")</td>
+            <td>@Model.SalesPerformanceReport.TotalRevenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
         </tr>
     </tbody>
 </table></div></div></div>
@@ -102,8 +103,8 @@
             <tr>
                 <td>@p.ProductName</td>
                 <td>@p.QuantitySold</td>
-                <td>@p.UnitPrice.ToString("C")</td>
-                <td>@p.Revenue.ToString("C")</td>
+                <td>@p.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                <td>@p.Revenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
             </tr>
         }
     }
@@ -164,7 +165,7 @@
 <div class="card report-section-card"><div class="card-header">Revenue Trend</div><div class="card-body"><canvas id="revenueTrendChart" height="100"></canvas></div></div>
 <!-- Sales By Category -->
 <div class="card report-section-card"><div class="card-header">Sales By Category</div><div class="card-body"><canvas id="salesByCategoryChart" height="100"></canvas></div></div>
-<div class="card report-section-card"><div class="card-header">Sales By Category</div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Category</th><th>Revenue</th><th>Units Sold</th></tr></thead><tbody>@if (Model.SalesByCategory != null && Model.SalesByCategory.Any()) { foreach (var c in Model.SalesByCategory) { <tr><td>@c.CategoryName</td><td>@c.Revenue.ToString("C")</td><td>@c.UnitsSold</td></tr> } } else { <tr><td colspan="3" class="text-center">No records found for the selected filters.</td></tr> }</tbody></table></div></div></div>
+<div class="card report-section-card"><div class="card-header">Sales By Category</div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Category</th><th>Revenue</th><th>Units Sold</th></tr></thead><tbody>@if (Model.SalesByCategory != null && Model.SalesByCategory.Any()) { foreach (var c in Model.SalesByCategory) { <tr><td>@c.CategoryName</td><td>@c.Revenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td><td>@c.UnitsSold</td></tr> } } else { <tr><td colspan="3" class="text-center">No records found for the selected filters.</td></tr> }</tbody></table></div></div></div>
 <!-- Low Stock Alerts -->
 <div class="card report-section-card"><div class="card-header">Low Stock Alerts</div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Product</th><th>Qty On Hand</th><th>Reorder Level</th><th>Status</th></tr></thead><tbody>@if (Model.LowStockAlerts != null && Model.LowStockAlerts.Any()) { foreach (var a in Model.LowStockAlerts) { <tr><td>@a.ProductName</td><td>@a.QuantityOnHand</td><td>@a.ReorderLevel</td><td>@a.StockStatus</td></tr> } } else { <tr><td colspan="4" class="text-center">No low stock alerts.</td></tr> }</tbody></table></div></div></div>
 
@@ -199,7 +200,7 @@
         const catChart = new Chart(catCtx, {
             type: 'doughnut',
             data: {
-                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesByCategory.Select(c => c.CategoryName)))
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesByCategory.Select(c => c.CategoryName))),
                 datasets: [{
                     label: 'Revenue by Category',
                     data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesByCategory.Select(c => c.Revenue))),

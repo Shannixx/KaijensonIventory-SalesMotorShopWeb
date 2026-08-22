@@ -1,5 +1,6 @@
 @model IEnumerable<Product>
 @{ ViewData["Title"] = "Products"; }
+@using System.Globalization
 
 <div class="page-header">
     <div>
@@ -54,7 +55,7 @@
                             <td><span class="fw-medium">@item.ProductName</span></td>
                             <td>@item.Supplier?.CompanyName</td>
                             <td>@(item.Brand ?? "-")</td>
-                            <td>@item.Price.ToString("C")</td>
+                            <td>@item.Price.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
                             <td>@item.Category?.CategoryName</td>
                             
                             <td>@item.QuantityOnHand</td>
