@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.ComponentModel.DataAnnotations;
 
 namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 {
@@ -18,6 +19,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public List<SelectListItem> Suppliers { get; set; } = new();
         public List<SelectListItem> Brands { get; set; } = new();
         public List<SelectListItem> PurchaseOrders { get; set; } = new();
+
+        [Range(0, int.MaxValue, ErrorMessage = "Reorder level cannot be negative.")]
+        [Display(Name = "Reorder Level")]
+        public int ReorderLevel { get; set; } = 4;
         public bool IsSerialized { get; set; }
     }
 }

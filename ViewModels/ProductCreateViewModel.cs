@@ -29,7 +29,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 
         [Range(0, int.MaxValue, ErrorMessage = "Reorder level cannot be negative.")]
         [Display(Name = "Reorder Level")]
-        public int ReorderLevel { get; set; }
+        public int ReorderLevel { get; set; } = 4;
 
         [StringLength(500)]
         [Display(Name = "Description")]

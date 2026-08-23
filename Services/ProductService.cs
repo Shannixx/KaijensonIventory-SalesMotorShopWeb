@@ -88,6 +88,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 ModelCompatibility = product.ModelCompatibility,
                 PurchaseOrderId = product.PurchaseOrderId,
                 Price = product.Price,
+                ReorderLevel = product.ReorderLevel,
                 IsSerialized = product.IsSerialized
             };
 
@@ -194,6 +195,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             
                 existing.IsSerialized = model.IsSerialized;
             existing.Price = model.Price ?? existing.Price;
+                existing.ReorderLevel = model.ReorderLevel;
             existing.StockStatus = StockHelper.GetStockStatus(existing.QuantityOnHand);
 
             await _context.SaveChangesAsync();

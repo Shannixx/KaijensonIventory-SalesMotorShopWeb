@@ -63,6 +63,11 @@
                         <label class="form-check-label" asp-for="IsSerialized">Serialized Product</label>
                     </div>
                 </div>
+                <div class="col-md-4">
+                    <label asp-for="ReorderLevel" class="form-label"></label>
+                    <input asp-for="ReorderLevel" class="form-control" />
+                    <span asp-validation-for="ReorderLevel" class="text-danger small"></span>
+                </div>
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-app-primary">
