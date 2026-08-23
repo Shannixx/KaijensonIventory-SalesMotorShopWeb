@@ -171,31 +171,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Quantity will be entered manually by the user; initialize to 0 to enforce input
-            int orderQty = 0;
+            // Quantity will be entered manually by the user; no placeholder variable needed
 
-            var poModel = new PurchaseOrderViewModel
-            {
-                SupplierId = product.SupplierId,
-                OrderDate = DateTime.Now,
-                IsReorder = true,
-                Items = new List<PurchaseOrderItemViewModel>
-                {
-                    new PurchaseOrderItemViewModel
-                    {
-                        ProductId = product.ProductId,
-                        ProductName = product.ProductName,
-                        Brand = product.Brand,
-                        Category = product.Category != null ? product.Category.CategoryName : null,
-                        Quantity = orderQty, // will be 0, user must input
-                        ReorderLevel = product.ReorderLevel,
-                        CurrentStock = product.QuantityOnHand
-                    }
-                }
-            };
-
-            var prepared = await _purchaseOrderService.PrepareCreateViewModelAsync(poModel);
-            return View("~/Views/PurchaseOrders/Create.cshtml", prepared);
+return RedirectToAction("Search", "Sales", new { reorder = true, productId = id });
         }
     }
 }

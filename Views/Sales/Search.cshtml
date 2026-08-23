@@ -2,28 +2,93 @@
 @using KaijensonIventory_SalesMotorShopWeb.Extensions
 @using System.Linq
 @using KaijensonIventory_SalesMotorShopWeb.ViewModels
+@using KaijensonIventory_SalesMotorShopWeb.Models
 @{
     var cart = Model.Cart;
 }
 @{
     ViewData["Title"] = "Product Search";
 }
-<div class="page-header mb-3">
-    <div>
-        <h1>Customer Purchase Order</h1>
-        <p>Search and add products to the purchase order.</p>
+@if (!(ViewBag.IsReorder == true && ViewBag.ReorderProduct != null))
+{
+    <div class="page-header mb-3">
+        <div>
+            <h1>Customer Purchase Order</h1>
+            <p>Search and add products to the purchase order.</p>
+        </div>
     </div>
-</div>
-@await Html.PartialAsync("_SearchToolbar", new SearchToolbarViewModel {
-    ActionName = "Search",
-    ControllerName = "Sales",
-    QueryParameterName = "query",
-    QueryValue = Context.Request.Query["query"],
-    Placeholder = "Search products...",
-    ClearActionName = "Search",
-    ClearControllerName = "Sales"
-})
-<div class="cpo-page row">
+}
+@if (ViewBag.IsReorder == true && ViewBag.ReorderProduct != null)
+{
+    <h1>Create Purchase Order</h1>
+    <p>Reorder Product</p>
+}
+else
+{
+    @await Html.PartialAsync("_SearchToolbar", new SearchToolbarViewModel {
+        ActionName = "Search",
+        ControllerName = "Sales",
+        QueryParameterName = "query",
+        QueryValue = Context.Request.Query["query"],
+        Placeholder = "Search products...",
+        ClearActionName = "Search",
+        ClearControllerName = "Sales"
+    })
+}
+@if (ViewBag.IsReorder == true && ViewBag.ReorderProduct != null)
+{
+    var p = (Product)ViewBag.ReorderProduct;
+    <div class="cpo-reorder-section card mb-3">
+        <div class="card-header"><h5>Reorder Product</h5></div>
+        <div class="card-body">
+            <form asp-controller="PurchaseOrders" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="SupplierId" value="@p.SupplierId" />
+                <input type="hidden" name="OrderDate" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="IsReorder" value="true" />
+                <input type="hidden" name="Items[0].ProductId" value="@p.ProductId" />
+                <input type="hidden" name="Items[0].ProductName" value="@p.ProductName" />
+                <input type="hidden" name="Items[0].Brand" value="@p.Brand" />
+                <input type="hidden" name="Items[0].Category" value="@p.Category?.CategoryName" />
+                <input type="hidden" name="Items[0].ReorderLevel" value="@p.ReorderLevel" />
+                <input type="hidden" name="Items[0].CurrentStock" value="@p.QuantityOnHand" />
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Product</label>
+                    <div class="col-sm-10"><input class="form-control" readonly value="@p.ProductName" /></div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Brand</label>
+                    <div class="col-sm-10"><input class="form-control" readonly value="@p.Brand" /></div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Category</label>
+                    <div class="col-sm-10"><input class="form-control" readonly value="@p.Category?.CategoryName" /></div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Supplier</label>
+                    <div class="col-sm-10"><input class="form-control" readonly value="@p.Supplier?.CompanyName" /></div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Current Stock</label>
+                    <div class="col-sm-10"><input class="form-control" readonly value="@p.QuantityOnHand" /></div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Reorder Level</label>
+                    <div class="col-sm-10"><input class="form-control" readonly value="@p.ReorderLevel" /></div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Quantity</label>
+                    <div class="col-sm-10"><input type="number" name="Items[0].Quantity" class="form-control" min="1" required /></div>
+                </div>
+                <button type="submit" class="btn btn-primary">+ Create Purchase Order</button>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="cpo-page row">
+
     <div class="col-md-8">
         <div class="card cpo-product-card">
             <div class="card-header"><h5>Products</h5></div>
@@ -145,3 +210,4 @@
         </div>
     </div>
 </div>
+}

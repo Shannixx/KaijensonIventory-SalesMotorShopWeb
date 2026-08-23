@@ -28,33 +28,66 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         }
 
         // GET: /Sales/Search
-        public async Task<IActionResult> Search(string? query)
+        public async Task<IActionResult> Search(string? query, bool reorder = false, int? productId = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
 
-            var results = await _productService.GetPagedAsync(query, null, 1);
-            var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
-            // Refresh cart product data
-            foreach (var item in cart.Items)
-            {
-                var product = await _productService.GetByIdAsync(item.ProductId);
-                if (product != null)
-                {
-                    item.ProductName = product.ProductName;
-                    item.UnitPrice = product.Price;
-                    item.Subtotal = product.Price * item.Quantity;
-                    item.IsSerialized = product.IsSerialized;
-                }
-                else
-                {
-                    item.ProductName = "[Removed]";
-                    item.UnitPrice = 0m;
-                    item.Subtotal = 0m;
-                }
-            }
-            // Persist any updates back to session
-            HttpContext.Session.SetObject("Cart", cart);
+var results = await _productService.GetPagedAsync(query, null, 1);
+
+// Reorder mode handling
+if (reorder && productId.HasValue)
+{
+    var product = await _productService.GetByIdAsync(productId.Value);
+    if (product == null)
+    {
+        TempData["ErrorMessage"] = "Product not found for reorder.";
+        return RedirectToAction(nameof(Index), "Products");
+    }
+    if (product.QuantityOnHand > product.ReorderLevel)
+    {
+        TempData["ErrorMessage"] = "Product stock is still above the reorder level.";
+        return RedirectToAction(nameof(Index), "Products");
+    }
+    if (product.SupplierId <= 0)
+    {
+        TempData["ErrorMessage"] = "Please assign a supplier to this product before creating a purchase order.";
+        return RedirectToAction(nameof(Index), "Products");
+    }
+    ViewBag.IsReorder = true;
+    ViewBag.ReorderProduct = product;
+
+    // In reorder mode, do not load or persist cart
+    var emptyCart = new CartViewModel();
+    var reorderViewModel = new CustomerPurchaseOrderViewModel
+    {
+        Products = results,
+        Cart = emptyCart,
+        SearchQuery = query
+    };
+    return View(reorderViewModel);
+}
+
+// Normal mode: load cart and refresh data
+var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
+foreach (var item in cart.Items)
+{
+    var product = await _productService.GetByIdAsync(item.ProductId);
+    if (product != null)
+    {
+        item.ProductName = product.ProductName;
+        item.UnitPrice = product.Price;
+        item.Subtotal = product.Price * item.Quantity;
+        item.IsSerialized = product.IsSerialized;
+    }
+    else
+    {
+        item.ProductName = "[Removed]";
+        item.UnitPrice = 0m;
+        item.Subtotal = 0m;
+    }
+}
+HttpContext.Session.SetObject("Cart", cart);
 
             var viewModel = new CustomerPurchaseOrderViewModel
             {

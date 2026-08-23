@@ -73,17 +73,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (!ModelState.IsValid)
                 return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
 
-            // Additional reorder validation to ensure server-side integrity
+            // Enforce exactly one reorder item and validate against database
             if (viewModel.IsReorder)
             {
-                // Expect exactly one item in reorder mode
-                var item = viewModel.Items?.FirstOrDefault();
-                if (item == null)
+                // Must have exactly one item with valid ProductId and Quantity
+                if (viewModel.Items == null || viewModel.Items.Count != 1 || viewModel.Items[0].ProductId <= 0 || viewModel.Items[0].Quantity < 1)
                 {
-                    ModelState.AddModelError(string.Empty, "Reorder requires a product item.");
+                    ModelState.AddModelError(string.Empty, "A reorder must contain exactly one product with a valid quantity.");
                     return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
                 }
 
+                var item = viewModel.Items[0];
                 var product = await _productService.GetByIdAsync(item.ProductId);
                 if (product == null)
                 {
@@ -91,12 +91,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
                 }
 
+                // Verify supplier matches
                 if (product.SupplierId != viewModel.SupplierId)
                 {
                     ModelState.AddModelError(string.Empty, "Supplier does not match the product's supplier.");
                     return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
                 }
 
+                // Verify stock is at or below reorder level
                 if (product.QuantityOnHand > product.ReorderLevel)
                 {
                     ModelState.AddModelError(string.Empty, "Product stock is still above the reorder level.");
