@@ -7,9 +7,19 @@
 <div class="page-header">
     <div>
         <h1>Reports</h1>
-        <p>View inventory, sales, stock movement, and serial-number information.</p>
+        <p class="subtitle">Sales and Inventory Management Reports</p>
+        <span class="badge rounded-circle bg-light text-primary me-2"><i class="bi bi-bar-chart"></i></span>
     </div>
 </div>
+<!-- Tab navigation -->
+<ul class="nav nav-tabs mb-3" id="reportsTabNav">
+    <li class="nav-item">
+        <a class="nav-link active" href="#salesTab">Sales Report</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#inventoryTab">Inventory Report</a>
+    </li>
+</ul>
 
 <div class="card report-filter-card">
     <div class="card-body">
@@ -42,6 +52,15 @@
                 <button type="submit" class="btn btn-primary w-100">Generate</button>
             </div>
         </form>
+        <!-- Quick Date Range -->
+        <div class="quick-date-range mb-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm me-1" data-range="7">Last 7 Days</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm me-1" data-range="30">Last 30 Days</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm me-1" data-range="210">Last 7 Months</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm me-1" data-range="quarter">This Quarter</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm me-1" data-range="ytd">Year to Date</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="custom">Custom</button>
+        </div>
         <div class="report-export-buttons mb-3 mt-2">
             <a asp-action="ExportCsv" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn btn-outline-primary me-2">Export CSV</a>
             <a asp-action="ExportPdf" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn btn-outline-secondary">Export PDF</a>
@@ -58,144 +77,315 @@
     <div class="metric-card"><div class="metric-info"><p class="metric-label">Low Stock Items</p><h3 class="metric-value">@Model.LowStockItemCount</h3></div></div>
 </div>
 <hr />
-<div class="card report-section-card"><div class="card-header">Current Stock</div><div class="card-body">
-<div class="table-responsive"><table class="table table-sm table-striped">
-    <thead><tr><th>Product</th><th>Category</th><th>Qty On Hand</th><th>Status</th></tr></thead>
-    <tbody>
-    @if (Model.InventoryReport.Items != null && Model.InventoryReport.Items.Any())
-    {
-        foreach (var item in Model.InventoryReport.Items)
-        {
-            <tr>
-                <td>@item.ProductName</td>
-                <td>@item.CategoryName</td>
-                <td>@item.QuantityOnHand</td>
-                <td>@item.StockStatus</td>
-                
-            </tr>
-        }
-    }
-    else
-    {
-        <tr><td colspan="4" class="text-center">No records found for the selected filters.</td></tr>
-    }
-    </tbody>
-</table></div></div></div>
-<div class="card report-section-card"><div class="card-header">Sales Performance</div><div class="card-body">
-<div class="table-responsive"><table class="table table-sm table-striped">
-    <thead><tr><th>Transactions</th><th>Total Qty Sold</th><th>Total Revenue</th></tr></thead>
-    <tbody>
-        <tr>
-            <td>@Model.SalesPerformanceReport.TransactionCount</td>
-            <td>@Model.SalesPerformanceReport.TotalQuantitySold</td>
-            <td>@Model.SalesPerformanceReport.TotalRevenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
-        </tr>
-    </tbody>
-</table></div></div></div>
-<div class="card report-section-card"><div class="card-header">Most Sold Products</div><div class="card-body">
-<div class="table-responsive"><table class="table table-sm table-striped">
-    <thead><tr><th>Product</th><th>Qty Sold</th><th>Unit Price</th><th>Revenue</th></tr></thead>
-    <tbody>
-@if (Model.MostSoldProducts != null && Model.MostSoldProducts.Any())
-    {
-        foreach (var p in Model.MostSoldProducts)
-        {
-            <tr>
-                <td>@p.ProductName</td>
-                <td>@p.QuantitySold</td>
-                <td>@p.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
-                <td>@p.Revenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
-            </tr>
-        }
-    }
-    else
-    {
-        <tr><td colspan="4" class="text-center">No records found for the selected filters.</td></tr>
-    }
-    </tbody>
-</table></div></div></div>
-<div class="card report-section-card"><div class="card-header">Stock Movements</div><div class="card-body">
-<div class="table-responsive"><table class="table table-sm table-striped">
-    <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Reference</th></tr></thead>
-    <tbody>
-    @if (Model.StockMovements != null && Model.StockMovements.Any())
-    {
-        foreach (var m in Model.StockMovements)
-        {
-            <tr>
-                <td>@m.Date.ToShortDateString()</td>
-                <td>@m.ProductName</td>
-                <td>@m.MovementType</td>
-                <td>@m.Quantity</td>
-                <td>@m.Reference</td>
-            </tr>
-        }
-    }
-    else
-    {
-        <tr><td colspan="5" class="text-center">No records found for the selected filters.</td></tr>
-    }
-    </tbody>
-</table></div></div></div>
-<div class="card report-section-card"><div class="card-header">Serial Numbers</div><div class="card-body">
-<div class="table-responsive"><table class="table table-sm table-striped">
-    <thead><tr><th>Serial</th><th>Product</th><th>Status</th><th>Sale Id</th><th>Sale Date</th></tr></thead>
-    <tbody>
-    @if (Model.SerialNumberReport != null && Model.SerialNumberReport.Any())
-    {
-        foreach (var s in Model.SerialNumberReport)
-        {
-            <tr>
-                <td>@s.SerialNumber</td>
-                <td>@s.ProductName</td>
-                <td>@s.Status</td>
-                <td>@(s.SaleId?.ToString() ?? "-")</td>
-                <td>@(s.SaleDate?.ToShortDateString() ?? "-")</td>
-            </tr>
-        }
-    }
-    else
-    {
-        <tr><td colspan="5" class="text-center">No records found for the selected filters.</td></tr>
-    }
-    </tbody>
-</table></div></div></div>
-
-<!-- Revenue Trend -->
-<div class="card report-section-card"><div class="card-header">Revenue Trend</div><div class="card-body"><canvas id="revenueTrendChart" height="100"></canvas></div></div>
-<!-- Sales By Category -->
-<div class="card report-section-card"><div class="card-header">Sales By Category</div><div class="card-body"><canvas id="salesByCategoryChart" height="100"></canvas></div></div>
-<div class="card report-section-card"><div class="card-header">Sales By Category</div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Category</th><th>Revenue</th><th>Units Sold</th></tr></thead><tbody>@if (Model.SalesByCategory != null && Model.SalesByCategory.Any()) { foreach (var c in Model.SalesByCategory) { <tr><td>@c.CategoryName</td><td>@c.Revenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td><td>@c.UnitsSold</td></tr> } } else { <tr><td colspan="3" class="text-center">No records found for the selected filters.</td></tr> }</tbody></table></div></div></div>
-<!-- Low Stock Alerts -->
-<div class="card report-section-card"><div class="card-header">Low Stock Alerts</div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Product</th><th>Qty On Hand</th><th>Reorder Level</th><th>Status</th></tr></thead><tbody>@if (Model.LowStockAlerts != null && Model.LowStockAlerts.Any()) { foreach (var a in Model.LowStockAlerts) { <tr><td>@a.ProductName</td><td>@a.QuantityOnHand</td><td>@a.ReorderLevel</td><td>@a.StockStatus</td></tr> } } else { <tr><td colspan="4" class="text-center">No low stock alerts.</td></tr> }</tbody></table></div></div></div>
-
+<div class="tab-content">
+    <!-- Sales Report Tab -->
+    <div class="tab-pane fade show active" id="salesTab">
+        <!-- Revenue Trend -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Revenue Trend</div>
+            <div class="card-body" style="max-height:280px;">
+                <canvas id="revenueTrendChart"></canvas>
+            </div>
+        </div>
+        <!-- Sales Summary -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Sales Performance</div>
+            <div class="card-body">
+                <div class="table-responsive"><table class="table table-sm table-striped">
+                    <thead><tr><th>Transactions</th><th>Total Qty Sold</th><th>Total Revenue</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>@Model.SalesPerformanceReport.TransactionCount</td>
+                            <td>@Model.SalesPerformanceReport.TotalQuantitySold</td>
+                            <td>@Model.SalesPerformanceReport.TotalRevenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                        </tr>
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+        <!-- Top Selling Products -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Most Sold Products</div>
+            <div class="card-body">
+                <div class="table-responsive"><table class="table table-sm table-striped">
+                    <thead><tr><th>Product</th><th>Qty Sold</th><th>Unit Price</th><th>Revenue</th></tr></thead>
+                    <tbody>
+                    @if (Model.MostSoldProducts != null && Model.MostSoldProducts.Any())
+                    {
+                        foreach (var p in Model.MostSoldProducts)
+                        {
+                            <tr>
+                                <td>@p.ProductName</td>
+                                <td>@p.QuantitySold</td>
+                                <td>@p.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                                <td>@p.Revenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="4" class="text-center">No records found for the selected filters.</td></tr>
+                    }
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+        <!-- Sales By Category (chart + table) -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Sales By Category</div>
+            <div class="card-body">
+                <div style="max-height:260px; margin-bottom:1rem;">
+                    <canvas id="salesByCategoryChart"></canvas>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>Category</th><th>Revenue</th><th>Units Sold</th></tr></thead>
+                        <tbody>
+                        @if (Model.SalesByCategory != null && Model.SalesByCategory.Any())
+                        {
+                            foreach (var c in Model.SalesByCategory)
+                            {
+                                <tr>
+                                    <td>@c.CategoryName</td>
+                                    <td>@c.Revenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                                    <td>@c.UnitsSold</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="3" class="text-center">No records found for the selected filters.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Inventory Report Tab -->
+    <div class="tab-pane fade" id="inventoryTab">
+        <!-- Current Stock -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Current Stock</div>
+                <div class="mb-3">
+                    <input type="text" id="inventorySearch" class="form-control" placeholder="Search product or category..." />
+                </div>
+            <div class="card-body">
+                <div class="table-responsive"><table class="table table-sm table-striped">
+                    <thead><tr><th>Product</th><th>Category</th><th>Qty On Hand</th><th>Status</th></tr></thead>
+                    <tbody>
+                    @if (Model.InventoryReport.Items != null && Model.InventoryReport.Items.Any())
+                    {
+                        foreach (var item in Model.InventoryReport.Items)
+                        {
+                            <tr>
+                                <td>@item.ProductName</td>
+                                <td>@item.CategoryName</td>
+                                <td>@item.QuantityOnHand</td>
+                                <td>@item.StockStatus</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="4" class="text-center">No records found for the selected filters.</td></tr>
+                    }
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+        <!-- Low Stock Alerts -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Low Stock Alerts</div>
+            <div class="card-body">
+                <div class="table-responsive"><table class="table table-sm table-striped">
+                    <thead><tr><th>Product</th><th>Qty On Hand</th><th>Reorder Level</th><th>Status</th></tr></thead>
+                    <tbody>
+                    @if (Model.LowStockAlerts != null && Model.LowStockAlerts.Any())
+                    {
+                        foreach (var a in Model.LowStockAlerts)
+                        {
+                            <tr>
+                                <td>@a.ProductName</td>
+                                <td>@a.QuantityOnHand</td>
+                                <td>@a.ReorderLevel</td>
+                                <td>@a.StockStatus</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="4" class="text-center">No low stock alerts.</td></tr>
+                    }
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+        <!-- Stock Movements -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Stock Movements</div>
+            <div class="card-body">
+                <div class="table-responsive"><table class="table table-sm table-striped">
+                    <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Reference</th></tr></thead>
+                    <tbody>
+                    @if (Model.StockMovements != null && Model.StockMovements.Any())
+                    {
+                        foreach (var m in Model.StockMovements)
+                        {
+                            <tr>
+                                <td>@m.Date.ToShortDateString()</td>
+                                <td>@m.ProductName</td>
+                                <td>@m.MovementType</td>
+                                <td>@m.Quantity</td>
+                                <td>@m.Reference</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5" class="text-center">No records found for the selected filters.</td></tr>
+                    }
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+        <!-- Serial Numbers -->
+        <div class="card report-section-card mb-3">
+            <div class="card-header">Serial Numbers</div>
+            <div class="card-body">
+                <div class="table-responsive"><table class="table table-sm table-striped">
+                    <thead><tr><th>Serial</th><th>Product</th><th>Status</th><th>Sale Id</th><th>Sale Date</th></tr></thead>
+                    <tbody>
+                    @if (Model.SerialNumberReport != null && Model.SerialNumberReport.Any())
+                    {
+                        foreach (var s in Model.SerialNumberReport)
+                        {
+                            <tr>
+                                <td>@s.SerialNumber</td>
+                                <td>@s.ProductName</td>
+                                <td>@s.Status</td>
+                                <td>@(s.SaleId?.ToString() ?? "-")</td>
+                                <td>@(s.SaleDate?.ToShortDateString() ?? "-")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5" class="text-center">No records found for the selected filters.</td></tr>
+                    }
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+    </div>
+</div>
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const ctx = document.getElementById('revenueTrendChart').getContext('2d');
-        const chart = new Chart(ctx, {
+        // A. Quick Date Range handler
+        document.querySelectorAll('.quick-date-range button').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const range = this.dataset.range;
+                const startInput = document.getElementById('Filter_StartDate');
+                const endInput = document.getElementById('Filter_EndDate');
+                const today = new Date();
+                let startDate = '';
+                let endDate = today.toISOString().split('T')[0];
+                if (range === 'custom') {
+                    return; // let user pick manually
+                }
+                if (range === '7') {
+                    const d = new Date(); d.setDate(today.getDate() - 6);
+                    startDate = d.toISOString().split('T')[0];
+                } else if (range === '30') {
+                    const d = new Date(); d.setDate(today.getDate() - 29);
+                    startDate = d.toISOString().split('T')[0];
+                } else if (range === '210') {
+                    const d = new Date(); d.setMonth(today.getMonth() - 6);
+                    startDate = d.toISOString().split('T')[0];
+                } else if (range === 'quarter') {
+                    const month = today.getMonth();
+                    const quarter = Math.floor(month / 3);
+                    const startMonth = quarter * 3;
+                    const d = new Date(today.getFullYear(), startMonth, 1);
+                    startDate = d.toISOString().split('T')[0];
+                } else if (range === 'ytd') {
+                    const d = new Date(today.getFullYear(), 0, 1);
+                    startDate = d.toISOString().split('T')[0];
+                }
+                if (startDate) {
+                    startInput.value = startDate;
+                    endInput.value = endDate;
+                }
+            });
+        });
+        // B. Custom Tab Switcher
+        document.querySelectorAll('#reportsTabNav .nav-link').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelectorAll('#reportsTabNav .nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                const targetId = this.getAttribute('href').substring(1);
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+                const targetPane = document.getElementById(targetId);
+                if (targetPane) {
+                    targetPane.classList.add('show', 'active');
+                }
+            });
+        });
+        // C. Inventory Search
+        const inventorySearch = document.getElementById('inventorySearch');
+        if (inventorySearch) {
+            inventorySearch.addEventListener('input', function () {
+                const term = this.value.trim().toLowerCase();
+                const rows = document.querySelectorAll('#inventoryTab tbody tr');
+                let visibleCount = 0;
+                rows.forEach(row => {
+                    if (row.children.length < 4) return;
+                    const product = row.cells[0].textContent.toLowerCase();
+                    const category = row.cells[1].textContent.toLowerCase();
+                    const match = product.includes(term) || category.includes(term);
+                    row.style.display = match ? '' : 'none';
+                    if (match) visibleCount++;
+                });
+                let noMatchRow = document.getElementById('inventoryNoMatchRow');
+                if (!noMatchRow) {
+                    noMatchRow = document.createElement('tr');
+                    noMatchRow.id = 'inventoryNoMatchRow';
+                    const td = document.createElement('td');
+                    td.colSpan = 4;
+                    td.className = 'text-center';
+                    td.textContent = 'No matching products found.';
+                    noMatchRow.appendChild(td);
+                    document.querySelector('#inventoryTab tbody').appendChild(noMatchRow);
+                }
+                noMatchRow.style.display = (visibleCount === 0 && term !== '') ? '' : 'none';
+            });
+        }
+        // D. Revenue Trend Chart
+        const revCtx = document.getElementById('revenueTrendChart').getContext('2d');
+        const revenueChart = new Chart(revCtx, {
             type: 'line',
             data: {
                 labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(r => r.Period.ToString("yyyy-MM-dd")))),
-                datasets: [
-                    {
-                        label: 'Revenue',
-                        data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(r => r.Revenue))),
-                        borderColor: '#007bff',
-                        fill: false
-                    }
-                ]
+                datasets: [{
+                    label: 'Revenue',
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(r => r.Revenue))),
+                    borderColor: '#007bff',
+                    fill: false,
+                    tension: 0.1
+                }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     x: { display: true, title: { display: true, text: 'Date' } },
                     y: { display: true, title: { display: true, text: 'Amount' } }
                 }
             }
         });
-    </script>
-    <script>
+        // E. Sales By Category Chart
         const catCtx = document.getElementById('salesByCategoryChart').getContext('2d');
         const catChart = new Chart(catCtx, {
             type: 'doughnut',
@@ -208,7 +398,8 @@
                 }]
             },
             options: {
-                responsive: true
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
     </script>
