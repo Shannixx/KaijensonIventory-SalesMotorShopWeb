@@ -1,5 +1,6 @@
 using KaijensonIventory_SalesMotorShopWeb.Services;
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
@@ -7,10 +8,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class ProductsController : BaseController
     {
         private readonly IProductService _productService;
+        private readonly IPurchaseOrderService _purchaseOrderService;
 
-        public ProductsController(IProductService productService)
+        public ProductsController(IProductService productService, IPurchaseOrderService purchaseOrderService)
         {
             _productService = productService;
+            _purchaseOrderService = purchaseOrderService;
         }
 
         public async Task<IActionResult> Index(string? searchString, int? categoryId, int page = 1)
@@ -144,6 +147,49 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             TempData["SuccessMessage"] = "Product deleted successfully.";
             return RedirectToAction(nameof(Index));
+        }
+
+        // Action to initiate creation of a Purchase Order for a product when reorder level is reached
+        public async Task<IActionResult> CreatePO(int id)
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null) return redirect;
+
+            var product = await _productService.GetByIdAsync(id);
+            if (product == null) return NotFound();
+
+            // Enforce reorder level condition: only allow PO creation when stock is at or below the reorder level
+            if (product.QuantityOnHand > product.ReorderLevel)
+            {
+                TempData["ErrorMessage"] = "Product stock is still above the reorder level.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (product.SupplierId <= 0)
+            {
+                TempData["ErrorMessage"] = "Please assign a supplier to this product before creating a purchase order.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            int orderQty = product.ReorderLevel > 0 ? product.ReorderLevel : 1;
+            if (orderQty < 1) orderQty = 1;
+
+            var poModel = new PurchaseOrderViewModel
+            {
+                SupplierId = product.SupplierId,
+                OrderDate = DateTime.Now,
+                Items = new List<PurchaseOrderItemViewModel>
+                {
+                    new PurchaseOrderItemViewModel
+                    {
+                        ProductId = product.ProductId,
+                        Quantity = orderQty
+                    }
+                }
+            };
+
+            var prepared = await _purchaseOrderService.PrepareCreateViewModelAsync(poModel);
+            return View("~/Views/PurchaseOrders/Create.cshtml", prepared);
         }
     }
 }

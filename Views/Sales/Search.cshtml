@@ -49,18 +49,7 @@
                                     <td>@p.Category?.CategoryName</td>
                                     <td class="text-end">@p.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
                                     <td class="text-center">
-                                        @if (p.QuantityOnHand > 5)
-                                        {
-                                            <span class="badge bg-success">Available</span>
-                                        }
-                                        else if (p.QuantityOnHand > 0)
-                                        {
-                                            <span class="badge bg-warning text-dark">Low Stock</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">Out of Stock</span>
-                                        }
+                                        @p.QuantityOnHand
                                     </td>
                                     <td>
                                         <form asp-action="AddToCart" method="post" class="d-inline" onsubmit="this.querySelector('button[type=submit]').disabled=true;">

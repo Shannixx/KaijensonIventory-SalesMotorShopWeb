@@ -65,14 +65,18 @@
                                 else { <span class="badge bg-success">Available</span> }
                             </td>
                             <td class="action-cell">
-                                <div class="action-buttons">
-                                    <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-view" title="View Product Details" aria-label="View @item.ProductName"><i class="bi bi-eye"></i></a>
-                                    <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product" aria-label="Edit @item.ProductName"><i class="bi bi-pencil"></i></a>
-                                    <form asp-action="Delete" asp-route-id="@item.ProductId" method="post" id="delete-product-@item.ProductId" class="action-form">
-                                        @Html.AntiForgeryToken()
-                                        <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-product-@item.ProductId" data-delete-record-name="@item.ProductName" data-delete-entity-name="product" title="Delete product" aria-label="Delete product @item.ProductName"><i class="bi bi-trash"></i></button>
-                                    </form>
-                                </div>
+<div class="action-buttons">
+                                     <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-view" title="View Product Details" aria-label="View @item.ProductName"><i class="bi bi-eye"></i></a>
+                                     <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product" aria-label="Edit @item.ProductName"><i class="bi bi-pencil"></i></a>
+                                     @if (item.QuantityOnHand <= item.ReorderLevel)
+                                     {
+                                         <a asp-action="CreatePO" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-primary" title="Create Purchase Order" aria-label="Create PO for @item.ProductName"><i class="bi bi-cart-plus"></i></a>
+                                     }
+                                     <form asp-action="Delete" asp-route-id="@item.ProductId" method="post" id="delete-product-@item.ProductId" class="action-form">
+                                         @Html.AntiForgeryToken()
+                                         <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-product-@item.ProductId" data-delete-record-name="@item.ProductName" data-delete-entity-name="product" title="Delete product" aria-label="Delete product @item.ProductName"><i class="bi bi-trash"></i></button>
+                                     </form>
+                                 </div>
                             </td>
                         </tr>
                     }
