@@ -6,6 +6,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 {
     public class PurchaseOrderViewModel
     {
+        public bool IsReorder { get; set; }
         public int? PurchaseOrderId { get; set; }
 
         [Display(Name = "PO Number")]

@@ -15,10 +15,20 @@
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label asp-for="SupplierId" class="form-label"></label>
-                    <select asp-for="SupplierId" class="form-select" asp-items="Model.Suppliers" id="supplierSelect">
-                        <option value="">-- Select Supplier --</option>
-                    </select>
+<label asp-for="SupplierId" class="form-label"></label>
+                    @if (Model.IsReorder)
+                    {
+                        <select asp-for="SupplierId" class="form-select" asp-items="Model.Suppliers" id="supplierSelect" disabled>
+                            <option value="">-- Select Supplier --</option>
+                        </select>
+                        <input type="hidden" asp-for="SupplierId" />
+                    }
+                    else
+                    {
+                        <select asp-for="SupplierId" class="form-select" asp-items="Model.Suppliers" id="supplierSelect">
+                            <option value="">-- Select Supplier --</option>
+                        </select>
+                    }
                     <span asp-validation-for="SupplierId" class="text-danger small"></span>
                     <div id="supplierInfo" class="mt-2 small text-muted d-none">
                         <div id="supplierContact"></div>
@@ -51,7 +61,7 @@
                         </tbody>
                     </table>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addItemBtn">
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addItemBtn" @(Model.IsReorder ? "style=\"display:none;\"" : "")>
                     <i class="bi bi-plus-lg"></i> Add Product
                 </button>
             </div>
@@ -186,7 +196,21 @@ row.innerHTML =
                 existingItems.forEach(function (item) { addItemRow(item); });
             }
         } else {
-            addItemRow();
+addItemRow();
+
+            // Reorder mode adjustments
+            var isReorder = @Model.IsReorder.ToString().ToLower();
+            if (isReorder) {
+                var firstProdSelect = document.querySelector('.product-select');
+                if (firstProdSelect) {
+                    firstProdSelect.setAttribute('disabled', 'disabled');
+                    var hiddenProd = document.createElement('input');
+                    hiddenProd.type = 'hidden';
+                    hiddenProd.name = 'Items[0].ProductId';
+                    hiddenProd.value = firstProdSelect.value;
+                    document.getElementById('poForm').appendChild(hiddenProd);
+                }
+            }
         }
 
         // Form validation

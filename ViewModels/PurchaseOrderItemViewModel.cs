@@ -14,6 +14,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 
         public string? Brand { get; set; }
 
+        public string? Category { get; set; }
+
         [Display(Name = "Current Stock")]
         public int CurrentStock { get; set; }
 

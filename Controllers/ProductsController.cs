@@ -178,12 +178,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 SupplierId = product.SupplierId,
                 OrderDate = DateTime.Now,
+                IsReorder = true,
                 Items = new List<PurchaseOrderItemViewModel>
                 {
                     new PurchaseOrderItemViewModel
                     {
                         ProductId = product.ProductId,
-                        Quantity = orderQty
+                        ProductName = product.ProductName,
+                        Brand = product.Brand,
+                        Category = product.Category != null ? product.Category.CategoryName : null,
+                        Quantity = orderQty,
+                        CurrentStock = product.QuantityOnHand
                     }
                 }
             };
