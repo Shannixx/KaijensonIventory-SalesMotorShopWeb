@@ -1,0 +1,435 @@
+/* ===================================================================
+   Kaijenson Reports — visual consistency layer
+   Scoped to .kaijenson-reports only. Does NOT affect other modules.
+   Uses ONLY the global Kaijenson design tokens from site.css:
+     --primary / --primary-hover / --primary-light
+     --body-bg / --card-bg
+     --text-primary / --text-secondary / --text-muted
+     --border-color / --border-focus
+     --success(-light) / --warning(-light) / --danger(-light)
+     --shadow-sm / --shadow-md / --radius*
+   =================================================================== */
+
+/* ─── Page header ─── */
+.kaijenson-reports .kx-page-header h1 {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+.kaijenson-reports .kx-page-header p {
+    color: var(--text-secondary);
+    margin: 2px 0 0;
+    font-size: 14px;
+}
+
+/* ─── Landing report cards (horizontal layout, Kaijenson card style) ─── */
+.kx-report-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    text-decoration: none;
+    height: 100%;
+    box-shadow: var(--shadow-sm);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.kx-report-card:hover,
+.kx-report-card:focus {
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+.kx-report-icon {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: var(--radius-md);
+    background: var(--primary-light);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+.kx-report-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.kx-report-card-title {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: .01em;
+    text-transform: uppercase;
+    margin: 0 0 3px;
+}
+.kx-report-card-desc {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.45;
+    margin: 0;
+}
+@media (max-width: 575.98px) {
+    .kx-report-card {
+        padding: 14px;
+        gap: 12px;
+    }
+    .kx-report-icon {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        font-size: 19px;
+        border-radius: var(--radius);
+    }
+}
+
+/* ─── Report detail header ─── */
+.kx-detail-header {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+}
+.kx-detail-title {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    margin: 0 0 6px;
+}
+.kx-detail-shop {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    color: var(--primary);
+    text-transform: uppercase;
+    margin: 0 0 8px;
+}
+.kx-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+}
+.kx-meta-item {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+}
+.kx-meta-item strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+.kx-back-link {
+    font-size: 13.5px;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+.kx-back-link:hover { color: var(--primary-hover); }
+
+/* ─── Filter bar ─── */
+.kx-filter-bar {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+}
+.kaijenson-reports .kx-filter-bar label.form-label {
+    font-family: var(--font-heading);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+.kaijenson-reports .kx-filter-bar .form-control,
+.kaijenson-reports .kx-filter-bar .form-select {
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    background-color: #fff;
+    color: var(--text-primary);
+}
+.kaijenson-reports .kx-filter-bar .form-control::placeholder {
+    color: var(--text-muted);
+}
+.kaijenson-reports .kx-filter-bar .form-control:hover,
+.kaijenson-reports .kx-filter-bar .form-select:hover {
+    border-color: #D1D5DB;
+}
+.kaijenson-reports .kx-filter-bar .form-control:focus,
+.kaijenson-reports .kx-filter-bar .form-select:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 4px var(--primary-subtle);
+    outline: none;
+    background-color: #fff;
+}
+.kx-btn-generate {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+}
+.kx-btn-generate:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: #fff;
+}
+.kx-quick-dates .btn {
+    background: #fff;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    border-radius: 100px;
+    font-size: 12.5px;
+    font-weight: 600;
+    transition: all .2s ease;
+}
+.kx-quick-dates .btn:hover,
+.kx-quick-dates .btn:focus {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary-hover);
+}
+.kx-quick-dates .btn.active,
+.kx-quick-dates .btn:active {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+.kx-export-btn {
+    background: #fff;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    transition: all .15s ease;
+}
+.kx-export-btn:hover {
+    background: var(--body-bg);
+    border-color: #b9c2d0;
+    color: var(--text-primary);
+}
+
+/* ─── Metric cards ─── */
+.kx-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+.kx-metric {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .25s, transform .25s;
+}
+.kx-metric:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+.kx-metric-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: var(--radius-md);
+    background: var(--primary-light);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+}
+.kx-metric-label {
+    font-family: var(--font-heading);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 0 0 2px;
+}
+.kx-metric-value {
+    font-family: var(--font-heading);
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.15;
+}
+@media (max-width: 991.98px) {
+    .kx-metrics { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 575.98px) {
+    .kx-metrics { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─── Section cards & tables ─── */
+.kx-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+.kx-section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-bg);
+}
+.kx-section-head i { color: var(--primary); font-size: 16px; }
+.kx-section-head h5 {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+}
+.kx-section-body { padding: 18px 20px; }
+
+.kx-table-wrap { overflow-x: auto; }
+.table.kx-table {
+    margin: 0;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    color: var(--text-primary);
+}
+.kx-table thead th {
+    background: var(--body-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    font-family: var(--font-heading);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 10px 12px;
+    white-space: nowrap;
+}
+.kx-table tbody td {
+    border: 1px solid var(--border-color);
+    padding: 9px 12px;
+    vertical-align: middle;
+    color: var(--text-primary);
+}
+.kx-table tbody tr { transition: background .15s ease; }
+.kx-table tbody tr:nth-child(even) td { background: #fff; }
+.kx-table tbody tr:hover td { background: #F8FAFC; }
+.kx-table .text-end { text-align: right; }
+.kx-table tfoot td {
+    background: var(--body-bg);
+    font-weight: 700;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 10px 12px;
+}
+.kx-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 18px 12px !important;
+    font-style: italic;
+}
+
+/* ─── Status badges ─── */
+.kx-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-family: var(--font-heading);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.kx-status-available {
+    background: var(--success-light);
+    color: var(--success);
+    border: 1px solid var(--success-light);
+}
+.kx-status-low {
+    background: var(--warning-light);
+    color: var(--warning);
+    border: 1px solid var(--warning-light);
+}
+.kx-status-out {
+    background: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid var(--danger-light);
+}
+
+/* ─── Chart containers ─── */
+.kx-chart-box { position: relative; height: 260px; }
+
+/* ─── Search input in inventory section ─── */
+.kaijenson-reports .kx-search-input {
+    max-width: 340px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    background-color: #fff;
+    color: var(--text-primary);
+}
+.kaijenson-reports .kx-search-input::placeholder {
+    color: var(--text-muted);
+}
+.kaijenson-reports .kx-search-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 4px var(--primary-subtle);
+    background-color: #fff;
+}
+
+/* ─── Section switching helpers ─── */
+.kx-hidden { display: none !important; }
+
+/* ─── Print/export friendly ─── */
+@media print {
+    .sidebar,
+    .top-header,
+    .sidebar-overlay,
+    .kx-back-link,
+    .kx-filter-bar,
+    .modal,
+    .btn { display: none !important; }
+    .main-content { padding: 0 !important; }
+    body { background: #fff !important; }
+    .kx-detail-header,
+    .kx-section,
+    .kx-metric {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+    }
+    .kx-table thead th {
+        background: #F5F7FA !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
