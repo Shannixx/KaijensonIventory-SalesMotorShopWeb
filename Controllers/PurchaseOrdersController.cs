@@ -1,7 +1,10 @@
-using KaijensonIventory_SalesMotorShopWeb.Models;
+
 using KaijensonIventory_SalesMotorShopWeb.Services;
+using KaijensonIventory_SalesMotorShopWeb.Models;
+
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -11,11 +14,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     public class PurchaseOrdersController : BaseController
     {
         private readonly IPurchaseOrderService _purchaseOrderService;
+        private readonly IProductService _productService;
         private readonly ILogger<PurchaseOrdersController> _logger;
 
-        public PurchaseOrdersController(IPurchaseOrderService purchaseOrderService, ILogger<PurchaseOrdersController> logger)
+        public PurchaseOrdersController(IPurchaseOrderService purchaseOrderService, IProductService productService, ILogger<PurchaseOrdersController> logger)
         {
             _purchaseOrderService = purchaseOrderService;
+            _productService = productService;
             _logger = logger;
         }
 
@@ -67,6 +72,37 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             if (!ModelState.IsValid)
                 return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
+
+            // Additional reorder validation to ensure server-side integrity
+            if (viewModel.IsReorder)
+            {
+                // Expect exactly one item in reorder mode
+                var item = viewModel.Items?.FirstOrDefault();
+                if (item == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Reorder requires a product item.");
+                    return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
+                }
+
+                var product = await _productService.GetByIdAsync(item.ProductId);
+                if (product == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Selected product does not exist.");
+                    return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
+                }
+
+                if (product.SupplierId != viewModel.SupplierId)
+                {
+                    ModelState.AddModelError(string.Empty, "Supplier does not match the product's supplier.");
+                    return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
+                }
+
+                if (product.QuantityOnHand > product.ReorderLevel)
+                {
+                    ModelState.AddModelError(string.Empty, "Product stock is still above the reorder level.");
+                    return View(await _purchaseOrderService.PrepareCreateViewModelAsync(viewModel));
+                }
+            }
 
             var result = await _purchaseOrderService.CreateAsync(viewModel, GetCurrentStaffId());
 

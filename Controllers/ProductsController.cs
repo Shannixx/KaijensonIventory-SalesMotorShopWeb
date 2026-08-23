@@ -171,8 +171,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            int orderQty = product.ReorderLevel > 0 ? product.ReorderLevel : 1;
-            if (orderQty < 1) orderQty = 1;
+            // Quantity will be entered manually by the user; initialize to 0 to enforce input
+            int orderQty = 0;
 
             var poModel = new PurchaseOrderViewModel
             {
@@ -187,7 +187,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         ProductName = product.ProductName,
                         Brand = product.Brand,
                         Category = product.Category != null ? product.Category.CategoryName : null,
-                        Quantity = orderQty,
+                        Quantity = orderQty, // will be 0, user must input
+                        ReorderLevel = product.ReorderLevel,
                         CurrentStock = product.QuantityOnHand
                     }
                 }
