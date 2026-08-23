@@ -26,7 +26,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     ProductName = p.ProductName,
                     CategoryName = p.Category.CategoryName,
                     QuantityOnHand = p.QuantityOnHand,
-                    StockStatus = p.StockStatus,
+                    StockStatus = StockHelper.GetStockStatus(p.QuantityOnHand),
                     ReorderLevel = p.ReorderLevel
                 })
                 .ToListAsync();
@@ -167,7 +167,7 @@ public async Task<decimal> GetTotalInventoryValueAsync(DateTime start, DateTime 
                 query = query.Where(p => p.ProductId == productId.Value);
             if (categoryId.HasValue)
                 query = query.Where(p => p.CategoryId == categoryId.Value);
-            var count = await query.CountAsync(p => p.QuantityOnHand <= p.ReorderLevel);
+            var count = await query.CountAsync(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5);
             return count;
         }
 
@@ -178,14 +178,14 @@ public async Task<decimal> GetTotalInventoryValueAsync(DateTime start, DateTime 
                 query = query.Where(p => p.ProductId == productId.Value);
             if (categoryId.HasValue)
                 query = query.Where(p => p.CategoryId == categoryId.Value);
-            var alerts = await query
-                .Where(p => p.QuantityOnHand <= p.ReorderLevel)
+var alerts = await query
+                        .Where(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5)
                 .Select(p => new LowStockAlertViewModel
                 {
                     ProductName = p.ProductName,
                     QuantityOnHand = p.QuantityOnHand,
                     ReorderLevel = p.ReorderLevel,
-                    StockStatus = p.StockStatus
+                    StockStatus = StockHelper.GetStockStatus(p.QuantityOnHand)
                 })
                 .ToListAsync();
             return alerts;

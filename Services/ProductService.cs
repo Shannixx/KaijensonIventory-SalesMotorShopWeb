@@ -1,5 +1,6 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.Services;
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -138,7 +139,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 IsSerialized = model.IsSerialized,
                 AverageCost = 0,
                 ReorderLevel = model.ReorderLevel,
-                StockStatus = CalculateStockStatus(model.QuantityOnHand, model.ReorderLevel),
+                StockStatus = StockHelper.GetStockStatus(model.QuantityOnHand),
                 CreatedAt = DateTime.Now
             };
 
@@ -193,7 +194,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             
                 existing.IsSerialized = model.IsSerialized;
             existing.Price = model.Price ?? existing.Price;
-            existing.StockStatus = CalculateStockStatus(existing.QuantityOnHand, existing.ReorderLevel);
+            existing.StockStatus = StockHelper.GetStockStatus(existing.QuantityOnHand);
 
             await _context.SaveChangesAsync();
 
@@ -329,11 +330,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return errors;
         }
 
-        private static string CalculateStockStatus(int qty, int reorder)
+        private static string CalculateStockStatus(int qty)
         {
-            if (qty <= 0) return "Out of Stock";
-            if (qty <= reorder) return "Low Stock";
-            return "Available";
+            return StockHelper.GetStockStatus(qty);
         }
     }
 }

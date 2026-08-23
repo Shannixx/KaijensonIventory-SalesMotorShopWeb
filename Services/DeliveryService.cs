@@ -187,8 +187,7 @@ Items = d.PurchaseOrder != null
                     receiveNow,
                     unitCost);
 
-                item.Product.StockStatus = CalculateStockStatus(
-                    item.Product.QuantityOnHand, item.Product.ReorderLevel);
+                item.Product.StockStatus = StockHelper.GetStockStatus(item.Product.QuantityOnHand);
 
                 // Update PO item received quantity
                 item.ReceivedQuantity += receiveNow;
@@ -232,11 +231,9 @@ Items = d.PurchaseOrder != null
             return ((oldQty * oldAvgCost) + (newQty * newUnitCost)) / (oldQty + newQty);
         }
 
-        private static string CalculateStockStatus(int qty, int reorder)
+        private static string CalculateStockStatus(int qty)
         {
-            if (qty <= 0) return "Out of Stock";
-            if (qty <= reorder) return "Low Stock";
-            return "Available";
+            return StockHelper.GetStockStatus(qty);
         }
     }
 }

@@ -35,11 +35,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     TotalProducts = await _context.Products.CountAsync(),
                     LowStockCount = await _context.Products
-                        .CountAsync(p => p.QuantityOnHand <= p.ReorderLevel && p.QuantityOnHand > 0),
+                        .CountAsync(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5),
                     OutOfStockCount = await _context.Products
                         .CountAsync(p => p.QuantityOnHand <= 0),
                     LowStockRequireReorder = await _context.Products
-                        .CountAsync(p => p.QuantityOnHand <= p.ReorderLevel),
+                        .CountAsync(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5),
                     TotalInventoryValue = await _context.Products
                         .SumAsync(p => (decimal?)(p.Price * p.QuantityOnHand)) ?? 0,
                     TotalCategories = await _context.Categories.CountAsync(),
@@ -48,7 +48,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     PendingPOCount = await _context.PurchaseOrders
                         .CountAsync(p => p.Status == "Pending"),
                     RecentLowStockProducts = await _context.Products
-                        .Where(p => p.QuantityOnHand <= p.ReorderLevel && p.QuantityOnHand > 0)
+                        .Where(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5)
                         .OrderBy(p => p.QuantityOnHand)
                         .Take(5)
                         .AsNoTracking()

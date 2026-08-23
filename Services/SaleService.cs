@@ -59,7 +59,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     throw new InvalidOperationException($"Product with ID {cartItem.ProductId} not found.");
 
                 // Ensure product is enabled/available (StockStatus not OutOfStock)
-                if (product.StockStatus == "OutOfStock")
+                if (product.StockStatus == "Out of Stock")
                     throw new InvalidOperationException($"Product {product.ProductName} is out of stock.");
 
                 // Verify sufficient stock now
@@ -186,25 +186,20 @@ if (product.IsSerialized)
                 product.QuantityOnHand -= cart.Items.First(i => i.ProductId == product.ProductId).Quantity;
                 product.LastSaleDate = DateTime.Now;
 
-                if (product.QuantityOnHand == 0)
-                    product.StockStatus = "OutOfStock";
-                else if (product.QuantityOnHand <= product.ReorderLevel)
-                    product.StockStatus = "Low";
-                else
-                    product.StockStatus = "Available";
+                product.StockStatus = StockHelper.GetStockStatus(product.QuantityOnHand);
 
                 // Notification on status transition
-                if (originalStatus == "Available" && product.StockStatus == "Low")
+                if (originalStatus == "Available" && product.StockStatus == "Low Stock")
                 {
                     await _notificationService.CreateAsync(product.ProductId, "LowStock",
                         $"Low stock for {product.ProductName} (Qty {product.QuantityOnHand}).");
                 }
-                else if (originalStatus == "Available" && product.StockStatus == "OutOfStock")
+                else if (originalStatus == "Available" && product.StockStatus == "Out of Stock")
                 {
                     await _notificationService.CreateAsync(product.ProductId, "OutOfStock",
                         $"{product.ProductName} is out of stock.");
                 }
-                else if (originalStatus == "Low" && product.StockStatus == "OutOfStock")
+                else if (originalStatus == "Low Stock" && product.StockStatus == "Out of Stock")
                 {
                     await _notificationService.CreateAsync(product.ProductId, "OutOfStock",
                         $"{product.ProductName} is out of stock.");
