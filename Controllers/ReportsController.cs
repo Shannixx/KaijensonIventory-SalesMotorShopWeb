@@ -15,14 +15,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     {
         private readonly IReportService _reportService;
         private readonly ApplicationDbContext _context;
-public ReportsController(IReportService reportService, ApplicationDbContext context)
-            {
-                _reportService = reportService;
-                _context = context;
-            }
+        public ReportsController(IReportService reportService, ApplicationDbContext context)
+        {
+            _reportService = reportService;
+            _context = context;
+        }
 
         // GET: /Reports
-        public async Task<IActionResult> Index(ReportFilterViewModel filter)
+        public async Task<IActionResult> Index(ReportFilterViewModel filter, string? report)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
@@ -31,6 +31,8 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
                 TempData["ErrorMessage"] = "Access denied. Manager or Owner required.";
                 return RedirectToAction("Index", "Dashboard");
             }
+            // Preserve the active report across Generate ("Sales" / "Inventory"; null = landing page)
+            ViewBag.ActiveReport = report == "Sales" || report == "Inventory" ? report : null;
             // Ensure defaults
             if (filter.StartDate == default) filter.StartDate = DateTime.Today.AddMonths(-1);
             if (filter.EndDate == default) filter.EndDate = DateTime.Today;
@@ -142,179 +144,264 @@ public ReportsController(IReportService reportService, ApplicationDbContext cont
             return File(bytes, "text/csv", fileName);
         }
 
-        // GET: /Reports/ExportPdf
+        // GET: /Reports/ExportSalesPdf
         [HttpGet]
-        public async Task<IActionResult> ExportPdf([FromQuery] ReportFilterViewModel filter)
+        public async Task<IActionResult> ExportSalesPdf([FromQuery] ReportFilterViewModel filter)
         {
-            var viewModel = await BuildReportViewModelAsync(filter);
-            var doc = QuestPDF.Fluent.Document.Create(container =>
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null) return redirect;
+            if (!IsOwnerOrManager())
             {
-                container.Page(page =>
+                TempData["ErrorMessage"] = "Access denied. Manager or Owner required.";
+                return RedirectToAction("Index", "Dashboard");
+            }
+            try
+            {
+                // Same filtering rules as the browser Sales Report
+                var viewModel = await BuildReportViewModelAsync(filter);
+                var ph = System.Globalization.CultureInfo.GetCultureInfo("en-PH");
+                var currentUser = GetCurrentStaffName();
+                var generatedOn = DateTime.Now.ToString("MMMM dd, yyyy h:mm tt");
+
+                var doc = Document.Create(container =>
                 {
-                    page.Size(QuestPDF.Helpers.PageSizes.A4);
-                    page.Margin(40);
-                    page.DefaultTextStyle(x => x.FontSize(10));
-                    // Header
-                    page.Header().Element(c =>
+                    container.Page(page =>
                     {
-                        c.Column(col =>
+                        page.Size(PageSizes.A4);
+                        page.Margin(40);
+                        page.DefaultTextStyle(x => x.FontSize(10));
+
+                        // Header
+                        page.Header().Column(col =>
                         {
-                            col.Item().AlignCenter().Text("KAJENSON MOTOR SHOP - Reports").Bold().FontSize(16);
-                            col.Item().AlignCenter().Text($"Period: {viewModel.Filter.StartDate:yyyy-MM-dd} to {viewModel.Filter.EndDate:yyyy-MM-dd}");
-                        });
-                    });
-                    // Content
-                    page.Content().PaddingVertical(10).Column(col =>
-                    {
-                        // KPIs table
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); });
-                            table.Cell().Element(container => container.Padding(2)).Text("Total Revenue");
-                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.RevenueReport.TotalRevenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
-                            table.Cell().Element(container => container.Padding(2)).Text("Units Sold");
-                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.SalesPerformanceReport.TotalQuantitySold.ToString());
-                            table.Cell().Element(container => container.Padding(2)).Text("Transactions");
-                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.SalesPerformanceReport.TransactionCount.ToString());
-                            table.Cell().Element(container => container.Padding(2)).Text("Inventory Value");
-                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.TotalInventoryValue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
-                            table.Cell().Element(container => container.Padding(2)).Text("Low Stock Items");
-                            table.Cell().Element(container => container.Padding(2)).Text(viewModel.LowStockItemCount.ToString());
+                            col.Item().AlignCenter().Text("KAIJENSON MOTOR SHOP").Bold().FontSize(16);
+                            col.Item().AlignCenter().Text("SALES REPORT").Bold().FontSize(12);
+                            col.Item().PaddingTop(4).AlignCenter().Text($"Date Range: {viewModel.Filter.StartDate:yyyy-MM-dd} to {viewModel.Filter.EndDate:yyyy-MM-dd}");
+                            col.Item().AlignCenter().Text($"Generated: {generatedOn}");
+                            col.Item().AlignCenter().Text($"Current User: {currentUser}");
                         });
 
-
-
-                        // Render additional sections with real data
-                        // Inventory Section
-                        col.Item().PaddingTop(10).Text("Inventory").Bold();
-                        col.Item().Table(table =>
+                        // Content: SALES REPORT sections only
+                        page.Content().PaddingVertical(10).Column(col =>
                         {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
-                            // Header
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Category").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty On Hand").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
-                            foreach (var i in viewModel.InventoryReport.Items)
+                            // Summary KPIs
+                            col.Item().Table(table =>
                             {
-                                table.Cell().Element(Container => Container.Padding(2)).Text(i.ProductName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(i.CategoryName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(i.QuantityOnHand.ToString());
-                                table.Cell().Element(Container => Container.Padding(2)).Text(i.StockStatus);
-                            }
-                        });
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Total Revenue");
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.RevenueReport.TotalRevenue.ToString("C", ph));
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Total Qty Sold");
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.SalesPerformanceReport.TotalQuantitySold.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Transactions");
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.SalesPerformanceReport.TransactionCount.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Inventory Value");
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.TotalInventoryValue.ToString("C", ph));
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Low Stock Items");
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.LowStockItemCount.ToString());
+                            });
 
-                        // Most Sold Products Section
-                        col.Item().PaddingTop(10).Text("Most Sold Products").Bold();
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty Sold").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Unit Price").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
-                            foreach (var p in viewModel.MostSoldProducts)
+                            // Sales Performance
+                            col.Item().PaddingTop(10).Text("Sales Performance").Bold();
+                            col.Item().Table(table =>
                             {
-                                table.Cell().Element(Container => Container.Padding(2)).Text(p.ProductName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(p.QuantitySold.ToString());
-                                table.Cell().Element(Container => Container.Padding(2)).Text(p.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
-                                table.Cell().Element(Container => Container.Padding(2)).Text(p.Revenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
-                            }
-                        });
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Transactions").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Total Qty Sold").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Total Revenue").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.SalesPerformanceReport.TransactionCount.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.SalesPerformanceReport.TotalQuantitySold.ToString());
+                                table.Cell().Element(Container => Container.Padding(2)).Text(viewModel.SalesPerformanceReport.TotalRevenue.ToString("C", ph));
+                            });
 
-                        // Revenue Trend Section
-                        col.Item().PaddingTop(10).Text("Revenue Trend").Bold();
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); });
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Period").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
-                            foreach (var r in viewModel.RevenueTrend)
+                            // Most Sold Products
+                            col.Item().PaddingTop(10).Text("Most Sold Products").Bold();
+                            col.Item().Table(table =>
                             {
-                                table.Cell().Element(Container => Container.Padding(2)).Text(r.Period.ToString("yyyy-MM-dd"));
-                                table.Cell().Element(Container => Container.Padding(2)).Text(r.Revenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
-                            }
-                        });
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Qty Sold").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Unit Price").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
+                                foreach (var p in viewModel.MostSoldProducts)
+                                {
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(p.ProductName);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(p.QuantitySold.ToString());
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(p.UnitPrice.ToString("C", ph));
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(p.Revenue.ToString("C", ph));
+                                }
+                            });
 
-                        // Sales By Category Section
-                        col.Item().PaddingTop(10).Text("Sales By Category").Bold();
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Category").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Units Sold").Bold();
-                            foreach (var c in viewModel.SalesByCategory)
+                            // Revenue Trend
+                            col.Item().PaddingTop(10).Text("Revenue Trend").Bold();
+                            col.Item().Table(table =>
                             {
-                                table.Cell().Element(Container => Container.Padding(2)).Text(c.CategoryName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(c.Revenue.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH")));
-                                table.Cell().Element(Container => Container.Padding(2)).Text(c.UnitsSold.ToString());
-                            }
-                        });
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Period").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
+                                foreach (var r in viewModel.RevenueTrend)
+                                {
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(r.Period.ToString("yyyy-MM-dd"));
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(r.Revenue.ToString("C", ph));
+                                }
+                            });
 
-                        // Low Stock Alerts Section
-                        col.Item().PaddingTop(10).Text("Low Stock Alerts").Bold();
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty On Hand").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Reorder Level").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
-                            foreach (var a in viewModel.LowStockAlerts)
+                            // Sales By Category
+                            col.Item().PaddingTop(10).Text("Sales By Category").Bold();
+                            col.Item().Table(table =>
                             {
-                                table.Cell().Element(Container => Container.Padding(2)).Text(a.ProductName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(a.QuantityOnHand.ToString());
-                                table.Cell().Element(Container => Container.Padding(2)).Text(a.ReorderLevel.ToString());
-                                table.Cell().Element(Container => Container.Padding(2)).Text(a.StockStatus);
-                            }
-                        });
-
-                        // Stock Movements Section
-                        col.Item().PaddingTop(10).Text("Stock Movements").Bold();
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Date").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Type").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Qty").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Reference").Bold();
-                            foreach (var m in viewModel.StockMovements)
-                            {
-                                table.Cell().Element(Container => Container.Padding(2)).Text(m.Date.ToString("yyyy-MM-dd"));
-                                table.Cell().Element(Container => Container.Padding(2)).Text(m.ProductName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(m.MovementType);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(m.Quantity.ToString());
-                                table.Cell().Element(Container => Container.Padding(2)).Text(m.Reference);
-                            }
-                        });
-
-                        // Serial Numbers Section
-                        col.Item().PaddingTop(10).Text("Serial Numbers").Bold();
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Serial").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Sale Id").Bold();
-                            table.Cell().Element(Container => Container.Padding(2)).Text("Sale Date").Bold();
-                            foreach (var s in viewModel.SerialNumberReport)
-                            {
-                                table.Cell().Element(Container => Container.Padding(2)).Text(s.SerialNumber);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(s.ProductName);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(s.Status);
-                                table.Cell().Element(Container => Container.Padding(2)).Text(s.SaleId?.ToString() ?? "-");
-                                table.Cell().Element(Container => Container.Padding(2)).Text(s.SaleDate?.ToString("yyyy-MM-dd") ?? "-");
-                            }
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Category").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Revenue").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Units Sold").Bold();
+                                foreach (var cat in viewModel.SalesByCategory)
+                                {
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(cat.CategoryName);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(cat.Revenue.ToString("C", ph));
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(cat.UnitsSold.ToString());
+                                }
+                            });
                         });
                     });
                 });
-            });
-            var pdfBytes = doc.GeneratePdf();
-            var fileName = $"Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-            return File(pdfBytes, "application/pdf", fileName);
+
+                var pdfBytes = doc.GeneratePdf();
+                var fileName = $"SalesReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception)
+            {
+                TempData["ErrorMessage"] = "Unable to generate the PDF report. Please try again.";
+                return RedirectToAction(nameof(Index), new { report = "Sales", filter.StartDate, filter.EndDate, filter.ProductId, filter.CategoryId, filter.SerialNumber });
+            }
+        }
+
+        // GET: /Reports/ExportInventoryPdf
+        [HttpGet]
+        public async Task<IActionResult> ExportInventoryPdf([FromQuery] ReportFilterViewModel filter)
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null) return redirect;
+            if (!IsOwnerOrManager())
+            {
+                TempData["ErrorMessage"] = "Access denied. Manager or Owner required.";
+                return RedirectToAction("Index", "Dashboard");
+            }
+            try
+            {
+                // Same filtering rules as the browser Inventory Report
+                var viewModel = await BuildReportViewModelAsync(filter);
+                var currentUser = GetCurrentStaffName();
+                var generatedOn = DateTime.Now.ToString("MMMM dd, yyyy h:mm tt");
+
+                var doc = Document.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Size(PageSizes.A4);
+                        page.Margin(40);
+                        page.DefaultTextStyle(x => x.FontSize(10));
+
+                        // Header
+                        page.Header().Column(col =>
+                        {
+                            col.Item().AlignCenter().Text("KAIJENSON MOTOR SHOP").Bold().FontSize(16);
+                            col.Item().AlignCenter().Text("INVENTORY REPORT").Bold().FontSize(12);
+                            col.Item().PaddingTop(4).AlignCenter().Text($"As of Date: {viewModel.Filter.EndDate:yyyy-MM-dd}");
+                            col.Item().AlignCenter().Text($"Generated: {generatedOn}");
+                            col.Item().AlignCenter().Text($"Current User: {currentUser}");
+                        });
+
+                        // Content: INVENTORY REPORT sections only
+                        page.Content().PaddingVertical(10).Column(col =>
+                        {
+                            // Current Stock
+                            col.Item().Text("Current Stock").Bold();
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Category").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Qty On Hand").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
+                                foreach (var i in viewModel.InventoryReport.Items)
+                                {
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(i.ProductName);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(i.CategoryName);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(i.QuantityOnHand.ToString());
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(i.StockStatus);
+                                }
+                            });
+
+                            // Low Stock Alerts
+                            col.Item().PaddingTop(10).Text("Low Stock Alerts").Bold();
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Qty On Hand").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Reorder Level").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
+                                foreach (var a in viewModel.LowStockAlerts)
+                                {
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(a.ProductName);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(a.QuantityOnHand.ToString());
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(a.ReorderLevel.ToString());
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(a.StockStatus);
+                                }
+                            });
+
+                            // Stock Movements
+                            col.Item().PaddingTop(10).Text("Stock Movements").Bold();
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Date").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Type").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Qty").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Reference").Bold();
+                                foreach (var m in viewModel.StockMovements)
+                                {
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(m.Date.ToString("yyyy-MM-dd"));
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(m.ProductName);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(m.MovementType);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(m.Quantity.ToString());
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(m.Reference);
+                                }
+                            });
+
+                            // Serial Numbers
+                            col.Item().PaddingTop(10).Text("Serial Numbers").Bold();
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(c => { c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); c.RelativeColumn(); });
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Serial").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Product").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Status").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Sale Id").Bold();
+                                table.Cell().Element(Container => Container.Padding(2)).Text("Sale Date").Bold();
+                                foreach (var s in viewModel.SerialNumberReport)
+                                {
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(s.SerialNumber);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(s.ProductName);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(s.Status);
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(s.SaleId?.ToString() ?? "-");
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(s.SaleDate?.ToString("yyyy-MM-dd") ?? "-");
+                                }
+                            });
+                        });
+                    });
+                });
+
+                var pdfBytes = doc.GeneratePdf();
+                var fileName = $"InventoryReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception)
+            {
+                TempData["ErrorMessage"] = "Unable to generate the PDF report. Please try again.";
+                return RedirectToAction(nameof(Index), new { report = "Inventory", filter.StartDate, filter.EndDate, filter.ProductId, filter.CategoryId, filter.SerialNumber });
+            }
         }
 
         // Private helper to construct the same view model used by Index

@@ -5,6 +5,7 @@
     ViewData["Title"] = "Reports";
     string currentUser = Context.Session.GetString("StaffName") ?? "Unknown";
     string generatedOn = DateTime.Now.ToString("MMMM dd, yyyy h:mm tt");
+    var activeReport = ViewBag.ActiveReport as string;
     string StatusClass(string s) => s switch
     {
         "Available" => "kx-status-available",
@@ -50,6 +51,7 @@
     @* ─── Shared Filter Bar (existing filters, restyled) ─── *@
     <div id="reportsFilterArea" class="kx-filter-bar kx-hidden">
         <form method="get" class="report-filter-grid">
+            <input type="hidden" name="report" id="activeReport" value="@activeReport" />
             <div class="report-filter-field">
                 <label asp-for="Filter.StartDate" class="form-label">Start Date</label>
                 <input asp-for="Filter.StartDate" class="form-control" type="date" />
@@ -83,13 +85,12 @@
             <button type="button" class="btn btn-sm" data-range="30">Last 30 Days</button>
             <button type="button" class="btn btn-sm" data-range="210">Last 7 Months</button>
             <button type="button" class="btn btn-sm" data-range="quarter">This Quarter</button>
-            <button type="button" class="btn btn-sm" data-range="ytd">Year to Date</button>
-            <button type="button" class="btn btn-sm" data-range="custom">Custom</button>
         </div>
         <hr class="my-3" style="border-color: var(--border-color); opacity: .5;" />
         <div class="report-export-buttons d-flex flex-wrap gap-2">
             <a asp-action="ExportCsv" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn kx-export-btn"><i class="bi bi-filetype-csv me-1"></i>Export CSV</a>
-            <a asp-action="ExportPdf" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn kx-export-btn"><i class="bi bi-filetype-pdf me-1"></i>Export PDF</a>
+            <a id="pdfSalesBtn" asp-action="ExportSalesPdf" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn kx-export-btn @(activeReport == "Sales" ? "" : "kx-hidden")"><i class="bi bi-filetype-pdf me-1"></i>Export PDF</a>
+            <a id="pdfInventoryBtn" asp-action="ExportInventoryPdf" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn kx-export-btn @(activeReport == "Inventory" ? "" : "kx-hidden")"><i class="bi bi-filetype-pdf me-1"></i>Export PDF</a>
         </div>
     </div>
 
@@ -347,9 +348,6 @@
                 const today = new Date();
                 let startDate = '';
                 let endDate = today.toISOString().split('T')[0];
-                if (range === 'custom') {
-                    return; // let user pick manually
-                }
                 if (range === '7') {
                     const d = new Date(); d.setDate(today.getDate() - 6);
                     startDate = d.toISOString().split('T')[0];
@@ -365,9 +363,6 @@
                     const startMonth = quarter * 3;
                     const d = new Date(today.getFullYear(), startMonth, 1);
                     startDate = d.toISOString().split('T')[0];
-                } else if (range === 'ytd') {
-                    const d = new Date(today.getFullYear(), 0, 1);
-                    startDate = d.toISOString().split('T')[0];
                 }
                 if (startDate) {
                     startInput.value = startDate;
@@ -379,6 +374,19 @@
         const landingEl = document.getElementById('reportsLanding');
         const filterAreaEl = document.getElementById('reportsFilterArea');
         const backBtn = document.getElementById('kxBackBtn');
+        const activeReportInput = document.getElementById('activeReport');
+        function updatePdfButtons(report) {
+            const salesBtn = document.getElementById('pdfSalesBtn');
+            const inventoryBtn = document.getElementById('pdfInventoryBtn');
+            if (salesBtn && inventoryBtn) {
+                salesBtn.classList.toggle('kx-hidden', report !== 'Sales');
+                inventoryBtn.classList.toggle('kx-hidden', report !== 'Inventory');
+            }
+        }
+        function setActiveReport(report) {
+            if (activeReportInput) activeReportInput.value = report;
+            updatePdfButtons(report);
+        }
         function openSection(targetId) {
             landingEl.classList.add('kx-hidden');
             filterAreaEl.classList.remove('kx-hidden');
@@ -389,6 +397,7 @@
                 targetPane.classList.add('show', 'active');
                 targetPane.classList.remove('kx-hidden');
             }
+            setActiveReport(targetId === 'inventoryTab' ? 'Inventory' : 'Sales');
         }
         document.querySelectorAll('.kx-report-link').forEach(link => {
             link.addEventListener('click', function (e) {
@@ -403,8 +412,20 @@
                 filterAreaEl.classList.add('kx-hidden');
                 backBtn.classList.add('kx-hidden');
                 document.querySelectorAll('.tab-pane').forEach(pane => { pane.classList.remove('show', 'active'); pane.classList.add('kx-hidden'); });
+                setActiveReport('');
             });
         }
+        // Restore the active report after Generate so it does not fall back to the landing page
+        (function () {
+            const initialActive = '@(activeReport)';
+            if (initialActive === 'Sales') {
+                openSection('salesTab');
+            } else if (initialActive === 'Inventory') {
+                openSection('inventoryTab');
+            } else if (activeReportInput) {
+                activeReportInput.value = '';
+            }
+        })();
         // C. Inventory Search (unchanged behavior)
         const inventorySearch = document.getElementById('inventorySearch');
         if (inventorySearch) {
