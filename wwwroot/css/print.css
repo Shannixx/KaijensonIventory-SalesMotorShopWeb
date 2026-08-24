@@ -1,15 +1,143 @@
 /**
- * Print Stylesheet - Purchase Order Print
+ * Print Stylesheet - Purchase Order Print + Sales Receipt
  * Optimized for clean, single-page output
  * This CSS should be included in the normal website stylesheet for screen viewing
  * Print-specific properties use @media print rules
+ *
+ * Purchase Order rules are generic (.print-preview-wrapper).
+ * Receipt rules are scoped under .receipt-preview so they never affect PO printing.
  */
 
+/* ===================================================================
+   ON-SCREEN COMPACT RECEIPT PREVIEW (.receipt-preview)
+   Loaded by Views/Sales/_ReceiptPreview.cshtml (modal + print window)
+   =================================================================== */
+.receipt-preview {
+    display: flex;
+    justify-content: center;
+    padding: 16px 8px;
+    background: transparent;
+}
+.receipt-preview .receipt-paper {
+    width: 100%;
+    max-width: 340px;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    padding: 18px 16px;
+    color: #111;
+    font-size: 12px;
+    line-height: 1.45;
+}
+.receipt-shop-name {
+    text-align: center;
+    font-family: var(--font-heading, Poppins, Arial, sans-serif);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: #111;
+    margin: 0;
+}
+.receipt-doc-title {
+    text-align: center;
+    font-size: 11.5px;
+    color: #555;
+    margin-top: 2px;
+}
+.receipt-divider {
+    border: none;
+    border-top: 1px dashed #CFCFCF;
+    margin: 10px 0;
+    opacity: 1;
+}
+.receipt-divider-strong { border-top: 1px solid #222; }
+.receipt-meta { padding: 0; }
+.receipt-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 11.5px;
+    padding: 1px 0;
+}
+.receipt-meta-label { color: #555; flex: 0 0 auto; }
+.receipt-meta-value { text-align: right; overflow-wrap: break-word; word-break: break-word; }
+.receipt-items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+    margin: 0;
+}
+.receipt-items th {
+    text-align: left;
+    font-weight: 600;
+    color: #111;
+    background: transparent !important;
+    border: none;
+    border-bottom: 1px solid #222 !important;
+    padding: 2px 0 4px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.receipt-items td {
+    border: none;
+    border-bottom: 1px dotted #DDD;
+    padding: 4px 0;
+    vertical-align: top;
+    background: transparent !important;
+}
+.receipt-items tbody tr:last-child td { border-bottom: none; }
+.receipt-items th.ri-product,
+.receipt-items td.ri-product { /* product column wraps freely */ }
+.receipt-items th.ri-qty,
+.receipt-items td.ri-qty { text-align: center; width: 30px; }
+.receipt-items th.ri-price,
+.receipt-items td.ri-price { text-align: right; width: 62px; white-space: nowrap; }
+.receipt-items th.ri-amt,
+.receipt-items td.ri-amt { text-align: right; width: 68px; white-space: nowrap; }
+.receipt-serial-row td {
+    font-size: 10.5px;
+    color: #444;
+    padding-top: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+.receipt-no-items {
+    text-align: center;
+    color: #777;
+    padding: 10px 0 !important;
+}
+.receipt-totals { font-size: 12px; }
+.receipt-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 2px 0;
+}
+.receipt-total-row span:last-child { text-align: right; white-space: nowrap; }
+.receipt-grand-total {
+    font-weight: 700;
+    font-size: 14px;
+    color: #E8650A;
+    border-top: 1px solid #222;
+    margin-top: 4px;
+    padding-top: 6px;
+}
+.receipt-thanks {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 11.5px;
+    color: #111;
+}
+
 @media print {
-    /* Page setup with standard margins */
+    /* Default page setup (Purchase Order and any non-receipt print) */
     @page {
-        size: auto !important;
-        margin: 12mm !important;
+        size: auto;
+        margin: 12mm;
     }
 
     /* Clean white background for printing */
@@ -176,5 +304,93 @@
     /* Force page break if element is longer than page */
     .print-preview-wrapper {
         page-break-after: avoid !important;
+    }
+}
+
+/* ===================================================================
+   RECEIPT PRINT RULES (.receipt-preview only – PO printing untouched)
+   80mm thermal-style output via a named page (@page receipt), scoped
+   so ONLY .receipt-preview content prints at 80mm. The Purchase Order
+   keeps the default @page (size: auto, margin: 12mm).
+   =================================================================== */
+@media print {
+    /* Assign ONLY the receipt to the 80mm thermal page */
+    .print-preview-wrapper.receipt-preview {
+        display: block !important;
+        width: 80mm !important;
+        max-width: 80mm !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        background: #fff !important;
+        page: receipt;
+    }
+
+    /* 80mm thermal page setup – applies only to receipt pages */
+    @page receipt {
+        size: 80mm auto;
+        margin: 4mm;
+    }
+
+    .receipt-preview .receipt-paper {
+        max-width: none !important;
+        width: 100% !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 9.5pt !important;
+        line-height: 1.4 !important;
+    }
+
+    .receipt-preview .receipt-shop-name {
+        font-size: 13pt !important;
+        color: #000 !important;
+    }
+
+    .receipt-preview .receipt-doc-title { font-size: 10pt !important; color: #000 !important; }
+    .receipt-preview .receipt-divider { border-top: 1px dashed #000 !important; margin: 6pt 0 !important; }
+    .receipt-preview .receipt-divider-strong { border-top: 1px solid #000 !important; }
+    .receipt-preview .receipt-meta-row { font-size: 9pt !important; padding: 1px 0 !important; }
+    .receipt-preview .receipt-meta-label { color: #000 !important; }
+
+    .receipt-preview .receipt-items {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 9pt !important;
+        margin: 0 !important;
+        page-break-inside: avoid !important;
+    }
+    .receipt-preview .receipt-items th {
+        background: transparent !important;
+        color: #000 !important;
+        border: none !important;
+        border-bottom: 1px solid #000 !important;
+        font-size: 8pt !important;
+        padding: 2px 0 3pt !important;
+    }
+    .receipt-preview .receipt-items td {
+        border: none !important;
+        border-bottom: 1px dotted #999 !important;
+        padding: 3pt 0 !important;
+    }
+    .receipt-preview .receipt-serial-row td { font-size: 7.5pt !important; color: #000 !important; }
+    .receipt-preview .receipt-totals { font-size: 9.5pt !important; page-break-inside: avoid !important; }
+    .receipt-preview .receipt-total-row { padding: 1.5pt 0 !important; }
+    .receipt-preview .receipt-grand-total {
+        color: #B35A00 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        border-top: 1px solid #000 !important;
+        font-size: 11pt !important;
+        margin-top: 3pt !important;
+        padding-top: 4pt !important;
+    }
+    .receipt-preview .receipt-thanks {
+        text-align: center !important;
+        font-size: 9pt !important;
+        margin-top: 8pt !important;
+        color: #000 !important;
     }
 }

@@ -3,77 +3,94 @@
 @{
     string staffName = Model.Transaction.Staff?.StaffName ?? "";
     string cust = string.IsNullOrWhiteSpace(Model.Transaction.CustomerName) ? "Walk‑in" : Model.Transaction.CustomerName;
+    var ph = System.Globalization.CultureInfo.GetCultureInfo("en-PH");
+    var items = Model.Items ?? System.Linq.Enumerable.Empty<KaijensonIventory_SalesMotorShopWeb.Models.SalesItem>();
+    decimal subtotal = items.Any() ? items.Sum(i => i.Subtotal) : Model.Transaction.TotalAmount;
 }
-<div class="print-preview-wrapper">
-    <div class="print-preview-header">
-        <div>
-            <h1 class="print-shop-name">KAIJENSON MOTOR SHOP</h1>
-            <p class="print-receipt-title">Sales Receipt</p>
-        </div>
-        <div class="print-header-info">
-            <div class="print-receipt-number">Receipt #: @Model.Transaction.InvoiceNumber</div>
-            <div class="print-receipt-date">Date: @Model.Transaction.TransactionDate.ToString("MMM dd, yyyy")</div>
-            <div class="print-receipt-staff">Staff: @staffName</div>
-            <div class="print-receipt-customer">Customer: @cust</div>
-        </div>
-    </div>
+<div class="print-preview-wrapper receipt-preview">
+    <div class="receipt-paper">
+        <div class="receipt-shop-name">KAIJENSON MOTOR SHOP</div>
+        <div class="receipt-doc-title">Sales Receipt</div>
 
-    <hr class="print-separator" />
+        <hr class="receipt-divider" />
 
-    <div class="print-items-section">
-        <table class="table table-bordered print-items-table">
+        <div class="receipt-meta">
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Receipt No.</span>
+                <span class="receipt-meta-value">@Model.Transaction.InvoiceNumber</span>
+            </div>
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Date</span>
+                <span class="receipt-meta-value">@Model.Transaction.TransactionDate.ToString("MMM dd, yyyy")</span>
+            </div>
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Staff</span>
+                <span class="receipt-meta-value">@staffName</span>
+            </div>
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Customer</span>
+                <span class="receipt-meta-value">@cust</span>
+            </div>
+        </div>
+
+        <hr class="receipt-divider" />
+
+        <table class="receipt-items">
             <thead>
-                <tr class="print-table-header">
-                    <th class="text-center">#</th>
-                    <th>Product</th>
-                    <th class="text-center">Qty</th>
-                    <th class="text-end">Unit Price</th>
-                    <th class="text-end">Subtotal</th>
+                <tr>
+                    <th class="ri-product">Product</th>
+                    <th class="ri-qty">Qty</th>
+                    <th class="ri-price">Price</th>
+                    <th class="ri-amt">Amount</th>
                 </tr>
             </thead>
             <tbody>
-                @{int idx = 1;}
-                @foreach (var item in Model.Items)
+                @foreach (var item in items)
                 {
                     <tr>
-                        <td class="text-center">@idx</td>
                         <td>@item.Product?.ProductName</td>
-                        <td class="text-center">@item.Quantity</td>
-                        <td class="text-end">@item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
-                        <td class="text-end">@item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
+                        <td class="ri-qty">@item.Quantity</td>
+                        <td class="ri-price">@item.UnitPrice.ToString("C", ph)</td>
+                        <td class="ri-amt">@item.Subtotal.ToString("C", ph)</td>
                     </tr>
-                    idx++;
                     if (Model.SerialNumbersByProduct != null && Model.SerialNumbersByProduct.TryGetValue(item.ProductId, out var serialList) && serialList.Any())
                     {
-                        <tr>
-                            <td colspan="5" class="ps-4"><strong>Serial Numbers:</strong> @string.Join(", ", serialList)</td>
+                        <tr class="receipt-serial-row">
+                            <td colspan="4">Serial: @string.Join(", ", serialList)</td>
                         </tr>
                     }
                 }
-                @if (!Model.Items.Any())
+                @if (!items.Any())
                 {
-                    <tr><td colspan="5" class="text-center py-3 text-muted">No items.</td></tr>
+                    <tr><td colspan="4" class="receipt-no-items">No items to display</td></tr>
                 }
             </tbody>
-            <tfoot>
-                <tr class="print-total-row">
-                    <td colspan="4" class="text-end fw-bold">Total:</td>
-                    <td class="text-end fw-bold">@Model.Transaction.TotalAmount.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
-                </tr>
-                <tr>
-                    <td colspan="4" class="text-end fw-bold">Paid:</td>
-                    <td class="text-end fw-bold">@Model.Transaction.AmountPaid.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
-                </tr>
-                <tr>
-                    <td colspan="4" class="text-end fw-bold">Change:</td>
-                    <td class="text-end fw-bold">@Model.Transaction.Change.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))</td>
-                </tr>
-            </tfoot>
         </table>
-    </div>
 
-    <div class="text-center mt-4">
-        <p>Thank you for your purchase.</p>
+        <hr class="receipt-divider receipt-divider-strong" />
+
+        <div class="receipt-totals">
+            <div class="receipt-total-row">
+                <span>Subtotal</span>
+                <span>@subtotal.ToString("C", ph)</span>
+            </div>
+            <div class="receipt-total-row receipt-grand-total">
+                <span>TOTAL</span>
+                <span>@Model.Transaction.TotalAmount.ToString("C", ph)</span>
+            </div>
+            <div class="receipt-total-row">
+                <span>Cash / Paid</span>
+                <span>@Model.Transaction.AmountPaid.ToString("C", ph)</span>
+            </div>
+            <div class="receipt-total-row">
+                <span>Change</span>
+                <span>@Model.Transaction.Change.ToString("C", ph)</span>
+            </div>
+        </div>
+
+        <hr class="receipt-divider" />
+
+        <div class="receipt-thanks">Thank you for your purchase.</div>
     </div>
 </div>
 <link rel="stylesheet" href="~/css/print.css" />

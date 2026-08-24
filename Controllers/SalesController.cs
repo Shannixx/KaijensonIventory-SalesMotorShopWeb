@@ -492,114 +492,135 @@ var viewModel = new SaleDetailsViewModel { Transaction = transaction, Items = tr
             return PartialView("_ReceiptPreview", viewModel);
         }
 
-        // Helper to generate PDF (simplified – uses QuestPDF like other controllers)
+        // Helper to generate PDF – compact 80mm thermal-style sales receipt
         private byte[] GeneratePdfBytes(SalesTransaction transaction)
         {
-            // Generate a professional printable receipt similar to Purchase Order PDF
+            var ph = System.Globalization.CultureInfo.GetCultureInfo("en-PH");
+            decimal subtotal = transaction.Items != null && transaction.Items.Any()
+                ? transaction.Items.Sum(i => i.Subtotal)
+                : transaction.TotalAmount;
+
+            var serials = _context.SerialUnits
+                .Where(s => s.SalesTransactionId == transaction.TransactionId)
+                .GroupBy(s => s.ProductId)
+                .ToDictionary(g => g.Key, g => g.Select(s => s.SerialNumber).ToList());
+
+            var cust = string.IsNullOrWhiteSpace(transaction.CustomerName) ? "Walk‑in" : transaction.CustomerName;
+
             var doc = QuestPDF.Fluent.Document.Create(container =>
             {
                 container.Page(page =>
                 {
-                    page.Size(QuestPDF.Helpers.PageSizes.A4);
-                    page.Margin(40);
-                    page.DefaultTextStyle(x => x.FontSize(10));
+                    // Narrow receipt paper (80mm) with dynamic height, like a thermal/POS receipt
+                    page.ContinuousSize(227f);   // ≈ 80mm in points
+                    page.Margin(11f);            // ≈ 4mm compact receipt margins
+                    page.DefaultTextStyle(x => x.FontSize(8).FontColor("#111111"));
 
-                    // Header – shop name and receipt title with transaction info on right
-                    page.Header().Element(c =>
-                    {
-                        c.Column(col =>
-                        {
-                            col.Item().Row(row =>
-                            {
-                                // Left side – shop name and document title
-                                row.RelativeItem().Column(left =>
-                                {
-                                    left.Item().Text("KAIJENSON MOTOR SHOP").FontSize(18).Bold();
-                                    left.Item().Text("Sales Receipt").FontSize(14);
-                                });
-                                // Right side – transaction details
-                                row.ConstantItem(250).Column(right =>
-                                {
-                                    right.Item().AlignRight().Text($"Receipt #: {transaction.InvoiceNumber}").Bold();
-                                    right.Item().AlignRight().Text($"Date: {transaction.TransactionDate:MMM dd, yyyy}");
-                                    right.Item().AlignRight().Text($"Staff: {transaction.Staff?.StaffName ?? ""}");
-                                    var cust = string.IsNullOrWhiteSpace(transaction.CustomerName) ? "Walk‑in" : transaction.CustomerName;
-                                    right.Item().AlignRight().Text($"Customer: {cust}");
-                                });
-                            });
-                            col.Item().PaddingVertical(10).LineHorizontal(1);
-                        });
-                    });
-
-                    // Content – product table and financial summary
                     page.Content().Element(c =>
                     {
                         c.Column(col =>
                         {
-                            // Product table
-col.Item().Table(table => { var serials = _context.SerialUnits.Where(s => s.SalesTransactionId == transaction.TransactionId).GroupBy(s => s.ProductId).ToDictionary(g => g.Key, g => g.Select(s => s.SerialNumber).ToList());
-                                table.ColumnsDefinition(columns =>
+                            col.Spacing(2);
+
+                            // ── Header: centered business identity ──
+                            col.Item().AlignCenter().Text("KAIJENSON MOTOR SHOP").FontSize(12.5f).Bold();
+                            col.Item().AlignCenter().Text("Sales Receipt").FontSize(9);
+                            col.Item().PaddingVertical(3).LineHorizontal(1).LineColor("#111111");
+
+                            // ── Transaction details ──
+                            col.Item().Column(meta =>
+                            {
+                                meta.Spacing(1);
+
+                                void MetaRow(string label, string value)
                                 {
-                                    columns.ConstantColumn(25); // index
-                                    columns.RelativeColumn(4); // product
-                                    columns.RelativeColumn(2); // qty
-                                    columns.RelativeColumn(2); // unit price
-                                    columns.RelativeColumn(2); // subtotal
-                                });
+                                    meta.Item().Row(r =>
+                                    {
+                                        r.ConstantItem(52).Text(label);
+                                        r.RelativeItem().AlignRight().Text(value);
+                                    });
+                                }
 
-                                // Header row styling similar to PO
-                                table.Header(header =>
-                                {
-                                    header.Cell().Background("#FF7F11").Padding(5).Text("#").FontColor("#fff").FontSize(10).Bold();
-                                    header.Cell().Background("#FF7F11").Padding(5).Text("Product").FontColor("#fff").FontSize(10).Bold();
-                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Qty").FontColor("#fff").FontSize(10).Bold();
-                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Unit Price").FontColor("#fff").FontSize(10).Bold();
-                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Subtotal").FontColor("#fff").FontSize(10).Bold();
-                                });
-
-                                int idx = 1;
-if (transaction.Items != null && transaction.Items.Any())
-                                          {
-foreach (var item in transaction.Items)
-                                                {
-                                                    table.Cell().Padding(5).Text(idx.ToString()).FontSize(10);
-                                                    table.Cell().Padding(5).Text(item.Product?.ProductName ?? "").FontSize(10);
-                                                    table.Cell().Padding(5).AlignRight().Text(item.Quantity.ToString()).FontSize(10);
-                                                    table.Cell().Padding(5).AlignRight().Text(item.UnitPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
-                                                    table.Cell().Padding(5).AlignRight().Text(item.Subtotal.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).FontSize(10);
-                                                    idx++;
-                                                    // Serial numbers row if applicable
-                                                    if (serials != null && serials.TryGetValue(item.ProductId, out var sList) && sList.Any())
-                                                    {
-                                                        table.Cell().ColumnSpan(5).Padding(5).Text($"Serial: {string.Join(", ", sList)}").FontSize(8);
-                                                    }
-                                                }
-                                          }
-                                          else
-                                          {
-                                              // No items – add a placeholder row
-                                              table.Cell().ColumnSpan(5).AlignCenter().Text("No items to display").FontSize(10);
-                                          }
-
-                                // Footer totals
-                                table.Cell().ColumnSpan(4).AlignRight().Text("Total:").Bold().FontSize(12);
-                                table.Cell().AlignRight().Text(transaction.TotalAmount.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))).Bold().FontSize(12);
+                                MetaRow("Receipt No.", transaction.InvoiceNumber);
+                                MetaRow("Date", transaction.TransactionDate.ToString("MMM dd, yyyy"));
+                                MetaRow("Staff", transaction.Staff?.StaffName ?? "");
+                                MetaRow("Customer", cust);
                             });
 
-                            // Amount paid and change
-                            col.Item().PaddingTop(10).AlignRight().Text($"Amount Paid: {transaction.AmountPaid.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))}").Bold().FontSize(12);
-                            col.Item().AlignRight().Text($"Change: {transaction.Change.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-PH"))}").Bold().FontSize(12);
+                            col.Item().PaddingVertical(3).LineHorizontal(1).LineColor("#999999");
 
-                            // Footer thank‑you message
-                            col.Item().PaddingTop(30).AlignCenter().Text("Thank you for your purchase.").FontSize(10);
+                            // ── Items ──
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.RelativeColumn(5);   // product
+                                    columns.ConstantColumn(20);  // qty
+                                    columns.ConstantColumn(46);  // unit price
+                                    columns.ConstantColumn(50);  // amount
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().BorderBottom(1).BorderColor("#111111").Text("Product").FontSize(7).Bold();
+                                    header.Cell().BorderBottom(1).BorderColor("#111111").AlignCenter().Text("Qty").FontSize(7).Bold();
+                                    header.Cell().BorderBottom(1).BorderColor("#111111").AlignRight().Text("Price").FontSize(7).Bold();
+                                    header.Cell().BorderBottom(1).BorderColor("#111111").AlignRight().Text("Amount").FontSize(7).Bold();
+                                });
+
+                                if (transaction.Items != null && transaction.Items.Any())
+                                {
+                                    foreach (var item in transaction.Items)
+                                    {
+                                        table.Cell().PaddingVertical(1.5f).Text(item.Product?.ProductName ?? "");
+                                        table.Cell().PaddingVertical(1.5f).AlignCenter().Text(item.Quantity.ToString());
+                                        table.Cell().PaddingVertical(1.5f).AlignRight().Text(item.UnitPrice.ToString("C", ph));
+                                        table.Cell().PaddingVertical(1.5f).AlignRight().Text(item.Subtotal.ToString("C", ph));
+
+                                        // Serial numbers directly beneath their product line
+                                        if (serials.TryGetValue(item.ProductId, out var sList) && sList.Any())
+                                        {
+                                            table.Cell().ColumnSpan(4).PaddingVertical(1).Text($"Serial: {string.Join(", ", sList)}").FontSize(6.5f).FontColor("#444444");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    table.Cell().ColumnSpan(4).PaddingVertical(4).AlignCenter().Text("No items to display").FontSize(8);
+                                }
+                            });
+
+                            col.Item().PaddingVertical(2).LineHorizontal(1).LineColor("#111111");
+
+                            // ── Totals ──
+                            col.Item().Column(tot =>
+                            {
+                                tot.Spacing(1);
+
+                                void TotalRow(string label, string value)
+                                {
+                                    tot.Item().Row(r =>
+                                    {
+                                        r.RelativeItem().Text(label).FontSize(8);
+                                        r.ConstantItem(60).AlignRight().Text(value).FontSize(8);
+                                    });
+                                }
+
+                                TotalRow("Subtotal", subtotal.ToString("C", ph));
+                                tot.Item().Row(r =>
+                                {
+                                    r.RelativeItem().Text("TOTAL").FontSize(10).Bold();
+                                    r.ConstantItem(60).AlignRight().Text(transaction.TotalAmount.ToString("C", ph)).FontSize(10).Bold().FontColor("#E8650A");
+                                });
+                                TotalRow("Cash / Paid", transaction.AmountPaid.ToString("C", ph));
+                                TotalRow("Change", transaction.Change.ToString("C", ph));
+                            });
+
+                            col.Item().PaddingVertical(4).LineHorizontal(1).LineColor("#111111");
+
+                            // ── Closing message ──
+                            col.Item().PaddingTop(6).AlignCenter().Text("Thank you for your purchase.").FontSize(8);
                         });
-                    });
-
-                    // Footer – page number
-                    page.Footer().AlignCenter().Text(text =>
-                    {
-                        text.Span("Page ");
-                        text.CurrentPageNumber();
                     });
                 });
             });
