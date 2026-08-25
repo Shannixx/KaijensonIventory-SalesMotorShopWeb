@@ -1,4 +1,6 @@
-﻿@{
+﻿@inject KaijensonIventory_SalesMotorShopWeb.Services.INotificationService NotificationService
+@using KaijensonIventory_SalesMotorShopWeb.Models
+@{
     string controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     string action = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
     bool IsActive(string c, string a = "") =>
@@ -13,6 +15,27 @@
                    string.Equals(staffRole, "Owner", StringComparison.OrdinalIgnoreCase);
     bool isOwnerOrManager = isAdmin ||
                    string.Equals(staffRole, "Manager", StringComparison.OrdinalIgnoreCase);
+
+    // Notification bell data (shop-wide alerts, count comes from the database)
+    int unreadNotificationCount = await NotificationService.GetUnreadCountAsync();
+    List<Notification> recentNotifications = await NotificationService.GetRecentAsync(8);
+
+    (string Label, string Icon, string Css) AlertMeta(string alertType) => alertType switch
+    {
+        "LowStock" => ("Low Stock", "bi-exclamation-triangle-fill", "kx-notif-warning"),
+        "OutOfStock" => ("Out of Stock", "bi-x-octagon-fill", "kx-notif-danger"),
+        "Reorder" => ("Reorder", "bi-arrow-repeat", "kx-notif-reorder"),
+        _ => ("Notification", "bi-bell", "kx-notif-info")
+    };
+    string TimeAgo(DateTime created)
+    {
+        var span = DateTime.Now - created;
+        if (span.TotalMinutes < 1) return "just now";
+        if (span.TotalMinutes < 60) { var m = (int)span.TotalMinutes; return m == 1 ? "1 minute ago" : $"{m} minutes ago"; }
+        if (span.TotalHours < 24) { var h = (int)span.TotalHours; return h == 1 ? "1 hour ago" : $"{h} hours ago"; }
+        if (span.TotalDays < 7) { var d = (int)span.TotalDays; return d == 1 ? "1 day ago" : $"{d} days ago"; }
+        return created.ToString("MMM dd, yyyy h:mm tt");
+    }
 }
 
 <!DOCTYPE html>
@@ -143,6 +166,68 @@
                 </button>
             </div>
             <div class="d-flex align-items-center gap-2">
+                @* ─── Notification Bell ─── *@
+                <div class="dropdown kx-bell-dropdown">
+                    <button class="btn kx-bell-btn position-relative" type="button" data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications">
+                        <i class="bi bi-bell"></i>
+                        @if (unreadNotificationCount > 0)
+                        {
+                            <span class="kx-bell-badge">@(unreadNotificationCount > 99 ? "99+" : unreadNotificationCount.ToString())</span>
+                        }
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end kx-notification-menu shadow-sm" aria-label="Notifications panel">
+                        <div class="kx-notification-head d-flex align-items-center justify-content-between">
+                            <span>Notifications</span>
+                            @if (unreadNotificationCount > 0)
+                            {
+                                <form asp-controller="Notifications" asp-action="MarkAllAsRead" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                    <button type="submit" class="kx-notification-markall">Mark all as read</button>
+                                </form>
+                            }
+                        </div>
+                        <div class="kx-notification-list">
+                            @if (recentNotifications.Any())
+                            {
+                                foreach (var n in recentNotifications)
+                                {
+                                    var meta = AlertMeta(n.AlertType);
+                                    <div class="kx-notification-item @(n.IsRead ? "is-read" : "")">
+                                        <div class="kx-notification-icon @meta.Css"><i class="bi @meta.Icon"></i></div>
+                                        <div class="kx-notification-body">
+                                            <div class="kx-notification-type">@meta.Label</div>
+                                            <div class="kx-notification-message">@n.Message</div>
+                                            <div class="kx-notification-time">@TimeAgo(n.CreatedAt)</div>
+                                            <div class="kx-notification-actions">
+                                                @if (n.ProductId.HasValue)
+                                                {
+                                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@n.ProductId.Value" class="kx-notification-link"><i class="bi bi-box-seam me-1"></i>View Product</a>
+                                                }
+                                                @if (!n.IsRead)
+                                                {
+                                                    <form asp-controller="Notifications" asp-action="MarkAsRead" asp-route-id="@n.NotificationId" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                                        <button type="submit" class="kx-notification-markread">Mark as read</button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="kx-notification-empty">
+                                    <i class="bi bi-bell-slash"></i>
+                                    <p>No notifications yet.</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
                 <div class="dropdown">
                     <button class="btn dropdown-toggle d-flex align-items-center gap-2 bg-transparent border-0" data-bs-toggle="dropdown" aria-label="User menu">
                         <div class="avatar-sm" style="background: rgba(253,126,20,0.15); color: var(--primary); font-weight: 600;">@avatarChar</div>

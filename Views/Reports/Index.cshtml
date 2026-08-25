@@ -83,8 +83,6 @@
         <div class="quick-date-range kx-quick-dates mt-3 d-flex flex-wrap gap-2">
             <button type="button" class="btn btn-sm" data-range="7">Last 7 Days</button>
             <button type="button" class="btn btn-sm" data-range="30">Last 30 Days</button>
-            <button type="button" class="btn btn-sm" data-range="210">Last 7 Months</button>
-            <button type="button" class="btn btn-sm" data-range="quarter">This Quarter</button>
         </div>
         <hr class="my-3" style="border-color: var(--border-color); opacity: .5;" />
         <div class="report-export-buttons d-flex flex-wrap gap-2">
@@ -112,7 +110,6 @@
                 <div class="kx-metric metric-card"><div class="kx-metric-icon"><i class="bi bi-cash-stack"></i></div><div class="metric-info"><p class="kx-metric-label metric-label">Total Revenue</p><h3 class="kx-metric-value metric-value">@Model.RevenueReport.TotalRevenue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</h3></div></div>
                 <div class="kx-metric metric-card"><div class="kx-metric-icon"><i class="bi bi-cart-check"></i></div><div class="metric-info"><p class="kx-metric-label metric-label">Total Qty Sold</p><h3 class="kx-metric-value metric-value">@Model.SalesPerformanceReport.TotalQuantitySold</h3></div></div>
                 <div class="kx-metric metric-card"><div class="kx-metric-icon"><i class="bi bi-receipt"></i></div><div class="metric-info"><p class="kx-metric-label metric-label">Transactions</p><h3 class="kx-metric-value metric-value">@Model.SalesPerformanceReport.TransactionCount</h3></div></div>
-                <div class="kx-metric metric-card"><div class="kx-metric-icon"><i class="bi bi-box-seam"></i></div><div class="metric-info"><p class="kx-metric-label metric-label">Inventory Value</p><h3 class="kx-metric-value metric-value">@Model.TotalInventoryValue.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</h3></div></div>
                 <div class="kx-metric metric-card"><div class="kx-metric-icon"><i class="bi bi-exclamation-triangle"></i></div><div class="metric-info"><p class="kx-metric-label metric-label">Low Stock Items</p><h3 class="kx-metric-value metric-value">@Model.LowStockItemCount</h3></div></div>
             </div>
 
@@ -353,15 +350,6 @@
                     startDate = d.toISOString().split('T')[0];
                 } else if (range === '30') {
                     const d = new Date(); d.setDate(today.getDate() - 29);
-                    startDate = d.toISOString().split('T')[0];
-                } else if (range === '210') {
-                    const d = new Date(); d.setMonth(today.getMonth() - 6);
-                    startDate = d.toISOString().split('T')[0];
-                } else if (range === 'quarter') {
-                    const month = today.getMonth();
-                    const quarter = Math.floor(month / 3);
-                    const startMonth = quarter * 3;
-                    const d = new Date(today.getFullYear(), startMonth, 1);
                     startDate = d.toISOString().split('T')[0];
                 }
                 if (startDate) {

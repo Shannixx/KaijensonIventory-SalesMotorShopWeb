@@ -188,21 +188,30 @@ if (product.IsSerialized)
 
                 product.StockStatus = StockHelper.GetStockStatus(product.QuantityOnHand);
 
-                // Notification on status transition
+                // Notification on status transition (deduplicated: an unread alert
+                // of the same type for this product is never duplicated)
                 if (originalStatus == "Available" && product.StockStatus == "Low Stock")
                 {
-                    await _notificationService.CreateAsync(product.ProductId, "LowStock",
+                    await _notificationService.CreateOnceAsync(product.ProductId, "LowStock",
                         $"Low stock for {product.ProductName} (Qty {product.QuantityOnHand}).");
                 }
                 else if (originalStatus == "Available" && product.StockStatus == "Out of Stock")
                 {
-                    await _notificationService.CreateAsync(product.ProductId, "OutOfStock",
+                    await _notificationService.CreateOnceAsync(product.ProductId, "OutOfStock",
                         $"{product.ProductName} is out of stock.");
                 }
                 else if (originalStatus == "Low Stock" && product.StockStatus == "Out of Stock")
                 {
-                    await _notificationService.CreateAsync(product.ProductId, "OutOfStock",
+                    await _notificationService.CreateOnceAsync(product.ProductId, "OutOfStock",
                         $"{product.ProductName} is out of stock.");
+                }
+
+                // Reorder is evaluated independently from the visual stock status:
+                // QuantityOnHand <= ReorderLevel means a reorder notification is needed.
+                if (product.QuantityOnHand <= product.ReorderLevel)
+                {
+                    await _notificationService.CreateOnceAsync(product.ProductId, "Reorder",
+                        $"{product.ProductName} reached reorder level. Qty: {product.QuantityOnHand}.");
                 }
             }
 

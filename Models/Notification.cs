@@ -12,7 +12,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public Product? Product { get; set; }
 
         [Required, MaxLength(30)]
-        public string AlertType { get; set; } = string.Empty; // "LowStock" or "OutOfStock"
+        public string AlertType { get; set; } = string.Empty; // "LowStock", "OutOfStock", or "Reorder"
 
         [Required, MaxLength(500)]
         public string Message { get; set; } = string.Empty;

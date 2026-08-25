@@ -104,7 +104,7 @@ else
         <div class="col-12 col-lg-8 d-flex">
             <div class="card cpo-product-card w-100 mb-0">
                 <div class="card-header cpo-card-header">
-                    <h5 class="mb-0">Products</h5>
+                    <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Products</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive cpo-table-scroll">
@@ -154,7 +154,7 @@ else
         <div class="col-12 col-lg-4 d-flex">
             <div class="card cpo-cart-card w-100 mb-0">
                 <div class="card-header cpo-card-header">
-                    <h5 class="mb-0">Current Cart</h5>
+                    <h5 class="mb-0"><i class="bi bi-cart3 me-2"></i>Current Cart</h5>
                     <span class="badge bg-primary">@cart.Items.Count @(cart.Items.Count == 1 ? "item" : "items")</span>
                 </div>
                 <div class="card-body cpo-cart-body p-0">
@@ -170,6 +170,12 @@ else
                     {
                         <div class="table-responsive cpo-table-scroll">
                             <table class="table table-striped align-middle mb-0 cpo-cart-table">
+                                <colgroup>
+                                    <col style="width:40%" />
+                                    <col style="width:18%" />
+                                    <col style="width:24%" />
+                                    <col style="width:18%" />
+                                </colgroup>
                                 <thead>
                                     <tr><th class="text-start">Product</th><th class="text-end">Price</th><th class="text-center">Qty</th><th class="text-end">Subtotal</th></tr>
                                 </thead>

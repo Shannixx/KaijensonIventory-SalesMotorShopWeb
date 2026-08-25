@@ -9,11 +9,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IActivityLogService _activityLogService;
+        private readonly INotificationService _notificationService;
 
-        public DeliveryService(ApplicationDbContext context, IActivityLogService activityLogService)
+        public DeliveryService(ApplicationDbContext context,
+                               IActivityLogService activityLogService,
+                               INotificationService notificationService)
         {
             _context = context;
             _activityLogService = activityLogService;
+            _notificationService = notificationService;
         }
 
 public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
@@ -152,6 +156,7 @@ Items = d.PurchaseOrder != null
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
+            var restockedProducts = new List<Product>();
             
             foreach (var item in order.Items.Where(i => i.Product != null))
             {
@@ -189,6 +194,9 @@ Items = d.PurchaseOrder != null
 
                 item.Product.StockStatus = StockHelper.GetStockStatus(item.Product.QuantityOnHand);
 
+                // Track restocked products for post-save notification evaluation
+                restockedProducts.Add(item.Product!);
+
                 // Update PO item received quantity
                 item.ReceivedQuantity += receiveNow;
 
@@ -219,6 +227,36 @@ Items = d.PurchaseOrder != null
 
             await _activityLogService.LogAsync("Mark Delivery", "Delivery",
                 $"Delivery for PO {order.PurchaseOrderNumber} processed. Status: {delivery.Status}", currentStaffId);
+
+            // Notification evaluation after stock increased (recovery + reorder check)
+            foreach (var product in restockedProducts)
+            {
+                int newQty = product.QuantityOnHand;
+
+                // Stock available again -> resolve stale Out of Stock alerts
+                if (newQty > 0)
+                    await _notificationService.ResolveUnreadAsync(product.ProductId, "OutOfStock");
+
+                // Still below the low stock threshold -> create/keep an active Low Stock alert (deduplicated)
+                if (newQty > 0 && newQty < StockHelper.LowStockThreshold)
+                    await _notificationService.CreateOnceAsync(product.ProductId, "LowStock",
+                        $"Low stock for {product.ProductName} (Qty {newQty}).");
+                // Back above the low stock threshold -> resolve stale Low Stock alerts
+                else if (newQty >= StockHelper.LowStockThreshold)
+                    await _notificationService.ResolveUnreadAsync(product.ProductId, "LowStock");
+
+                // Reorder: still at/below the reorder level -> keep an active alert (deduplicated);
+                // back above it -> resolve previous Reorder notifications
+                if (newQty <= product.ReorderLevel)
+                {
+                    await _notificationService.CreateOnceAsync(product.ProductId, "Reorder",
+                        $"{product.ProductName} reached reorder level. Qty: {newQty}.");
+                }
+                else
+                {
+                    await _notificationService.ResolveUnreadAsync(product.ProductId, "Reorder");
+                }
+            }
 
             await transaction.CommitAsync();
 
