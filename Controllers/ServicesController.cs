@@ -38,7 +38,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 int total = await query.CountAsync();
 
                 List<Service> services = await query
-                    .OrderBy(s => s.ServiceName)
+                    .OrderBy(s => s.ServiceId)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();

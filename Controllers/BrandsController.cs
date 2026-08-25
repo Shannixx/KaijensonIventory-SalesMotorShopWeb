@@ -62,8 +62,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 int total = await query.CountAsync();
 
                 List<Brand> brands = await query
-                    .OrderBy(b => b.Status == "Active" ? 0 : 1)
-                    .ThenBy(b => b.BrandName)
+                    .OrderBy(b => b.BrandId)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();

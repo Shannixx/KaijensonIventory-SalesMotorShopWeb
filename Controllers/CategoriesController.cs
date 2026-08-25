@@ -54,7 +54,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 int total = await query.CountAsync();
 
                 List<Category> categories = await query
-                    .OrderBy(c => c.CategoryName)
+                    .OrderBy(c => c.CategoryId)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();

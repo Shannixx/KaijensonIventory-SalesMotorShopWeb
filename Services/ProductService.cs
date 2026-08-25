@@ -46,7 +46,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             int totalPages = (int)Math.Ceiling(total / (double)pageSize);
 
             List<Product> items = await query
-                .OrderBy(p => p.ProductName)
+                .OrderBy(p => p.ProductId)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -209,21 +209,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
             if (newQty <= 0)
                 await _notificationService.CreateOnceAsync(existing.ProductId, "OutOfStock",
-                    $"{existing.ProductName} is out of stock.");
+                    $"{existing.ProductName} is out of stock.", currentStaffId);
             else
-                await _notificationService.ResolveUnreadAsync(existing.ProductId, "OutOfStock");
+                await _notificationService.ResolveUnreadAsync(existing.ProductId, "OutOfStock", currentStaffId);
 
             if (newQty > 0 && newQty < StockHelper.LowStockThreshold)
                 await _notificationService.CreateOnceAsync(existing.ProductId, "LowStock",
-                    $"Low stock for {existing.ProductName} (Qty {newQty}).");
+                    $"Low stock for {existing.ProductName} (Qty {newQty}).", currentStaffId);
             else if (newQty >= StockHelper.LowStockThreshold)
-                await _notificationService.ResolveUnreadAsync(existing.ProductId, "LowStock");
+                await _notificationService.ResolveUnreadAsync(existing.ProductId, "LowStock", currentStaffId);
 
             if (newQty <= existing.ReorderLevel)
                 await _notificationService.CreateOnceAsync(existing.ProductId, "Reorder",
-                    $"{existing.ProductName} reached reorder level. Qty: {newQty}.");
+                    $"{existing.ProductName} reached reorder level. Qty: {newQty}.", currentStaffId);
             else
-                await _notificationService.ResolveUnreadAsync(existing.ProductId, "Reorder");
+                await _notificationService.ResolveUnreadAsync(existing.ProductId, "Reorder", currentStaffId);
 
             await _activityLogService.LogAsync("Edit Product", "Product",
                 $"Product {existing.ProductName} - Qty: {existing.QuantityOnHand}, Price: {existing.Price}",

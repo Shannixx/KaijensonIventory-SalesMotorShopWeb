@@ -235,26 +235,26 @@ Items = d.PurchaseOrder != null
 
                 // Stock available again -> resolve stale Out of Stock alerts
                 if (newQty > 0)
-                    await _notificationService.ResolveUnreadAsync(product.ProductId, "OutOfStock");
+                    await _notificationService.ResolveUnreadAsync(product.ProductId, "OutOfStock", currentStaffId);
 
                 // Still below the low stock threshold -> create/keep an active Low Stock alert (deduplicated)
                 if (newQty > 0 && newQty < StockHelper.LowStockThreshold)
                     await _notificationService.CreateOnceAsync(product.ProductId, "LowStock",
-                        $"Low stock for {product.ProductName} (Qty {newQty}).");
+                        $"Low stock for {product.ProductName} (Qty {newQty}).", currentStaffId);
                 // Back above the low stock threshold -> resolve stale Low Stock alerts
                 else if (newQty >= StockHelper.LowStockThreshold)
-                    await _notificationService.ResolveUnreadAsync(product.ProductId, "LowStock");
+                    await _notificationService.ResolveUnreadAsync(product.ProductId, "LowStock", currentStaffId);
 
                 // Reorder: still at/below the reorder level -> keep an active alert (deduplicated);
                 // back above it -> resolve previous Reorder notifications
                 if (newQty <= product.ReorderLevel)
                 {
                     await _notificationService.CreateOnceAsync(product.ProductId, "Reorder",
-                        $"{product.ProductName} reached reorder level. Qty: {newQty}.");
+                        $"{product.ProductName} reached reorder level. Qty: {newQty}.", currentStaffId);
                 }
                 else
                 {
-                    await _notificationService.ResolveUnreadAsync(product.ProductId, "Reorder");
+                    await _notificationService.ResolveUnreadAsync(product.ProductId, "Reorder", currentStaffId);
                 }
             }
 

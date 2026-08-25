@@ -193,17 +193,17 @@ if (product.IsSerialized)
                 if (originalStatus == "Available" && product.StockStatus == "Low Stock")
                 {
                     await _notificationService.CreateOnceAsync(product.ProductId, "LowStock",
-                        $"Low stock for {product.ProductName} (Qty {product.QuantityOnHand}).");
+                        $"Low stock for {product.ProductName} (Qty {product.QuantityOnHand}).", staffId);
                 }
                 else if (originalStatus == "Available" && product.StockStatus == "Out of Stock")
                 {
                     await _notificationService.CreateOnceAsync(product.ProductId, "OutOfStock",
-                        $"{product.ProductName} is out of stock.");
+                        $"{product.ProductName} is out of stock.", staffId);
                 }
                 else if (originalStatus == "Low Stock" && product.StockStatus == "Out of Stock")
                 {
                     await _notificationService.CreateOnceAsync(product.ProductId, "OutOfStock",
-                        $"{product.ProductName} is out of stock.");
+                        $"{product.ProductName} is out of stock.", staffId);
                 }
 
                 // Reorder is evaluated independently from the visual stock status:
@@ -211,7 +211,7 @@ if (product.IsSerialized)
                 if (product.QuantityOnHand <= product.ReorderLevel)
                 {
                     await _notificationService.CreateOnceAsync(product.ProductId, "Reorder",
-                        $"{product.ProductName} reached reorder level. Qty: {product.QuantityOnHand}.");
+                        $"{product.ProductName} reached reorder level. Qty: {product.QuantityOnHand}.", staffId);
                 }
             }
 

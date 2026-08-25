@@ -9,6 +9,7 @@
         <p>Manage service types.</p>
     </div>
     <a asp-action="Create" class="btn btn-primary">Add Service</a>
+    <a asp-controller="ServiceJobs" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-wrench-adjustable"></i> Service Jobs</a>
 </div>
 
 @{
@@ -32,7 +33,7 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Name</th>
+                        <th>Service Name</th>
                         <th>Price</th>
                         <th>Mechanic</th>
                         <th class="actions-column">Actions</th>
@@ -54,6 +55,7 @@
                                         @Html.AntiForgeryToken()
                                         <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-service-@item.ServiceId" data-delete-record-name="@item.ServiceName" data-delete-entity-name="service" title="Delete service" aria-label="Delete service @item.ServiceName"><i class="bi bi-trash"></i></button>
                                     </form>
+                                    <a asp-controller="ServiceJobs" asp-action="Index" asp-route-serviceId="@item.ServiceId" class="btn btn-icon btn-outline-secondary" title="Service Jobs for this service" aria-label="Service jobs for @item.ServiceName"><i class="bi bi-wrench-adjustable"></i></a>
                                 </div>
                             </td>
                         </tr>

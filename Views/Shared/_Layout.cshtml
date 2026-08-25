@@ -194,7 +194,7 @@
                                 foreach (var n in recentNotifications)
                                 {
                                     var meta = AlertMeta(n.AlertType);
-                                    <div class="kx-notification-item @(n.IsRead ? "is-read" : "")">
+                                    <div class="kx-notification-item">
                                         <div class="kx-notification-icon @meta.Css"><i class="bi @meta.Icon"></i></div>
                                         <div class="kx-notification-body">
                                             <div class="kx-notification-type">@meta.Label</div>
@@ -205,14 +205,11 @@
                                                 {
                                                     <a asp-controller="Products" asp-action="Details" asp-route-id="@n.ProductId.Value" class="kx-notification-link"><i class="bi bi-box-seam me-1"></i>View Product</a>
                                                 }
-                                                @if (!n.IsRead)
-                                                {
-                                                    <form asp-controller="Notifications" asp-action="MarkAsRead" asp-route-id="@n.NotificationId" method="post" class="d-inline">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                                        <button type="submit" class="kx-notification-markread">Mark as read</button>
-                                                    </form>
-                                                }
+                                                <form asp-controller="Notifications" asp-action="MarkAsRead" asp-route-id="@n.NotificationId" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                                    <button type="submit" class="kx-notification-markread">Mark as read</button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>

@@ -20,7 +20,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
 
-            await _notificationService.MarkAsReadAsync(id);
+            await _notificationService.MarkAsReadAsync(id, GetCurrentStaffId());
             return RedirectBack(returnUrl);
         }
 
@@ -31,7 +31,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
 
-            await _notificationService.MarkAllAsReadAsync();
+            await _notificationService.MarkAllAsReadAsync(GetCurrentStaffId());
             return RedirectBack(returnUrl);
         }
 

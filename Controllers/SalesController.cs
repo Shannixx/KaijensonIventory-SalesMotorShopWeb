@@ -432,6 +432,12 @@ foreach (var kvp in SerialNumbers)
 
             if (transaction == null) return NotFound();
 
+            // Optional service-job reference connected to this sale (single FK on ServiceJob).
+            var serviceJob = await _context.ServiceJobs
+                .Include(j => j.Service)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(j => j.SalesTransactionId == id);
+
             // Load serial numbers for this transaction, grouped by product
             var serials = await _context.SerialUnits
                 .Where(s => s.SalesTransactionId == id)
@@ -441,7 +447,8 @@ foreach (var kvp in SerialNumbers)
             var viewModel = new SaleDetailsViewModel {
                 Transaction = transaction,
                 Items = transaction.Items,
-                SerialNumbersByProduct = serials
+                SerialNumbersByProduct = serials,
+                ServiceJob = serviceJob
             };
             return View(viewModel);
         }

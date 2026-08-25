@@ -151,124 +151,198 @@ a:hover { color: var(--primary-hover); }
    2. SIDEBAR
    =================================================================== */
 
-/* ==== CPO Scoped Styles ==== */
+/* ===================================================================
+   2a. CUSTOMER PURCHASE ORDER — Sales/Search (normal mode, scoped)
+   Layout: Products (flexible) | Current Cart (min 360px), full width
+   Single source of truth for all .cpo-* rules.
+   =================================================================== */
 .cpo-page {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr);
     gap: var(--space-lg);
+    align-items: stretch;
+    width: 100%;
 }
-.cpo-product-card, .cpo-cart-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
-    padding: var(--space-md);
-}
-.cpo-product-card .card-header, .cpo-cart-card .card-header {
-    margin-bottom: var(--space-sm);
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-.cpo-product-card table th, .cpo-cart-card table th {
-    background: var(--primary-light);
-    color: var(--primary);
-}
-.cpo-product-card table tr:hover {
-    background: var(--primary-subtle);
-}
-.cpo-product-card .product-name {
-    font-weight: 600;
-    font-size: 1rem;
-}
-.cpo-product-card .brand-category {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-.cpo-product-card .price {
-    color: var(--primary);
-    font-weight: 600;
-}
-.cpo-product-card .stock-badge {
-    padding: 2px 6px;
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-}
-.cpo-product-actions {
+.cpo-page > .card {
     display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-}
-.cpo-total {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary);
-    text-align: right;
-    margin-top: var(--space-md);
-}
-.cpo-serial-section {
-    margin-top: var(--space-md);
-}
-.cpo-serial-section label {
-    font-weight: 500;
-    display: block;
-    margin-bottom: var(--space-xs);
+    flex-direction: column;
+    min-width: 0;
+    margin-bottom: 0;
 }
 
-/* ==== CPO Layout Balance & HCI (Products | Current Cart) ==== */
-.cpo-page { align-items: stretch; }
-.cpo-page > [class*='col-'] { display: flex; flex-direction: column; }
-
-/* Card headers stay visually consistent across both cards */
-.cpo-page .cpo-card-header {
+/* ── Card headers (shared) ── */
+.cpo-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
-    margin-bottom: 0;
     padding: 14px 18px;
-    border-bottom: 1px solid var(--border-color);
+}
+.cpo-card-header h5 {
+    display: inline-flex;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+}
+.cpo-card-header .badge {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 12px;
+    white-space: nowrap;
 }
 
-/* ── Products card ── */
-.cpo-product-table th { white-space: nowrap; }
-.cpo-product-table th,
-.cpo-product-table td { padding: 12px 14px; }
+/* ── Products table ── */
+.cpo-product-table { font-size: 13.5px; }
+.cpo-product-table thead th {
+    font-size: 12px;
+    padding: 13px 16px;
+    white-space: nowrap;
+}
+.cpo-product-table tbody td {
+    padding: 13px 16px;
+    vertical-align: middle;
+}
+.cpo-price-cell {
+    color: var(--primary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Product row: quantity input + Add (Fitts's law targets) */
+.cpo-product-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
 .cpo-qty-input {
-    width: 84px;
-    min-width: 84px;
-    max-width: 84px;
+    width: 90px;
+    min-width: 90px;
+    max-width: 90px;
+    height: 38px;
+    min-height: 38px;
     text-align: center;
+    font-weight: 600;
 }
-.cpo-add-btn { min-width: 72px; }
-.cpo-product-actions { flex-wrap: nowrap; }
+.cpo-add-btn {
+    min-width: 70px;
+    height: 38px;
+    padding: 0 16px;
+}
 
-/* ── Current Cart card (active work area) ── */
+/* ── Current Cart (primary work area) ── */
 .cpo-cart-body {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
 }
-.cpo-cart-table th { white-space: nowrap; }
-.cpo-cart-table td { padding: 10px 12px; }
-.cpo-cart-table .text-end { white-space: nowrap; }
+.cpo-cart-table { font-size: 13px; }
+.cpo-cart-table thead th {
+    font-size: 12px;
+    padding: 13px 16px;
+    white-space: nowrap;
+}
+.cpo-cart-table tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+}
 .cpo-cart-product-cell {
-    min-width: 110px;
+    font-weight: 500;
     overflow-wrap: break-word;
     word-break: break-word;
+    min-width: 96px;
 }
+.cpo-cart-table .text-end { white-space: nowrap; }
 .cpo-cart-qty-group {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: nowrap;
     gap: 6px;
 }
-.cpo-cart-qty-value {
-    min-width: 24px;
-    text-align: center;
-    font-weight: 600;
+.cpo-cart-qty-group .btn-icon {
+    width: 36px;
+    height: 36px;
 }
-.cpo-cart-remove-form { margin-left: 4px; }
+.cpo-cart-qty-value {
+    min-width: 28px;
+    text-align: center;
+    font-weight: 700;
+}
+.cpo-cart-remove-form { margin-left: 2px; }
+
+/* Total — prominent, directly under the cart table */
+.cpo-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    border-top: 2px solid var(--border-color);
+    padding-top: 14px;
+    font-family: var(--font-heading);
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--primary);
+}
+
+/* Footer: total → serials → actions kept together (proximity) */
+.cpo-cart-footer {
+    margin-top: auto;
+    padding: 4px 20px 20px;
+}
+.cpo-serial-section {
+    margin-top: var(--space-md);
+    padding-top: var(--space-sm);
+}
+.cpo-serial-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.cpo-serial-title {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.cpo-serial-qty {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--body-bg);
+    border-radius: 100px;
+    padding: 2px 10px;
+    white-space: nowrap;
+}
+.cpo-serial-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin: 10px 0 4px;
+}
+.cpo-serial-input {
+    width: 100%;
+    min-height: 38px;
+}
+
+/* Cart actions — full-width primary + secondary */
+.cpo-proceed-btn {
+    min-height: 42px;
+    font-size: 14px;
+    margin-top: var(--space-md);
+}
+.cpo-back-btn {
+    min-height: 40px;
+    margin-top: 10px;
+}
 
 /* Empty state */
 .cpo-cart-empty {
@@ -278,12 +352,12 @@ a:hover { color: var(--primary-hover); }
     align-items: center;
     justify-content: center;
     text-align: center;
-    gap: 6px;
-    padding: 48px 20px;
-    min-height: 320px;
+    gap: 8px;
+    padding: 56px 24px;
+    min-height: 300px;
 }
 .cpo-cart-empty i {
-    font-size: 42px;
+    font-size: 44px;
     line-height: 1;
     color: #CBD5E1;
 }
@@ -295,27 +369,25 @@ a:hover { color: var(--primary-hover); }
     margin: 0;
 }
 .cpo-cart-empty-sub {
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--text-muted);
     margin: 0;
+    max-width: 320px;
 }
 
-/* Footer: total + serials + actions pinned to a stable position */
-.cpo-cart-footer {
-    margin-top: auto;
-    padding: 14px 16px 16px;
-}
-.cpo-total {
-    border-top: 2px solid var(--border-color);
-    padding-top: 12px;
-    margin-top: 0;
-    margin-bottom: 4px;
-}
-.cpo-serial-section { margin-top: var(--space-md); }
-.cpo-serial-input { margin-bottom: var(--space-sm); }
+/* Responsive: stack cards below laptop width; no fixed heights anywhere */
 @media (max-width: 991.98px) {
-    .cpo-cart-footer { margin-top: 0; }
+    .cpo-page { grid-template-columns: 1fr; }
+    .cpo-cart-footer { margin-top: var(--space-md); }
     .cpo-cart-empty { min-height: 220px; }
+}
+@media (max-width: 575.98px) {
+    .cpo-card-header { padding: 12px 14px; }
+    .cpo-product-table thead th,
+    .cpo-product-table tbody td,
+    .cpo-cart-table thead th,
+    .cpo-cart-table tbody td { padding-left: 12px; padding-right: 12px; }
+    .cpo-cart-footer { padding-left: 14px; padding-right: 14px; }
 }
 .sidebar {
     position: fixed;
@@ -1794,6 +1866,7 @@ textarea.form-control { min-height: 80px; resize: vertical; }
     .modal-backdrop {
         display: none !important;
     }
+}
 
 
 

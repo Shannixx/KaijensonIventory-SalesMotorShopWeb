@@ -1,0 +1,69 @@
+@model KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob
+@{ ViewData["Title"] = "Create Service Job"; }
+<div class="page-header">
+    <div>
+        <h1>Create Service Job</h1>
+        <p>Record a new service job for a customer.</p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+
+            <div class="mb-3">
+                <label asp-for="ServiceId" class="form-label"></label>
+                <select asp-for="ServiceId" asp-items="ViewBag.ServiceId" class="form-select">
+                    <option value="">-- Select Service --</option>
+                </select>
+                <span asp-validation-for="ServiceId" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MechanicId" class="form-label"></label>
+                <select asp-for="MechanicId" asp-items="ViewBag.MechanicId" class="form-select">
+                    <option value="">-- Select Mechanic --</option>
+                </select>
+                <span asp-validation-for="MechanicId" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="CustomerName" class="form-label"></label>
+                <input asp-for="CustomerName" class="form-control" />
+                <span asp-validation-for="CustomerName" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="2" placeholder="What work will be performed (e.g. Change Oil)?"></textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label">Work Status</label>
+                <select asp-for="Status" asp-items="ViewBag.StatusOptions" class="form-select"></select>
+                <span asp-validation-for="Status" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AmountReceived" class="form-label"></label>
+                <input asp-for="AmountReceived" class="form-control" type="number" step="0.01" min="0" value="0" />
+                <span asp-validation-for="AmountReceived" class="text-danger small"></span>
+                <div class="form-text">Payment status is computed automatically: Unpaid, Partially Paid or Paid. Amount received cannot exceed the service amount.</div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-app-primary">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    <span>Create Service Job</span>
+                </button>
+                <a asp-action="Index" class="btn btn-app-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

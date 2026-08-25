@@ -1,0 +1,169 @@
+@model IEnumerable<KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob>
+@using System.Globalization
+@{
+    ViewData["Title"] = "Service Jobs";
+    string? currentFilter = ViewData["CurrentFilter"] as string;
+    string? statusFilter = ViewData["StatusFilter"] as string;
+    string? paymentFilter = ViewData["PaymentFilter"] as string;
+    int? mechanicId = ViewData["MechanicId"] as int?;
+    int? serviceId = ViewData["ServiceId"] as int?;
+    var mechanics = ViewBag.MechanicList as List<KaijensonIventory_SalesMotorShopWeb.Models.Mechanic> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.Mechanic>();
+
+    // Build a query string that preserves every active filter for pagination links.
+    var parts = new List<string>();
+    if (!string.IsNullOrWhiteSpace(currentFilter)) parts.Add("searchString=" + Uri.EscapeDataString(currentFilter));
+    if (mechanicId.HasValue && mechanicId.Value > 0) parts.Add("mechanicId=" + mechanicId.Value);
+    if (!string.IsNullOrWhiteSpace(statusFilter)) parts.Add("statusFilter=" + Uri.EscapeDataString(statusFilter));
+    if (!string.IsNullOrWhiteSpace(paymentFilter)) parts.Add("paymentFilter=" + Uri.EscapeDataString(paymentFilter));
+    if (serviceId.HasValue && serviceId.Value > 0) parts.Add("serviceId=" + serviceId.Value);
+    string filterQuery = parts.Count > 0 ? "&" + string.Join("&", parts) : "";
+}
+<div class="page-header">
+    <div>
+        <h1>Service Jobs</h1>
+        <p>Track actual service work performed by mechanics.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Services" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-gear"></i> Service Types</a>
+        <a asp-action="Create" class="btn btn-primary">Add Service Job</a>
+    </div>
+</div>
+
+@if (ViewBag.FilteredServiceName != null)
+{
+    <div class="alert alert-info py-2">
+        Showing service jobs for service type: <strong>@ViewBag.FilteredServiceName</strong>
+        &middot; <a asp-action="Index">Clear filter</a>
+    </div>
+}
+
+<div class="search-toolbar-card">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        @if (serviceId.HasValue && serviceId.Value > 0)
+        {
+            <input type="hidden" name="serviceId" value="@serviceId.Value" />
+        }
+        <div>
+            <label class="form-label small">Search</label>
+            <input type="text" name="searchString" class="form-control" placeholder="SV number, customer or service..." value="@currentFilter" style="min-width:220px;" />
+        </div>
+        <div>
+            <label class="form-label small">Mechanic</label>
+            <select name="mechanicId" class="form-select" style="min-width:160px;">
+                <option value="">All Mechanics</option>
+                @foreach (var m in mechanics)
+                {
+                    <option value="@m.MechanicId" selected="@(mechanicId == m.MechanicId)">@m.MechanicName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="form-label small">Status</label>
+            <select name="statusFilter" class="form-select" style="min-width:150px;">
+                <option value="">All Status</option>
+                @foreach (var s in KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.AllStatuses)
+                {
+                    <option value="@s" selected="@(statusFilter == s)">@s</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="form-label small">Payment</label>
+            <select name="paymentFilter" class="form-select" style="min-width:150px;">
+                <option value="">All Payments</option>
+                @foreach (var s in KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.AllPaymentStatuses)
+                {
+                    <option value="@s" selected="@(paymentFilter == s)">@s</option>
+                }
+            </select>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn-search"><i class="bi bi-search"></i> Filter</button>
+            <a asp-action="Index" class="btn-clear"><i class="bi bi-x-lg"></i> Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Service ID</th>
+                        <th>Service Name</th>
+                        <th>Mechanic</th>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th class="text-end">Amount Received</th>
+                        <th>Service Date</th>
+                        <th class="actions-column actions-column-wide">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><span class="fw-medium">@item.ServiceJobNumber</span></td>
+                            <td>@item.Service?.ServiceName</td>
+                            <td>@item.Mechanic?.MechanicName</td>
+                            <td>@item.CustomerName</td>
+                            <td>
+                                @if (item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusStillWorking)
+                                { <span class="badge bg-warning text-dark">Still Working</span> }
+                                else if (item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished)
+                                { <span class="badge bg-success">Finished</span> }
+                            </td>
+                            <td>
+                                @if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentUnpaid)
+                                { <span class="badge bg-danger">Unpaid</span> }
+                                else if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPartiallyPaid)
+                                { <span class="badge bg-warning text-dark">Partially Paid</span> }
+                                else if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid)
+                                { <span class="badge bg-success">Paid</span> }
+                            </td>
+                            <td class="text-end">@item.AmountReceived.ToString("N2", CultureInfo.GetCultureInfo("en-PH"))</td>
+                            <td>@item.ServiceDate.ToString("MMM dd, yyyy")</td>
+                            <td class="action-cell action-cell-wide">
+                                <div class="action-buttons">
+                                    <a asp-action="Details" asp-route-id="@item.ServiceJobId" class="btn btn-icon btn-icon-view" title="View Service Job" aria-label="View @item.ServiceJobNumber"><i class="bi bi-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.ServiceJobId" class="btn btn-icon btn-icon-edit" title="Edit Service Job" aria-label="Edit @item.ServiceJobNumber"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="AddHistory" asp-route-id="@item.ServiceJobId" class="btn btn-icon btn-outline-secondary" title="Add Work History" aria-label="Add history for @item.ServiceJobNumber"><i class="bi bi-journal-plus"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="9" class="text-center py-4 text-muted">No service jobs found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@{
+    int page = (int)(ViewData["Page"] ?? 1);
+    int totalPages = (int)(ViewData["TotalPages"] ?? 1);
+}
+@if (totalPages > 1)
+{
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(page <= 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(page - 1)@filterQuery">Previous</a>
+            </li>
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == page ? "active" : "")">
+                    <a class="page-link" href="?page=@i@filterQuery">@i</a>
+                </li>
+            }
+            <li class="page-item @(page >= totalPages ? "disabled" : "")">
+                <a class="page-link" href="?page=@(page + 1)@filterQuery">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

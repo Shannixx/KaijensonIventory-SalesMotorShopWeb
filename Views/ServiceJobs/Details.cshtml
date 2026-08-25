@@ -1,0 +1,137 @@
+@model KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob
+@using System.Globalization
+@{
+    ViewData["Title"] = $"Service Job {Model.ServiceJobNumber}";
+    var histories = ViewBag.Histories as List<KaijensonIventory_SalesMotorShopWeb.Models.ServiceHistory> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.ServiceHistory>();
+    decimal serviceAmount = Model.Service?.ServicePrice ?? 0m;
+    string StatusBadge(string s) => s == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished
+        ? "<span class=\"badge bg-success\">Finished</span>"
+        : "<span class=\"badge bg-warning text-dark\">Still Working</span>";
+    string PaymentBadge(string s) => s switch
+    {
+        KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid => "<span class=\"badge bg-success\">Paid</span>",
+        KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPartiallyPaid => "<span class=\"badge bg-warning text-dark\">Partially Paid</span>",
+        _ => "<span class=\"badge bg-danger\">Unpaid</span>"
+    };
+    var ph = CultureInfo.GetCultureInfo("en-PH");
+}
+<div class="page-header">
+    <div>
+        <h1>Service Job @Model.ServiceJobNumber</h1>
+        <p>Service job information, work history and sales link.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.ServiceJobId" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit</a>
+        <a asp-action="AddHistory" asp-route-id="@Model.ServiceJobId" class="btn btn-primary"><i class="bi bi-journal-plus"></i> Add History</a>
+        <a asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Back to Service Jobs</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Service Job ID</dt>
+            <dd class="col-sm-9"><span class="fw-medium">@Model.ServiceJobNumber</span></dd>
+
+            <dt class="col-sm-3">Service Name</dt>
+            <dd class="col-sm-9">@Model.Service?.ServiceName</dd>
+
+            <dt class="col-sm-3">Mechanic</dt>
+            <dd class="col-sm-9">@Model.Mechanic?.MechanicName</dd>
+
+            <dt class="col-sm-3">Customer</dt>
+            <dd class="col-sm-9">@Model.CustomerName</dd>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <dt class="col-sm-3">Description</dt>
+                <dd class="col-sm-9">@Model.Description</dd>
+            }
+
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">@Html.Raw(StatusBadge(Model.Status))</dd>
+
+            <dt class="col-sm-3">Payment</dt>
+            <dd class="col-sm-9">@Html.Raw(PaymentBadge(Model.PaymentStatus))</dd>
+
+            <dt class="col-sm-3">Service Amount</dt>
+            <dd class="col-sm-9">@serviceAmount.ToString("C", ph)</dd>
+
+            <dt class="col-sm-3">Amount Received</dt>
+            <dd class="col-sm-9">@Model.AmountReceived.ToString("C", ph)</dd>
+
+            <dt class="col-sm-3">Service Date</dt>
+            <dd class="col-sm-9">@Model.ServiceDate.ToString("MMMM dd, yyyy")</dd>
+
+            @if (Model.CompletedDate.HasValue)
+            {
+                <dt class="col-sm-3">Completed Date</dt>
+                <dd class="col-sm-9">@Model.CompletedDate.Value.ToString("MMMM dd, yyyy")</dd>
+            }
+        </dl>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body p-0">
+        <div class="page-header m-0 p-3 pb-2 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold">SERVICE HISTORY</h5>
+            <a asp-action="AddHistory" asp-route-id="@Model.ServiceJobId" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i> Add History</a>
+        </div>
+        <div class="table-container">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Work</th>
+                        <th class="text-end">Amount</th>
+                        <th>Payment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var h in histories)
+                    {
+                        <tr>
+                            <td>@h.WorkDate.ToString("ddd, MMM dd, yyyy")</td>
+                            <td>@h.Description</td>
+                            <td class="text-end">@h.AmountReceived.ToString("N2", ph)</td>
+                            <td>@Html.Raw(PaymentBadge(h.PaymentStatus))</td>
+                        </tr>
+                    }
+                    @if (!histories.Any())
+                    {
+                        <tr><td colspan="4" class="text-center py-4 text-muted">No work history recorded yet.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">SALES</h5>
+        @if (Model.SalesTransaction != null)
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Sales Invoice</dt>
+                <dd class="col-sm-9">
+                    <a asp-controller="Sales" asp-action="Details" asp-route-id="@Model.SalesTransaction.TransactionId" class="fw-medium">
+                        #@Model.SalesTransaction.InvoiceNumber
+                    </a>
+                </dd>
+                <dt class="col-sm-3">Sale Total</dt>
+                <dd class="col-sm-9">@Model.SalesTransaction.TotalAmount.ToString("C", ph)</dd>
+                <dt class="col-sm-3">Sale Date</dt>
+                <dd class="col-sm-9">@Model.SalesTransaction.TransactionDate.ToString("MMM dd, yyyy")</dd>
+            </dl>
+        }
+        else
+        {
+            <p class="text-muted mb-3">Not yet connected to a sale.</p>
+            <a asp-action="ConnectToSale" asp-route-id="@Model.ServiceJobId" class="btn btn-app-primary">
+                <i class="bi bi-link-45deg"></i><span>Connect to Sale</span>
+            </a>
+        }
+    </div>
+</div>

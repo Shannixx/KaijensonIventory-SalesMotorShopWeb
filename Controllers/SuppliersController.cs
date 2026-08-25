@@ -38,7 +38,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 int total = await query.CountAsync();
 
                 List<Supplier> suppliers = await query
-                    .OrderBy(s => s.CompanyName)
+                    .OrderBy(s => s.SupplierId)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();

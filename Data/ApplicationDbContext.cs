@@ -26,6 +26,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<SalesItem> SalesItems => Set<SalesItem>();
         public DbSet<Notification> Notifications => Set<Notification>();
 
+        // Service job / work order entities (Service remains the catalog definition)
+        public DbSet<ServiceJob> ServiceJobs => Set<ServiceJob>();
+        public DbSet<ServiceHistory> ServiceHistories => Set<ServiceHistory>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -53,6 +57,32 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
 
             modelBuilder.Entity<Service>()
                 .HasOne(s => s.Mechanic).WithMany().HasForeignKey(s => s.MechanicId).OnDelete(DeleteBehavior.Restrict);
+
+            // ServiceJob relationships
+            modelBuilder.Entity<ServiceJob>()
+                .HasIndex(j => j.ServiceJobNumber).IsUnique();
+
+            modelBuilder.Entity<ServiceJob>()
+                .HasOne(j => j.Service).WithMany()
+                .HasForeignKey(j => j.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ServiceJob>()
+                .HasOne(j => j.Mechanic).WithMany()
+                .HasForeignKey(j => j.MechanicId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Optional link to an existing sale (single FK direction: ServiceJob -> SalesTransaction).
+            // Never cascade into sales data; unlink the job if a sale is ever removed.
+            modelBuilder.Entity<ServiceJob>()
+                .HasOne(j => j.SalesTransaction).WithMany()
+                .HasForeignKey(j => j.SalesTransactionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<ServiceHistory>()
+                .HasOne(h => h.ServiceJob).WithMany(j => j.Histories)
+                .HasForeignKey(h => h.ServiceJobId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ActivityLog>()
                 .HasOne(l => l.Staff).WithMany().HasForeignKey(l => l.StaffId).OnDelete(DeleteBehavior.SetNull);

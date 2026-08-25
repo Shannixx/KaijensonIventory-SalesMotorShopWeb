@@ -42,7 +42,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 int total = await query.CountAsync();
 
                 List<Mechanic> mechanics = await query
-                    .OrderBy(m => m.MechanicName)
+                    .OrderBy(m => m.MechanicId)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();

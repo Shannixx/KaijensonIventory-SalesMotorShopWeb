@@ -8,5 +8,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public SalesTransaction Transaction { get; set; } = null!;
         public IEnumerable<SalesItem> Items { get; set; } = System.Array.Empty<SalesItem>();
         public Dictionary<int, List<string>> SerialNumbersByProduct { get; set; } = new();
+
+        // Optional: the service job that generated (part of) this sale, if any.
+        public ServiceJob? ServiceJob { get; set; }
     }
 }
