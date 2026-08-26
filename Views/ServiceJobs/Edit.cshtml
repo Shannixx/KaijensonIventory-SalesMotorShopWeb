@@ -1,6 +1,9 @@
 @model KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob
+@using System.Globalization
 @{
     ViewData["Title"] = $"Edit {Model.ServiceJobNumber}";
+    var services = ViewBag.ServicesList as List<KaijensonIventory_SalesMotorShopWeb.Models.Service> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.Service>();
+    var ph = CultureInfo.GetCultureInfo("en-PH");
 }
 <div class="page-header">
     <div>
@@ -17,10 +20,22 @@
 
             <div class="mb-3">
                 <label asp-for="ServiceId" class="form-label"></label>
-                <select asp-for="ServiceId" asp-items="ViewBag.ServiceId" class="form-select">
+                <select asp-for="ServiceId" id="serviceSelect" class="form-select">
                     <option value="">-- Select Service --</option>
+                    @foreach (var s in services)
+                    {
+                        <option value="@s.ServiceId" data-price="@s.ServicePrice.ToString(CultureInfo.InvariantCulture)" selected="@(Model.ServiceId == s.ServiceId)">
+                            @s.ServiceName — ₱@s.ServicePrice.ToString("N2", ph)
+                        </option>
+                    }
                 </select>
                 <span asp-validation-for="ServiceId" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label for="servicePriceDisplay" class="form-label">Service Price</label>
+                <input type="text" class="form-control" id="servicePriceDisplay" value="" readonly placeholder="-- Select a service --" />
+                <div class="form-text">Price comes automatically from the selected service.</div>
             </div>
 
             <div class="mb-3">
@@ -73,4 +88,27 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var select = document.getElementById('serviceSelect');
+            var display = document.getElementById('servicePriceDisplay');
+            if (!select || !display) return;
+
+            var fmt = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
+
+            function updatePrice() {
+                var option = select.options[select.selectedIndex];
+                var price = option ? parseFloat(option.getAttribute('data-price')) : NaN;
+                if (!isNaN(price)) {
+                    display.value = fmt.format(price);
+                } else {
+                    display.value = '';
+                    display.placeholder = '-- Select a service --';
+                }
+            }
+
+            select.addEventListener('change', updatePrice);
+            updatePrice();
+        })();
+    </script>
 }

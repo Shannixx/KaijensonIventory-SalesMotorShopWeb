@@ -1,0 +1,81 @@
+@* Shared "Mark Done" payment confirmation modal for Service Jobs.
+   Trigger buttons carry data-mark-done + data-* attributes; this partial
+   fills the form and posts to ServiceJobsController.MarkDone. *@
+<div class="modal fade"
+     id="markDoneModal"
+     tabindex="-1"
+     aria-labelledby="markDoneModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-controller="ServiceJobs" asp-action="MarkDone" method="post" id="markDoneForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="markDoneModalLabel">Mark Done &mdash; Record Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-3 small">
+                        <dt class="col-sm-4">Service Job ID</dt>
+                        <dd class="col-sm-8 fw-medium" id="markDoneJobNumber">&mdash;</dd>
+
+                        <dt class="col-sm-4">Service</dt>
+                        <dd class="col-sm-8" id="markDoneServiceName">&mdash;</dd>
+
+                        <dt class="col-sm-4">Price</dt>
+                        <dd class="col-sm-8" id="markDonePrice">&mdash;</dd>
+
+                        <dt class="col-sm-4">Already Received</dt>
+                        <dd class="col-sm-8" id="markDoneReceived">&mdash;</dd>
+
+                        <dt class="col-sm-4">Remaining</dt>
+                        <dd class="col-sm-8" id="markDoneRemaining">&mdash;</dd>
+                    </dl>
+
+                    <div class="mb-2">
+                        <label class="form-label" for="markDoneAmount">Amount Paid Now (&#8369;)</label>
+                        <input type="number" step="0.01" min="0" class="form-control"
+                               id="markDoneAmount" name="amountPaid" value="0.00" required />
+                        <div class="form-text">Marking done sets the job status to Finished and stamps the completion date. Payment status is computed automatically.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" name="id" id="markDoneJobId" />
+                    <input type="hidden" name="returnUrl" id="markDoneReturnUrl" />
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-app-primary">
+                        <i class="bi bi-check-circle" aria-hidden="true"></i>
+                        <span>Mark Done</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var fmt = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
+
+        document.addEventListener('click', function (event) {
+            var trigger = event.target.closest('[data-mark-done]');
+            if (!trigger || trigger.disabled) return;
+
+            var price = parseFloat(trigger.getAttribute('data-price')) || 0;
+            var received = parseFloat(trigger.getAttribute('data-received')) || 0;
+            var remaining = Math.max(0, price - received);
+
+            document.getElementById('markDoneJobId').value = trigger.getAttribute('data-job-id') || '';
+            document.getElementById('markDoneReturnUrl').value = trigger.getAttribute('data-return-url') || window.location.pathname + window.location.search;
+            document.getElementById('markDoneJobNumber').textContent = trigger.getAttribute('data-job-number') || '';
+            document.getElementById('markDoneServiceName').textContent = trigger.getAttribute('data-service') || '';
+            document.getElementById('markDonePrice').textContent = fmt.format(price);
+            document.getElementById('markDoneReceived').textContent = fmt.format(received);
+            document.getElementById('markDoneRemaining').textContent = fmt.format(remaining);
+
+            var amountInput = document.getElementById('markDoneAmount');
+            amountInput.value = remaining.toFixed(2);
+            amountInput.max = remaining.toFixed(2);
+        });
+    })();
+</script>

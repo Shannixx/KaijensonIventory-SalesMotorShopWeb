@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
@@ -583,6 +586,293 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         }
 
         // ------------------------------------------------------------------
+        // Mark Done (payment confirmation workflow)
+        // ------------------------------------------------------------------
+
+        // POST: /ServiceJobs/MarkDone/5
+        // Finishes a "Still Working" job after recording the customer's payment.
+        // The service price always comes from the Service table, never from the browser.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkDone(int id, decimal amountPaid, string? returnUrl = null)
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
+
+            ServiceJob? job = await _context.ServiceJobs
+                .Include(j => j.Service)
+                .FirstOrDefaultAsync(j => j.ServiceJobId == id);
+            if (job == null) return NotFound();
+
+            IActionResult Back() =>
+                !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
+                    ? Redirect(returnUrl)
+                    : RedirectToAction(nameof(Details), new { id });
+
+            if (job.Status != ServiceJob.StatusStillWorking)
+            {
+                TempData["ErrorMessage"] = $"{job.ServiceJobNumber} is already finished.";
+                return Back();
+            }
+
+            decimal servicePrice = job.Service?.ServicePrice ?? 0m;
+            decimal totalAfterPayment = job.AmountReceived + amountPaid;
+
+            if (amountPaid < 0)
+            {
+                TempData["ErrorMessage"] = "Amount paid cannot be negative.";
+                return Back();
+            }
+            if (totalAfterPayment > servicePrice)
+            {
+                TempData["ErrorMessage"] =
+                    $"Amount paid cannot exceed the service price of ₱{servicePrice:N2} (₱{job.AmountReceived:N2} already received).";
+                return Back();
+            }
+
+            try
+            {
+                string originalStatus = job.Status;
+                job.AmountReceived = totalAfterPayment;
+                job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
+                job.Status = ServiceJob.StatusFinished;
+                if (job.CompletedDate == null)
+                    job.CompletedDate = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Action = "Change Service Status",
+                    Module = "Service",
+                    Description = $"{job.ServiceJobNumber}: {originalStatus} -> {job.Status}",
+                    StaffId = GetCurrentStaffId(),
+                    Timestamp = DateTime.Now
+                });
+                if (amountPaid > 0)
+                {
+                    _context.ActivityLogs.Add(new ActivityLog
+                    {
+                        Action = "Record Payment",
+                        Module = "Service",
+                        Description = $"{job.ServiceJobNumber}: received ₱{amountPaid:N2}; total ₱{job.AmountReceived:N2} of ₱{servicePrice:N2} ({job.PaymentStatus})",
+                        StaffId = GetCurrentStaffId(),
+                        Timestamp = DateTime.Now
+                    });
+                }
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = $"{job.ServiceJobNumber} marked as finished. Payment status: {job.PaymentStatus}.";
+                return Back();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while marking service job done. ServiceJobId: {ServiceJobId}", id);
+                TempData["ErrorMessage"] = "An error occurred while finishing the service job. Please try again.";
+                return Back();
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Service receipt
+        // ------------------------------------------------------------------
+
+        // GET: /ServiceJobs/PrintPreviewHtml/5
+        // HTML fragment rendered inside the shared receipt preview modal.
+        public async Task<IActionResult> PrintPreviewHtml(int id)
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
+
+            ServiceJob? job = await LoadReceiptJobAsync(id);
+            if (job == null) return NotFound();
+
+            return PartialView("_ServiceReceiptPreview", job);
+        }
+
+        // GET: /ServiceJobs/ReceiptPdf/5
+        // QuestPDF service receipt following the existing sales receipt layout.
+        public async Task<IActionResult> ReceiptPdf(int id)
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null)
+                return redirect;
+
+            ServiceJob? job = await LoadReceiptJobAsync(id);
+            if (job == null) return NotFound();
+
+            try
+            {
+                byte[] pdfBytes = GenerateServiceReceiptPdfBytes(job);
+
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Action = "Generate Service Receipt",
+                    Module = "Service",
+                    Description = $"{job.ServiceJobNumber}: generated service receipt ({job.PaymentStatus})",
+                    StaffId = GetCurrentStaffId(),
+                    Timestamp = DateTime.Now
+                });
+                await _context.SaveChangesAsync();
+
+                return File(pdfBytes, "application/pdf", $"ServiceReceipt-{job.ServiceJobNumber}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Service receipt generation failed. ServiceJobId: {ServiceJobId}", id);
+                TempData["ErrorMessage"] = "Service receipt could not be generated. You can view the details page and retry.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+        }
+
+        private async Task<ServiceJob?> LoadReceiptJobAsync(int id) =>
+            await _context.ServiceJobs
+                .Include(j => j.Service)
+                .ThenInclude(s => s!.Mechanic)
+                .Include(j => j.Mechanic)
+                .Include(j => j.Histories)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(j => j.ServiceJobId == id);
+
+        // Helper to generate PDF – compact 80mm thermal-style service receipt,
+        // mirroring the existing CPO/Sales receipt structure.
+        private static byte[] GenerateServiceReceiptPdfBytes(ServiceJob job)
+        {
+            var ph = System.Globalization.CultureInfo.GetCultureInfo("en-PH");
+            decimal total = job.Service?.ServicePrice ?? 0m;
+            decimal paid = job.AmountReceived;
+            decimal remaining = Math.Max(0m, total - paid);
+            string customer = string.IsNullOrWhiteSpace(job.CustomerName) ? "Walk-in" : job.CustomerName;
+
+            var doc = QuestPDF.Fluent.Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.ContinuousSize(227f);   // ≈ 80mm in points, like the sales receipt paper
+                    page.Margin(11f);
+                    page.DefaultTextStyle(x => x.FontSize(8).FontColor("#111111"));
+
+                    page.Content().Element(c =>
+                    {
+                        c.Column(col =>
+                        {
+                            col.Spacing(2);
+
+                            // ── Header: centered business identity ──
+                            col.Item().AlignCenter().Text("KAIJENSON MOTOR SHOP").FontSize(12.5f).Bold();
+                            col.Item().AlignCenter().Text("Service Receipt").FontSize(9);
+                            col.Item().PaddingVertical(3).LineHorizontal(1).LineColor("#111111");
+
+                            // ── Job details ──
+                            col.Item().Column(meta =>
+                            {
+                                meta.Spacing(1);
+
+                                void MetaRow(string label, string value)
+                                {
+                                    meta.Item().Row(r =>
+                                    {
+                                        r.ConstantItem(52).Text(label);
+                                        r.RelativeItem().AlignRight().Text(value);
+                                    });
+                                }
+
+                                MetaRow("Service ID", job.ServiceJobNumber);
+                                MetaRow("Service", job.Service?.ServiceName ?? "");
+                                MetaRow("Mechanic", job.Mechanic?.MechanicName ?? "");
+                                MetaRow("Customer", customer);
+                                MetaRow("Date", job.ServiceDate.ToString("MMM dd, yyyy"));
+                                MetaRow("Completed", job.CompletedDate?.ToString("MMM dd, yyyy") ?? "—");
+                            });
+
+                            col.Item().PaddingVertical(3).LineHorizontal(1).LineColor("#999999");
+
+                            // ── Work performed (history lines when present) ──
+                            List<ServiceHistory> histories = job.Histories?
+                                .OrderBy(h => h.WorkDate).ThenBy(h => h.ServiceHistoryId).ToList()
+                                ?? new List<ServiceHistory>();
+
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.RelativeColumn(6);   // work
+                                    columns.ConstantColumn(20);  // qty
+                                    columns.RelativeColumn(4);   // amount
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().BorderBottom(1).BorderColor("#111111").Text("Work").FontSize(7).Bold();
+                                    header.Cell().BorderBottom(1).BorderColor("#111111").AlignCenter().Text("Qty").FontSize(7).Bold();
+                                    header.Cell().BorderBottom(1).BorderColor("#111111").AlignRight().Text("Amount").FontSize(7).Bold();
+                                });
+
+                                if (histories.Any())
+                                {
+                                    foreach (ServiceHistory h in histories)
+                                    {
+                                        table.Cell().PaddingVertical(1.5f).Text(
+                                            $"{h.WorkDate:ddd, MMM dd}: {h.Description}");
+                                        table.Cell().PaddingVertical(1.5f).AlignCenter().Text("1");
+                                        table.Cell().PaddingVertical(1.5f).AlignRight().Text(h.AmountReceived.ToString("C", ph));
+                                    }
+                                }
+                                else
+                                {
+                                    table.Cell().PaddingVertical(1.5f).Text(job.Service?.ServiceName ?? "");
+                                    table.Cell().PaddingVertical(1.5f).AlignCenter().Text("1");
+                                    table.Cell().PaddingVertical(1.5f).AlignRight().Text(total.ToString("C", ph));
+                                }
+                            });
+
+                            col.Item().PaddingVertical(2).LineHorizontal(1).LineColor("#111111");
+
+                            // ── Payment totals ──
+                            col.Item().Column(tot =>
+                            {
+                                tot.Spacing(1);
+
+                                void TotalRow(string label, string value)
+                                {
+                                    tot.Item().Row(r =>
+                                    {
+                                        r.RelativeItem().Text(label).FontSize(8);
+                                        r.ConstantItem(60).AlignRight().Text(value).FontSize(8);
+                                    });
+                                }
+
+                                TotalRow("TOTAL", total.ToString("C", ph));
+                                tot.Item().Row(r =>
+                                {
+                                    r.RelativeItem().Text("AMOUNT PAID").FontSize(10).Bold();
+                                    r.ConstantItem(60).AlignRight().Text(paid.ToString("C", ph)).FontSize(10).Bold().FontColor("#E8650A");
+                                });
+                                TotalRow("REMAINING", remaining.ToString("C", ph));
+
+                                tot.Item().PaddingTop(2).Row(r =>
+                                {
+                                    r.RelativeItem().Text($"Status: {job.PaymentStatus.ToUpperInvariant()}").Bold();
+                                });
+                            });
+
+                            col.Item().PaddingVertical(4).LineHorizontal(1).LineColor("#111111");
+
+                            // ── Closing message ──
+                            col.Item().PaddingTop(6).AlignCenter().Text("Thank you.").FontSize(8);
+                        });
+                    });
+                });
+            });
+
+            using var ms = new System.IO.MemoryStream();
+            doc.GeneratePdf(ms);
+            return ms.ToArray();
+        }
+
+        // ------------------------------------------------------------------
         // Helpers
         // ------------------------------------------------------------------
 
@@ -698,6 +988,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             List<Service> services = await _context.Services.AsNoTracking()
                 .Include(s => s.Mechanic)
                 .OrderBy(s => s.ServiceId).ToListAsync();
+
+            ViewBag.ServicesList = services;
 
             ViewBag.ServiceId = new SelectList(
                 services.Select(s => new { s.ServiceId, Label = $"{s.ServiceName} — ₱{s.ServicePrice:N2}" }),

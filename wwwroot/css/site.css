@@ -1162,6 +1162,16 @@ a:hover { color: var(--primary-hover); }
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
+.btn-icon-done {
+    color: var(--success);
+    border-color: var(--success);
+}
+.btn-icon-done:hover {
+    background: var(--success);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
 /* ─── Cart quantity controls (global) ─── */
 .cart-quantity-controls .btn-minus {
     color: var(--danger);

@@ -43,6 +43,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Take(pageSize)
                     .ToListAsync();
 
+                // Mechanics list feeds the inline "Add Service" form on the Index page.
+                ViewBag.MechanicId = new SelectList(
+                    await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(),
+                    "MechanicId", "MechanicName");
+
                 ViewData["CurrentFilter"] = searchString;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);

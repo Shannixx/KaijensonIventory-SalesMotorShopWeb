@@ -8,6 +8,8 @@
     int? mechanicId = ViewData["MechanicId"] as int?;
     int? serviceId = ViewData["ServiceId"] as int?;
     var mechanics = ViewBag.MechanicList as List<KaijensonIventory_SalesMotorShopWeb.Models.Mechanic> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.Mechanic>();
+    var ph = CultureInfo.GetCultureInfo("en-PH");
+    string returnUrl = Context.Request.Path + Context.Request.QueryString;
 
     // Build a query string that preserves every active filter for pagination links.
     var parts = new List<string>();
@@ -94,6 +96,7 @@
                         <th>Service Name</th>
                         <th>Mechanic</th>
                         <th>Customer</th>
+                        <th class="text-end">Price</th>
                         <th>Status</th>
                         <th>Payment</th>
                         <th class="text-end">Amount Received</th>
@@ -104,13 +107,15 @@
                 <tbody>
                     @foreach (var item in Model)
                     {
+                        bool isStillWorking = item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusStillWorking;
                         <tr>
                             <td><span class="fw-medium">@item.ServiceJobNumber</span></td>
                             <td>@item.Service?.ServiceName</td>
                             <td>@item.Mechanic?.MechanicName</td>
                             <td>@item.CustomerName</td>
+                            <td class="text-end">@item.Service?.ServicePrice.ToString("N2", ph)</td>
                             <td>
-                                @if (item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusStillWorking)
+                                @if (isStillWorking)
                                 { <span class="badge bg-warning text-dark">Still Working</span> }
                                 else if (item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished)
                                 { <span class="badge bg-success">Finished</span> }
@@ -123,12 +128,33 @@
                                 else if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid)
                                 { <span class="badge bg-success">Paid</span> }
                             </td>
-                            <td class="text-end">@item.AmountReceived.ToString("N2", CultureInfo.GetCultureInfo("en-PH"))</td>
+                            <td class="text-end">@item.AmountReceived.ToString("N2", ph)</td>
                             <td>@item.ServiceDate.ToString("MMM dd, yyyy")</td>
                             <td class="action-cell action-cell-wide">
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.ServiceJobId" class="btn btn-icon btn-icon-view" title="View Service Job" aria-label="View @item.ServiceJobNumber"><i class="bi bi-eye"></i></a>
                                     <a asp-action="Edit" asp-route-id="@item.ServiceJobId" class="btn btn-icon btn-icon-edit" title="Edit Service Job" aria-label="Edit @item.ServiceJobNumber"><i class="bi bi-pencil"></i></a>
+                                    @if (isStillWorking)
+                                    {
+                                        <button type="button" class="btn btn-icon btn-icon-done"
+                                                data-mark-done
+                                                data-job-id="@item.ServiceJobId"
+                                                data-job-number="@item.ServiceJobNumber"
+                                                data-service="@item.Service?.ServiceName"
+                                                data-price="@(item.Service?.ServicePrice.ToString(CultureInfo.InvariantCulture) ?? "0")"
+                                                data-received="@item.AmountReceived.ToString(CultureInfo.InvariantCulture)"
+                                                data-return-url="@returnUrl"
+                                                title="Mark Done &amp; Record Payment"
+                                                aria-label="Mark done and record payment for @item.ServiceJobNumber">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-icon btn-icon-print"
+                                                onclick="openServiceReceiptPreview(@item.ServiceJobId, '@item.ServiceJobNumber')"
+                                                title="Service Receipt" aria-label="Service receipt for @item.ServiceJobNumber"><i class="bi bi-receipt"></i></button>
+                                    }
                                     <a asp-action="AddHistory" asp-route-id="@item.ServiceJobId" class="btn btn-icon btn-outline-secondary" title="Add Work History" aria-label="Add history for @item.ServiceJobNumber"><i class="bi bi-journal-plus"></i></a>
                                 </div>
                             </td>
@@ -167,3 +193,5 @@
         </ul>
     </nav>
 }
+
+<partial name="_MarkDoneModal" />

@@ -258,9 +258,10 @@
     }
 
 // ------------------------------------------------------------
-// SALES RECEIPT PRINT PREVIEW (global scope)
+// RECEIPT PRINT PREVIEW (global scope) — sales and service receipts
+// share the same global preview modal and print workflow.
 // ------------------------------------------------------------
-function loadReceiptPreview(saleId, invoiceNumber) {
+function loadReceiptIntoModal(fetchUrl, referenceNumber) {
     return new Promise(function (resolve, reject) {
         var modalEl = document.getElementById('receiptPreviewModal');
         if (!modalEl) { reject(new Error('Receipt preview modal not found')); return; }
@@ -268,14 +269,14 @@ function loadReceiptPreview(saleId, invoiceNumber) {
         var numberEl = document.getElementById('receiptPreviewNumber');
         var printBtn = document.getElementById('receiptPrintBtn');
 
-        numberEl.textContent = invoiceNumber;
+        numberEl.textContent = referenceNumber;
         bodyEl.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted">Loading receipt preview...</p></div>';
         if (printBtn) printBtn.disabled = true;
 
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
 
-        fetch('/Sales/PrintPreviewHtml/' + saleId)
+        fetch(fetchUrl)
             .then(function (r) {
                 if (!r.ok) throw new Error('Failed to load receipt preview');
                 return r.text();
@@ -288,7 +289,7 @@ function loadReceiptPreview(saleId, invoiceNumber) {
                         var printContent = document.getElementById('receiptPreviewBody').innerHTML;
                         var printWindow = window.open('', '_blank', 'height=600,width=800');
                         if (!printWindow) { alert('Popup blocked. Please allow popups for this site.'); return; }
-                        printWindow.document.write('<!DOCTYPE html><html><head><title>Print - ' + invoiceNumber + '</title>');
+                        printWindow.document.write('<!DOCTYPE html><html><head><title>Print - ' + referenceNumber + '</title>');
                         printWindow.document.write('<link rel="stylesheet" href="/css/print.css" />');
                         printWindow.document.write('</head><body>');
                         printWindow.document.write(printContent);
@@ -312,6 +313,10 @@ function loadReceiptPreview(saleId, invoiceNumber) {
     });
 }
 
+function loadReceiptPreview(saleId, invoiceNumber) {
+    return loadReceiptIntoModal('/Sales/PrintPreviewHtml/' + saleId, invoiceNumber);
+}
+
 window.openReceiptPreview = function (saleId, invoiceNumber) {
     loadReceiptPreview(saleId, invoiceNumber);
 };
@@ -321,6 +326,10 @@ window.openReceiptPrint = function (saleId, invoiceNumber) {
         var printBtn = document.getElementById('receiptPrintBtn');
         if (printBtn) printBtn.click();
     }).catch(function () {});
+};
+
+window.openServiceReceiptPreview = function (serviceJobId, serviceJobNumber) {
+    loadReceiptIntoModal('/ServiceJobs/PrintPreviewHtml/' + serviceJobId, serviceJobNumber).catch(function () {});
 };
 
     /* ───────────────────────────────────

@@ -1,0 +1,109 @@
+@model KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob
+@using System.Globalization
+@{
+    // Service receipt rendered with the same Kaijenson receipt-paper styles used by the CPO/Sales receipt.
+    var ph = CultureInfo.GetCultureInfo("en-PH");
+    var histories = (Model.Histories ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.ServiceHistory>())
+        .OrderBy(h => h.WorkDate).ThenBy(h => h.ServiceHistoryId).ToList();
+    decimal total = Model.Service?.ServicePrice ?? 0m;
+    decimal paid = Model.AmountReceived;
+    decimal remaining = Math.Max(0m, total - paid);
+    string customer = string.IsNullOrWhiteSpace(Model.CustomerName) ? "Walk-in" : Model.CustomerName;
+}
+<div class="print-preview-wrapper receipt-preview">
+    <div class="receipt-paper">
+        <div class="receipt-shop-name">KAIJENSON MOTOR SHOP</div>
+        <div class="receipt-doc-title">Service Receipt</div>
+
+        <hr class="receipt-divider" />
+
+        <div class="receipt-meta">
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Service ID</span>
+                <span class="receipt-meta-value">@Model.ServiceJobNumber</span>
+            </div>
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Service</span>
+                <span class="receipt-meta-value">@Model.Service?.ServiceName</span>
+            </div>
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Mechanic</span>
+                <span class="receipt-meta-value">@Model.Mechanic?.MechanicName</span>
+            </div>
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Customer</span>
+                <span class="receipt-meta-value">@customer</span>
+            </div>
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Date</span>
+                <span class="receipt-meta-value">@Model.ServiceDate.ToString("MMM dd, yyyy")</span>
+            </div>
+            @if (Model.CompletedDate.HasValue)
+            {
+                <div class="receipt-meta-row">
+                    <span class="receipt-meta-label">Completed</span>
+                    <span class="receipt-meta-value">@Model.CompletedDate.Value.ToString("MMM dd, yyyy")</span>
+                </div>
+            }
+        </div>
+
+        <hr class="receipt-divider" />
+
+        <table class="receipt-items">
+            <thead>
+                <tr>
+                    <th class="ri-product">Work</th>
+                    <th class="ri-qty">Qty</th>
+                    <th class="ri-amt">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (histories.Any())
+                {
+                    @foreach (var h in histories)
+                    {
+                        <tr>
+                            <td>@h.WorkDate.ToString("ddd, MMM dd"): @h.Description</td>
+                            <td class="ri-qty">1</td>
+                            <td class="ri-amt">@h.AmountReceived.ToString("C", ph)</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td>@Model.Service?.ServiceName</td>
+                        <td class="ri-qty">1</td>
+                        <td class="ri-amt">@total.ToString("C", ph)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <hr class="receipt-divider receipt-divider-strong" />
+
+        <div class="receipt-totals">
+            <div class="receipt-total-row">
+                <span>TOTAL</span>
+                <span>@total.ToString("C", ph)</span>
+            </div>
+            <div class="receipt-total-row receipt-grand-total">
+                <span>AMOUNT PAID</span>
+                <span>@paid.ToString("C", ph)</span>
+            </div>
+            <div class="receipt-total-row">
+                <span>REMAINING</span>
+                <span>@remaining.ToString("C", ph)</span>
+            </div>
+            <div class="receipt-total-row">
+                <span>Status</span>
+                <span>@Model.PaymentStatus.ToUpperInvariant()</span>
+            </div>
+        </div>
+
+        <hr class="receipt-divider" />
+
+        <div class="receipt-thanks">Thank you.</div>
+    </div>
+</div>
+<link rel="stylesheet" href="~/css/print.css" />
