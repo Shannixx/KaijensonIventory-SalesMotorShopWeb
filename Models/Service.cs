@@ -17,8 +17,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Service Price")]
         public decimal ServicePrice { get; set; }
 
+        // Optional: a service is created with just a name and price.
+        // Categories remain required for products only.
         [Display(Name = "Category")]
-        public int CategoryId { get; set; }
+        public int? CategoryId { get; set; }
 
         public Category? Category { get; set; }
     }

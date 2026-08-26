@@ -81,13 +81,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        public async Task<IActionResult> Create()
+        // Creation happens through the "Add Service" modal on the Index page;
+        // this GET only exists to redirect any direct navigation back to the list.
+        public IActionResult Create()
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
 
-            return View();
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
@@ -112,7 +114,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
-                    service.CategoryId = 1;
+                    // CategoryId stays null: the Add Service form only collects
+                    // ServiceName and ServicePrice, per the service catalog spec.
                     _context.Services.Add(service);
                     await _context.SaveChangesAsync();
 
@@ -135,8 +138,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     TempData["ErrorMessage"] = "An error occurred while creating the service. Please try again.";
                 }
             }
+            else if (!TempData.ContainsKey("ErrorMessage"))
+            {
+                TempData["ErrorMessage"] = "Please provide a valid service name and price.";
+            }
 
-            return View(service);
+            // No full-page create form exists: the Add Service modal on Index owns this POST.
+            return RedirectToAction(nameof(Index));
         }
 
         public async Task<IActionResult> Edit(int? id)

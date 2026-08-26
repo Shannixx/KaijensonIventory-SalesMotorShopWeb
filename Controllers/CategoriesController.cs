@@ -68,8 +68,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .ToDictionaryAsync(k => k.CategoryId, v => v.Count);
 
                 ViewData["ServiceCounts"] = await _context.Services
-                    .Where(s => categoryIds.Contains(s.CategoryId))
-                    .GroupBy(s => s.CategoryId)
+                    .Where(s => s.CategoryId != null && categoryIds.Contains(s.CategoryId.Value))
+                    .GroupBy(s => s.CategoryId!.Value)
                     .Select(g => new { CategoryId = g.Key, Count = g.Count() })
                     .ToDictionaryAsync(k => k.CategoryId, v => v.Count);
 

@@ -52,6 +52,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.PurchaseOrder).WithMany().HasForeignKey(p => p.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
 
+            // Category is optional for services: they are created with only
+            // ServiceName and ServicePrice; products still require a category.
             modelBuilder.Entity<Service>()
                 .HasOne(s => s.Category).WithMany().HasForeignKey(s => s.CategoryId).OnDelete(DeleteBehavior.Restrict);
 
