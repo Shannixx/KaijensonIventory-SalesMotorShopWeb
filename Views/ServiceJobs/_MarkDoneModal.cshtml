@@ -28,6 +28,15 @@
                         <dt class="col-sm-4">Already Received</dt>
                         <dd class="col-sm-8" id="markDoneReceived">&mdash;</dd>
 
+                        <dt class="col-sm-4">Amount Paid Now</dt>
+                        <dd class="col-sm-8" id="markDoneAmountNowDisplay">&mdash;</dd>
+
+                        <dt class="col-sm-4">Change</dt>
+                        <dd class="col-sm-8" id="markDoneChange">&mdash;</dd>
+
+                        <dt class="col-sm-4">Payment Status</dt>
+                        <dd class="col-sm-8" id="markDonePaymentStatus">&mdash;</dd>
+
                         <dt class="col-sm-4">Remaining</dt>
                         <dd class="col-sm-8" id="markDoneRemaining">&mdash;</dd>
                     </dl>
@@ -63,7 +72,6 @@
 
             var price = parseFloat(trigger.getAttribute('data-price')) || 0;
             var received = parseFloat(trigger.getAttribute('data-received')) || 0;
-            var remaining = Math.max(0, price - received);
 
             document.getElementById('markDoneJobId').value = trigger.getAttribute('data-job-id') || '';
             document.getElementById('markDoneReturnUrl').value = trigger.getAttribute('data-return-url') || window.location.pathname + window.location.search;
@@ -71,11 +79,36 @@
             document.getElementById('markDoneServiceName').textContent = trigger.getAttribute('data-service') || '';
             document.getElementById('markDonePrice').textContent = fmt.format(price);
             document.getElementById('markDoneReceived').textContent = fmt.format(received);
+
+            // Initial calculations for remaining amount.
+            var remaining = Math.max(0, price - received);
             document.getElementById('markDoneRemaining').textContent = fmt.format(remaining);
 
+            // Set the amount paid now input to the remaining amount by default.
             var amountInput = document.getElementById('markDoneAmount');
             amountInput.value = remaining.toFixed(2);
             amountInput.max = remaining.toFixed(2);
+
+            // Update other displays based on current input.
+            updateDisplays();
         });
+
+        // Recalculate change, payment status, etc. whenever the amount changes.
+        function updateDisplays() {
+            var price = parseFloat(document.getElementById('markDonePrice').textContent.replace(/[^0-9.-]+/g, '')) || 0;
+            var received = parseFloat(document.getElementById('markDoneReceived').textContent.replace(/[^0-9.-]+/g, '')) || 0;
+            var amountNow = parseFloat(document.getElementById('markDoneAmount').value) || 0;
+
+            var totalAfter = received + amountNow;
+            var change = Math.max(0, totalAfter - price);
+            var paymentStatus = (totalAfter >= price && totalAfter > 0) ? 'Paid' : 'Unpaid';
+
+            document.getElementById('markDoneAmountNowDisplay').textContent = fmt.format(amountNow);
+            document.getElementById('markDoneChange').textContent = fmt.format(change);
+            document.getElementById('markDonePaymentStatus').textContent = paymentStatus;
+            document.getElementById('markDoneRemaining').textContent = fmt.format(Math.max(0, price - totalAfter));
+        }
+
+        document.getElementById('markDoneAmount').addEventListener('input', updateDisplays);
     })();
 </script>

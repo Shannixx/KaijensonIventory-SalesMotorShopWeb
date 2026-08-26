@@ -157,23 +157,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     if (redirect != null)
                         return redirect;
 
-                    Service? service = await ValidateJobAsync(job);
-                    bool paymentValid = ModelState.IsValid ? await ValidateAmountAsync(job, service) : false;
-                    if (paymentValid)
-                        job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, service!.ServicePrice);
+                    // Validate user-submitted fields only. Server-generated fields have
+                                        // Required attributes on the model, which would cause ModelState
+                                        // to be invalid before we assign them. Remove those entries so the
+                                        // validation step focuses on the fields the client actually posts.
+                                        Service? service = await ValidateJobAsync(job);
+                                        ModelState.Remove(nameof(ServiceJob.ServiceJobNumber));
+                                        ModelState.Remove(nameof(ServiceJob.Status));
+                                        ModelState.Remove(nameof(ServiceJob.PaymentStatus));
 
-                    // Duplicate submission protection: token must be unique.
-                    if (!string.IsNullOrWhiteSpace(job.SubmissionToken))
-                    {
-                        bool tokenExists = await _context.ServiceJobs.AnyAsync(j => j.SubmissionToken == job.SubmissionToken);
-                        if (tokenExists)
-                        {
-                            // Find existing job and redirect to its details.
-                            var existing = await _context.ServiceJobs.FirstOrDefaultAsync(j => j.SubmissionToken == job.SubmissionToken);
-                            if (existing != null)
-                                return RedirectToAction(nameof(Details), new { id = existing.ServiceJobId });
-                        }
-                    }
+                                        bool paymentValid = ModelState.IsValid ? await ValidateAmountAsync(job, service) : false;
+                                        if (paymentValid && service != null)
+                                            job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, service.ServicePrice);
+
+                                        // Duplicate submission protection: token must be unique.
+                                        if (!string.IsNullOrWhiteSpace(job.SubmissionToken))
+                                        {
+                                            bool tokenExists = await _context.ServiceJobs.AnyAsync(j => j.SubmissionToken == job.SubmissionToken);
+                                            if (tokenExists)
+                                            {
+                                                // Find existing job and redirect to its details.
+                                                var existing = await _context.ServiceJobs.FirstOrDefaultAsync(j => j.SubmissionToken == job.SubmissionToken);
+                                                if (existing != null)
+                                                    return RedirectToAction(nameof(Details), new { id = existing.ServiceJobId });
+                                            }
+                                        }
 
                     if (ModelState.IsValid && service != null)
                     {
@@ -607,28 +615,37 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ? Redirect(returnUrl)
                     : RedirectToAction(nameof(Details), new { id });
 
-            if (job.Status != ServiceJob.StatusStillWorking)
-            {
-                TempData["ErrorMessage"] = $"{job.ServiceJobNumber} is already finished.";
-                return Back();
-            }
+            // Ensure job is still in progress.
+                        if (job.Status != ServiceJob.StatusStillWorking)
+                        {
+                            TempData["ErrorMessage"] = $"{job.ServiceJobNumber} is already finished.";
+                            return Back();
+                        }
 
-            decimal servicePrice = job.Service?.ServicePrice ?? 0m;
-            decimal totalAfterPayment = job.AmountReceived + amountPaid;
+                        // Validate amount paid.
+                        if (amountPaid < 0)
+                        {
+                            TempData["ErrorMessage"] = "Amount paid cannot be negative.";
+                            return Back();
+                        }
 
-            if (amountPaid < 0)
-            {
-                TempData["ErrorMessage"] = "Amount paid cannot be negative.";
-                return Back();
-            }
+                        decimal servicePrice = job.Service?.ServicePrice ?? 0m;
+                        decimal totalAfterPayment = job.AmountReceived + amountPaid;
 
-            // Overpayment is allowed – compute change amount.
-            job.AmountReceived = totalAfterPayment;
-            job.ChangeAmount = Math.Max(0m, totalAfterPayment - servicePrice);
-            job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
-            job.Status = ServiceJob.StatusFinished;
-            if (job.CompletedDate == null)
-                job.CompletedDate = DateTime.Now;
+                        // Require full payment before marking finished.
+                        if (totalAfterPayment < servicePrice)
+                        {
+                            TempData["ErrorMessage"] = "Full payment is required before completing the service.";
+                            return Back();
+                        }
+
+                        // Apply payment and compute change.
+                        job.AmountReceived = totalAfterPayment;
+                        job.ChangeAmount = Math.Max(0m, totalAfterPayment - servicePrice);
+                        job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
+                        job.Status = ServiceJob.StatusFinished;
+                        if (job.CompletedDate == null)
+                            job.CompletedDate = DateTime.Now;
 
             try
             {
