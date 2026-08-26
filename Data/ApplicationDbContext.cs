@@ -112,11 +112,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
                 .HasForeignKey(s => s.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<SerialUnit>()
-                .HasOne(s => s.SalesTransaction)
+            modelBuilder.Entity<ServiceJob>()
+                .HasOne(j => j.SalesTransaction)
                 .WithMany()
-                .HasForeignKey(s => s.SalesTransactionId)
+                .HasForeignKey(j => j.SalesTransactionId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // The staff member who created/processed the service job.
+            // Use Restrict to avoid cascade delete cycles with ActivityLog's cascade.
+            modelBuilder.Entity<ServiceJob>()
+                .HasOne(j => j.ProcessedByStaff)
+                .WithMany()
+                .HasForeignKey(j => j.ProcessedByStaffId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // DeliveryItem relationships
             modelBuilder.Entity<DeliveryItem>()

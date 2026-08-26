@@ -45,7 +45,12 @@
                     <span class="receipt-meta-value">@Model.CompletedDate.Value.ToString("MMM dd, yyyy")</span>
                 </div>
             }
+            <div class="receipt-meta-row">
+                <span class="receipt-meta-label">Processed By</span>
+                <span class="receipt-meta-value">@Model.ProcessedByStaff?.StaffName ?? "—"</span>
+            </div>
         </div>
+        <button type="button" class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer"></i> Print Receipt</button>
 
         <hr class="receipt-divider" />
 
@@ -92,8 +97,8 @@
                 <span>@paid.ToString("C", ph)</span>
             </div>
             <div class="receipt-total-row">
-                <span>REMAINING</span>
-                <span>@remaining.ToString("C", ph)</span>
+                <span>CHANGE</span>
+                <span>@Model.ChangeAmount.ToString("C", ph)</span>
             </div>
             <div class="receipt-total-row">
                 <span>Status</span>

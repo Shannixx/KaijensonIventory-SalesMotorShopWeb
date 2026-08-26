@@ -78,7 +78,8 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-app-primary">
+                <input type="hidden" asp-for="SubmissionToken" />
+                <button type="submit" class="btn btn-app-primary" id="createBtn">
                     <span>Create Service Job</span>
                 </button>
                 <a asp-action="Index" class="btn btn-app-secondary">Cancel</a>
@@ -115,6 +116,14 @@
                     select.value = this.getAttribute('data-service-id');
                     select.dispatchEvent(new Event('change'));
                 });
+            });
+
+            // Prevent duplicate submissions
+            var form = document.querySelector('form');
+            var btn = document.getElementById('createBtn');
+            form.addEventListener('submit', function () {
+                btn.disabled = true;
+                btn.innerHTML = '<span>Creating Service Job...</span>';
             });
 
             updatePrice();

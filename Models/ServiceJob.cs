@@ -65,8 +65,22 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public SalesTransaction? SalesTransaction { get; set; }
 
         [Display(Name = "Created At")]
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+                public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        public ICollection<ServiceHistory> Histories { get; set; } = new List<ServiceHistory>();
-    }
-}
+                // The staff member (authenticated user) who created this service job.
+                // Enables receipts to show "Processed By" and aligns with requirement Part 15.
+                public int ProcessedByStaffId { get; set; }
+                public Staff? ProcessedByStaff { get; set; }
+
+                // Amount of change to return to the customer. Computed server‑side.
+                [Column(TypeName = "decimal(18,2)")]
+                [Display(Name = "Change Amount")]
+                public decimal ChangeAmount { get; set; }
+
+                // Token to protect against duplicate form submissions.
+                [StringLength(64)]
+                public string SubmissionToken { get; set; } = string.Empty;
+
+                public ICollection<ServiceHistory> Histories { get; set; } = new List<ServiceHistory>();
+            }
+        }

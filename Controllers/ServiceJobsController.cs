@@ -135,7 +135,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 await PopulateCreateListsAsync();
-                return View(new ServiceJob());
+                var model = new ServiceJob();
+                // Generate a unique token for duplicate submission protection.
+                model.SubmissionToken = Guid.NewGuid().ToString();
+                return View(model);
             }
             catch (Exception ex)
             {
@@ -147,58 +150,75 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         // POST: /ServiceJobs/Create
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ServiceId,MechanicId,CustomerName,Description,AmountReceived")] ServiceJob job)
-        {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
-            Service? service = await ValidateJobAsync(job);
-            bool paymentValid = ModelState.IsValid ? await ValidateAmountAsync(job, service) : false;
-            if (paymentValid)
-                job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, service!.ServicePrice);
-
-            if (ModelState.IsValid && service != null)
-            {
-                try
+                [ValidateAntiForgeryToken]
+                public async Task<IActionResult> Create([Bind("ServiceId,MechanicId,CustomerName,Description,AmountReceived,SubmissionToken")] ServiceJob job)
                 {
-                    // New jobs always start as "Still Working"; finishing happens
-                    // through the Mark Done action, never from this form.
-                    job.Status = ServiceJob.StatusStillWorking;
-                    job.ServiceDate = DateTime.Now;
-                    job.CreatedAt = DateTime.Now;
+                    var redirect = RedirectIfNotAuthenticated();
+                    if (redirect != null)
+                        return redirect;
 
-                    // Sequential SV-### numbering, generated safely against concurrent creation.
-                    await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-                    job.ServiceJobNumber = await GenerateServiceJobNumberAsync();
-                    _context.ServiceJobs.Add(job);
-                    await _context.SaveChangesAsync();
-                    await tx.CommitAsync();
+                    Service? service = await ValidateJobAsync(job);
+                    bool paymentValid = ModelState.IsValid ? await ValidateAmountAsync(job, service) : false;
+                    if (paymentValid)
+                        job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, service!.ServicePrice);
 
-                    _context.ActivityLogs.Add(new ActivityLog
+                    // Duplicate submission protection: token must be unique.
+                    if (!string.IsNullOrWhiteSpace(job.SubmissionToken))
                     {
-                        Action = "Create Service Job",
-                        Module = "Service",
-                        Description = $"Created service job {job.ServiceJobNumber} for {job.CustomerName}",
-                        StaffId = GetCurrentStaffId(),
-                        Timestamp = DateTime.Now
-                    });
-                    await _context.SaveChangesAsync();
+                        bool tokenExists = await _context.ServiceJobs.AnyAsync(j => j.SubmissionToken == job.SubmissionToken);
+                        if (tokenExists)
+                        {
+                            // Find existing job and redirect to its details.
+                            var existing = await _context.ServiceJobs.FirstOrDefaultAsync(j => j.SubmissionToken == job.SubmissionToken);
+                            if (existing != null)
+                                return RedirectToAction(nameof(Details), new { id = existing.ServiceJobId });
+                        }
+                    }
 
-                    TempData["SuccessMessage"] = $"Service job {job.ServiceJobNumber} created successfully.";
-                    return RedirectToAction(nameof(Details), new { id = job.ServiceJobId });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error occurred while creating service job.");
-                    TempData["ErrorMessage"] = "An error occurred while creating the service job. Please try again.";
-                }
-            }
+                    if (ModelState.IsValid && service != null)
+                    {
+                        try
+                        {
+                            job.Status = ServiceJob.StatusStillWorking;
+                            job.ServiceDate = DateTime.Now;
+                            job.CreatedAt = DateTime.Now;
 
-            await PopulateCreateListsAsync(job);
-            return View(job);
-        }
+                            // Compute change amount server‑side.
+                            job.ChangeAmount = Math.Max(0m, job.AmountReceived - service.ServicePrice);
+
+                            await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                            job.ServiceJobNumber = await GenerateServiceJobNumberAsync();
+                            job.ProcessedByStaffId = GetCurrentStaffId();
+                            // Ensure token is set; generate if missing.
+                            if (string.IsNullOrWhiteSpace(job.SubmissionToken))
+                                job.SubmissionToken = Guid.NewGuid().ToString();
+                            _context.ServiceJobs.Add(job);
+                            await _context.SaveChangesAsync();
+                            await tx.CommitAsync();
+
+                            _context.ActivityLogs.Add(new ActivityLog
+                            {
+                                Action = "Create Service Job",
+                                Module = "Service",
+                                Description = $"Created service job {job.ServiceJobNumber} for {job.CustomerName}",
+                                StaffId = GetCurrentStaffId(),
+                                Timestamp = DateTime.Now
+                            });
+                            await _context.SaveChangesAsync();
+
+                            TempData["SuccessMessage"] = $"Service job {job.ServiceJobNumber} created successfully.";
+                            return RedirectToAction(nameof(Details), new { id = job.ServiceJobId });
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error occurred while creating service job.");
+                            TempData["ErrorMessage"] = "An error occurred while creating the service job. Please try again.";
+                        }
+                    }
+
+                    await PopulateCreateListsAsync(job);
+                    return View(job);
+                }
 
         // GET: /ServiceJobs/Edit/5
         public async Task<IActionResult> Edit(int? id)
@@ -271,7 +291,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     existing.CustomerName = job.CustomerName;
                     existing.Description = job.Description;
                     existing.AmountReceived = job.AmountReceived;
-                    existing.PaymentStatus = job.PaymentStatus;
+                                        // Recalculate change amount based on latest service price.
+                                        if (existing.Service != null)
+                                            existing.ChangeAmount = Math.Max(0m, existing.AmountReceived - existing.Service.ServicePrice);
+                                        // Recalculate change amount based on latest service price.
+                if (existing.Service != null)
+                    existing.ChangeAmount = Math.Max(0m, existing.AmountReceived - existing.Service.ServicePrice);
+                existing.PaymentStatus = ComputePaymentStatus(existing.AmountReceived, existing.Service?.ServicePrice ?? 0m);
 
                     // Job status is never edited here: "Still Working" jobs are
                     // finished through the Mark Done action, which stamps the
@@ -416,8 +442,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     if (paymentRecorded)
                     {
                         job.AmountReceived += history.AmountReceived;
+                        // Recalculate change amount based on service price.
+                        if (job.Service != null)
+                            job.ChangeAmount = Math.Max(0m, job.AmountReceived - job.Service.ServicePrice);
                         job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
                     }
+
 
                     await _context.SaveChangesAsync();
 
@@ -591,29 +621,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "Amount paid cannot be negative.";
                 return Back();
             }
-            if (totalAfterPayment > servicePrice)
-            {
-                TempData["ErrorMessage"] =
-                    $"Amount paid cannot exceed the service price of ₱{servicePrice:N2} (₱{job.AmountReceived:N2} already received).";
-                return Back();
-            }
+
+            // Overpayment is allowed – compute change amount.
+            job.AmountReceived = totalAfterPayment;
+            job.ChangeAmount = Math.Max(0m, totalAfterPayment - servicePrice);
+            job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
+            job.Status = ServiceJob.StatusFinished;
+            if (job.CompletedDate == null)
+                job.CompletedDate = DateTime.Now;
 
             try
             {
-                string originalStatus = job.Status;
-                job.AmountReceived = totalAfterPayment;
-                job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
-                job.Status = ServiceJob.StatusFinished;
-                if (job.CompletedDate == null)
-                    job.CompletedDate = DateTime.Now;
-
                 await _context.SaveChangesAsync();
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     Action = "Change Service Status",
                     Module = "Service",
-                    Description = $"{job.ServiceJobNumber}: {originalStatus} -> {job.Status}",
+                    Description = $"{job.ServiceJobNumber}: Still Working -> {job.Status}",
                     StaffId = GetCurrentStaffId(),
                     Timestamp = DateTime.Now
                 });
@@ -709,7 +734,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var ph = System.Globalization.CultureInfo.GetCultureInfo("en-PH");
             decimal total = job.Service?.ServicePrice ?? 0m;
             decimal paid = job.AmountReceived;
-            decimal remaining = Math.Max(0m, total - paid);
+            decimal change = job.ChangeAmount;
             string customer = string.IsNullOrWhiteSpace(job.CustomerName) ? "Walk-in" : job.CustomerName;
 
             var doc = QuestPDF.Fluent.Document.Create(container =>
@@ -816,6 +841,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                     r.RelativeItem().Text("AMOUNT PAID").FontSize(10).Bold();
                                     r.ConstantItem(60).AlignRight().Text(paid.ToString("C", ph)).FontSize(10).Bold().FontColor("#E8650A");
                                 });
+                                decimal remaining = Math.Max(0m, total - paid);
                                 TotalRow("REMAINING", remaining.ToString("C", ph));
 
                                 tot.Item().PaddingTop(2).Row(r =>
@@ -926,10 +952,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return false;
             }
 
-            if (job.AmountReceived > service.ServicePrice)
+            // Overpayment is allowed – the excess will be shown as change on the receipt.
+            if (job.AmountReceived < 0)
             {
-                ModelState.AddModelError("AmountReceived",
-                    $"Amount received cannot exceed the service amount of ₱{service.ServicePrice:N2}.");
+                ModelState.AddModelError("AmountReceived", "Amount received cannot be negative.");
                 return false;
             }
 

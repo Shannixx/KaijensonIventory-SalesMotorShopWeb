@@ -4,6 +4,7 @@ using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826154634_AddProcessedByStaffToServiceJob")]
+    partial class AddProcessedByStaffToServiceJob
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -663,9 +666,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<decimal>("AmountReceived")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("ChangeAmount")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("datetime2");
 
@@ -710,11 +710,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("SubmissionToken")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
 
                     b.HasKey("ServiceJobId");
 
@@ -962,7 +957,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.SalesTransaction", "SalesTransaction")
                         .WithMany()
-                        .HasForeignKey("SalesTransactionId");
+                        .HasForeignKey("SalesTransactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Product");
 
@@ -1001,7 +997,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "ProcessedByStaff")
                         .WithMany()
                         .HasForeignKey("ProcessedByStaffId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.SalesTransaction", "SalesTransaction")
