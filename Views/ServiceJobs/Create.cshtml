@@ -71,21 +71,14 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="Status" class="form-label">Work Status</label>
-                <select asp-for="Status" asp-items="ViewBag.StatusOptions" class="form-select"></select>
-                <span asp-validation-for="Status" class="text-danger small"></span>
-            </div>
-
-            <div class="mb-3">
                 <label asp-for="AmountReceived" class="form-label">Amount Received (₱)</label>
                 <input asp-for="AmountReceived" class="form-control" type="number" step="0.01" min="0" value="0" />
                 <span asp-validation-for="AmountReceived" class="text-danger small"></span>
-                <div class="form-text">Payment status is computed automatically: Unpaid, Partially Paid or Paid. Amount received cannot exceed the service price.</div>
+                <div class="form-text">Payment status is computed automatically: Unpaid or Paid. Amount received cannot exceed the service price.</div>
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-app-primary">
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
                     <span>Create Service Job</span>
                 </button>
                 <a asp-action="Index" class="btn btn-app-secondary">Cancel</a>

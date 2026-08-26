@@ -8,7 +8,7 @@
 <div class="page-header">
     <div>
         <h1>Edit Service Job @Model.ServiceJobNumber</h1>
-        <p>Update work status and payment information.</p>
+        <p>Update service job details and payment information.</p>
     </div>
 </div>
 
@@ -59,12 +59,15 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="Status" class="form-label">Work Status</label>
-                <select asp-for="Status" asp-items="ViewBag.StatusOptions" class="form-select"></select>
-                <span asp-validation-for="Status" class="text-danger small"></span>
+                <label asp-for="Status" class="form-label">Status</label>
+                <input type="text" class="form-control" value="@Model.Status" readonly />
                 @if (Model.CompletedDate.HasValue)
                 {
                     <div class="form-text">Completed on @Model.CompletedDate.Value.ToString("MMMM dd, yyyy"). The completion date is never overwritten.</div>
+                }
+                else
+                {
+                    <div class="form-text">New work starts as Still Working. Use Mark Done on the job list or details page to finish it.</div>
                 }
             </div>
 
@@ -72,7 +75,7 @@
                 <label asp-for="AmountReceived" class="form-label"></label>
                 <input asp-for="AmountReceived" class="form-control" type="number" step="0.01" min="0" />
                 <span asp-validation-for="AmountReceived" class="text-danger small"></span>
-                <div class="form-text">Payment status is recomputed automatically: Unpaid (&le; 0), Partially Paid (less than the service amount) or Paid (full amount).</div>
+                <div class="form-text">Payment status is recomputed automatically: Unpaid (&le; 0 or less than the service amount) or Paid (full amount).</div>
             </div>
 
             <div class="form-actions">

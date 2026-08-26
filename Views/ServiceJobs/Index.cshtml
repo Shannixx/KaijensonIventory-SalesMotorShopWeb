@@ -3,7 +3,6 @@
 @{
     ViewData["Title"] = "Service Jobs";
     string? currentFilter = ViewData["CurrentFilter"] as string;
-    string? statusFilter = ViewData["StatusFilter"] as string;
     string? paymentFilter = ViewData["PaymentFilter"] as string;
     int? mechanicId = ViewData["MechanicId"] as int?;
     int? serviceId = ViewData["ServiceId"] as int?;
@@ -15,7 +14,6 @@
     var parts = new List<string>();
     if (!string.IsNullOrWhiteSpace(currentFilter)) parts.Add("searchString=" + Uri.EscapeDataString(currentFilter));
     if (mechanicId.HasValue && mechanicId.Value > 0) parts.Add("mechanicId=" + mechanicId.Value);
-    if (!string.IsNullOrWhiteSpace(statusFilter)) parts.Add("statusFilter=" + Uri.EscapeDataString(statusFilter));
     if (!string.IsNullOrWhiteSpace(paymentFilter)) parts.Add("paymentFilter=" + Uri.EscapeDataString(paymentFilter));
     if (serviceId.HasValue && serviceId.Value > 0) parts.Add("serviceId=" + serviceId.Value);
     string filterQuery = parts.Count > 0 ? "&" + string.Join("&", parts) : "";
@@ -26,8 +24,8 @@
         <p>Track actual service work performed by mechanics.</p>
     </div>
     <div class="d-flex gap-2">
-        <a asp-controller="Services" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-gear"></i> Service Types</a>
-        <a asp-action="Create" class="btn btn-primary">Add Service Job</a>
+        <a asp-controller="Services" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-gear"></i> Back to Services</a>
+        <a asp-action="Create" class="btn btn-primary">Create Service Job</a>
     </div>
 </div>
 
@@ -56,16 +54,6 @@
                 @foreach (var m in mechanics)
                 {
                     <option value="@m.MechanicId" selected="@(mechanicId == m.MechanicId)">@m.MechanicName</option>
-                }
-            </select>
-        </div>
-        <div>
-            <label class="form-label small">Status</label>
-            <select name="statusFilter" class="form-select" style="min-width:150px;">
-                <option value="">All Status</option>
-                @foreach (var s in KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.AllStatuses)
-                {
-                    <option value="@s" selected="@(statusFilter == s)">@s</option>
                 }
             </select>
         </div>
@@ -121,12 +109,10 @@
                                 { <span class="badge bg-success">Finished</span> }
                             </td>
                             <td>
-                                @if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentUnpaid)
-                                { <span class="badge bg-danger">Unpaid</span> }
-                                else if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPartiallyPaid)
-                                { <span class="badge bg-warning text-dark">Partially Paid</span> }
-                                else if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid)
+                                @if (item.PaymentStatus == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid)
                                 { <span class="badge bg-success">Paid</span> }
+                                else
+                                { <span class="badge bg-danger">Unpaid</span> }
                             </td>
                             <td class="text-end">@item.AmountReceived.ToString("N2", ph)</td>
                             <td>@item.ServiceDate.ToString("MMM dd, yyyy")</td>
@@ -162,7 +148,7 @@
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="9" class="text-center py-4 text-muted">No service jobs found.</td></tr>
+                        <tr><td colspan="10" class="text-center py-4 text-muted">No service jobs found.</td></tr>
                     }
                 </tbody>
             </table>

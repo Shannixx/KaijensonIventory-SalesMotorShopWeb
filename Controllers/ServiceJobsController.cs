@@ -23,7 +23,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         // GET: /ServiceJobs
         public async Task<IActionResult> Index(string? searchString, int? mechanicId,
-            string? statusFilter, string? paymentFilter, int? serviceId, int page = 1)
+            string? paymentFilter, int? serviceId, int page = 1)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -52,9 +52,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (mechanicId.HasValue && mechanicId.Value > 0)
                     query = query.Where(j => j.MechanicId == mechanicId.Value);
 
-                if (!string.IsNullOrWhiteSpace(statusFilter))
-                    query = query.Where(j => j.Status == statusFilter);
-
                 if (!string.IsNullOrWhiteSpace(paymentFilter))
                     query = query.Where(j => j.PaymentStatus == paymentFilter);
 
@@ -70,7 +67,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 ViewBag.ServiceJobsCount = total;
                 ViewData["CurrentFilter"] = searchString;
-                ViewData["StatusFilter"] = statusFilter;
                 ViewData["PaymentFilter"] = paymentFilter;
                 ViewData["ServiceId"] = serviceId;
                 ViewData["Page"] = page;
@@ -152,7 +148,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         // POST: /ServiceJobs/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ServiceId,MechanicId,CustomerName,Description,Status,AmountReceived")] ServiceJob job)
+        public async Task<IActionResult> Create([Bind("ServiceId,MechanicId,CustomerName,Description,AmountReceived")] ServiceJob job)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -167,11 +163,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
-                    job.Status = IsValidStatus(job.Status) ? job.Status : ServiceJob.StatusStillWorking;
+                    // New jobs always start as "Still Working"; finishing happens
+                    // through the Mark Done action, never from this form.
+                    job.Status = ServiceJob.StatusStillWorking;
                     job.ServiceDate = DateTime.Now;
                     job.CreatedAt = DateTime.Now;
-                    if (job.Status == ServiceJob.StatusFinished)
-                        job.CompletedDate = DateTime.Now;
 
                     // Sequential SV-### numbering, generated safely against concurrent creation.
                     await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
@@ -235,7 +231,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         // POST: /ServiceJobs/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ServiceJobId,ServiceId,MechanicId,CustomerName,Description,Status,AmountReceived")] ServiceJob job)
+        public async Task<IActionResult> Edit(int id, [Bind("ServiceJobId,ServiceId,MechanicId,CustomerName,Description,AmountReceived")] ServiceJob job)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -268,7 +264,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ServiceJob? existing = await _context.ServiceJobs.FindAsync(id);
                     if (existing == null) return NotFound();
 
-                    string originalStatus = existing.Status;
                     decimal originalAmount = existing.AmountReceived;
 
                     existing.ServiceId = job.ServiceId;
@@ -278,32 +273,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     existing.AmountReceived = job.AmountReceived;
                     existing.PaymentStatus = job.PaymentStatus;
 
-                    // Completion rule: stamp CompletedDate only on the first transition to Finished.
-                    // Reverting to Still Working never creates or overwrites a CompletedDate.
-                    existing.Status = IsValidStatus(job.Status) ? job.Status : existing.Status;
-                    if (existing.Status == ServiceJob.StatusFinished &&
-                        originalStatus != ServiceJob.StatusFinished &&
-                        existing.CompletedDate == null)
-                    {
-                        existing.CompletedDate = DateTime.Now;
-                    }
+                    // Job status is never edited here: "Still Working" jobs are
+                    // finished through the Mark Done action, which stamps the
+                    // CompletedDate once and never overwrites it.
 
                     await _context.SaveChangesAsync();
 
-                    bool statusChanged = originalStatus != existing.Status;
                     bool amountChanged = originalAmount != existing.AmountReceived;
 
-                    if (statusChanged)
-                    {
-                        _context.ActivityLogs.Add(new ActivityLog
-                        {
-                            Action = "Change Service Status",
-                            Module = "Service",
-                            Description = $"{existing.ServiceJobNumber}: {originalStatus} -> {existing.Status}",
-                            StaffId = GetCurrentStaffId(),
-                            Timestamp = DateTime.Now
-                        });
-                    }
                     if (amountChanged)
                     {
                         _context.ActivityLogs.Add(new ActivityLog
@@ -401,26 +378,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ModelState.AddModelError("PaymentStatus", "Please select a valid payment status.");
 
             // Payment consistency: the recorded amount must agree with the declared
-            // status, and the running job total must never exceed the service price.
+            // status (Unpaid or Paid only), and the running job total must never
+            // exceed the service price.
             decimal servicePrice = job.Service?.ServicePrice ?? 0m;
             if (ModelState.IsValid && IsValidPaymentStatus(history.PaymentStatus))
             {
-                decimal remainingBalance = Math.Max(0m, servicePrice - job.AmountReceived);
-
                 switch (history.PaymentStatus)
                 {
                     case ServiceJob.PaymentUnpaid when history.AmountReceived != 0:
                         ModelState.AddModelError("AmountReceived",
                             "An unpaid work entry must record an amount of ₱0.00.");
-                        break;
-                    case ServiceJob.PaymentPartiallyPaid when history.AmountReceived <= 0:
-                        ModelState.AddModelError("AmountReceived",
-                            "A partially paid work entry must record an amount greater than ₱0.00.");
-                        break;
-                    case ServiceJob.PaymentPartiallyPaid:
-                        if (history.AmountReceived >= remainingBalance)
-                            ModelState.AddModelError("AmountReceived",
-                                $"A partially paid work entry must record an amount greater than ₱0.00 and less than the remaining balance of ₱{remainingBalance:N2}.");
                         break;
                     case ServiceJob.PaymentPaid when history.AmountReceived <= 0:
                         ModelState.AddModelError("AmountReceived",
@@ -730,7 +697,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         private async Task<ServiceJob?> LoadReceiptJobAsync(int id) =>
             await _context.ServiceJobs
                 .Include(j => j.Service)
-                .ThenInclude(s => s!.Mechanic)
                 .Include(j => j.Mechanic)
                 .Include(j => j.Histories)
                 .AsNoTracking()
@@ -903,20 +869,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         private static string ComputePaymentStatus(decimal amountReceived, decimal serviceAmount)
         {
+            // Two payment states only: Unpaid until the full service price is received.
             if (amountReceived <= 0)
                 return ServiceJob.PaymentUnpaid;
             if (amountReceived < serviceAmount)
-                return ServiceJob.PaymentPartiallyPaid;
+                return ServiceJob.PaymentUnpaid;
             return ServiceJob.PaymentPaid;
         }
-
-        private static bool IsValidStatus(string? status) =>
-            ServiceJob.AllStatuses.Contains(status);
 
         private static bool IsValidPaymentStatus(string? status) =>
             ServiceJob.AllPaymentStatuses.Contains(status);
 
-        /// <summary>Shared validations: service/mechanic exist, customer required, status valid.</summary>
+        /// <summary>Shared validations: service/mechanic exist and customer required. Job status is managed server-side (default Still Working, finished only via Mark Done).</summary>
         private async Task<Service?> ValidateJobAsync(ServiceJob job)
         {
             if (string.IsNullOrWhiteSpace(job.CustomerName))
@@ -926,9 +890,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             if (job.Description != null && job.Description.Length > 500)
                 ModelState.AddModelError("Description", "Description must be 500 characters or fewer.");
-
-            if (!IsValidStatus(job.Status))
-                ModelState.AddModelError("Status", "Please select a valid work status.");
 
             Service? service = null;
             if (job.ServiceId <= 0)
@@ -986,7 +947,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         private async Task PopulateCreateListsAsync(ServiceJob? job = null)
         {
             List<Service> services = await _context.Services.AsNoTracking()
-                .Include(s => s.Mechanic)
                 .OrderBy(s => s.ServiceId).ToListAsync();
 
             ViewBag.ServicesList = services;
@@ -998,10 +958,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
                 .OrderBy(m => m.MechanicName).ToListAsync();
             ViewBag.MechanicId = new SelectList(mechanics, "MechanicId", "MechanicName", job?.MechanicId);
-
-            ViewBag.StatusOptions = new SelectList(
-                ServiceJob.AllStatuses.Select(s => new { Value = s, Text = s }),
-                "Value", "Text", job?.Status);
         }
     }
 }

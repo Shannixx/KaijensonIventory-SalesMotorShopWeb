@@ -1,7 +1,6 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
@@ -27,7 +26,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 int pageSize = 10;
                 IQueryable<Service> query = _context.Services
-                    .Include(s => s.Mechanic)
                     .AsNoTracking();
 
                 if (!string.IsNullOrWhiteSpace(searchString))
@@ -42,11 +40,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();
-
-                // Mechanics list feeds the inline "Add Service" form on the Index page.
-                ViewBag.MechanicId = new SelectList(
-                    await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(),
-                    "MechanicId", "MechanicName");
 
                 ViewData["CurrentFilter"] = searchString;
                 ViewData["Page"] = page;
@@ -73,7 +66,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 Service? service = await _context.Services
-                    .Include(s => s.Mechanic)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.ServiceId == id);
 
@@ -95,22 +87,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (redirect != null)
                 return redirect;
 
-            try
-            {
-                ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName");
-                return View();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while loading create service form.");
-                TempData["ErrorMessage"] = "An error occurred while loading the create service form. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
+            return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice,MechanicId")] Service service)
+        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice")] Service service)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -124,10 +106,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (service.ServicePrice < 0)
             {
                 ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
-            }
-            if (service.MechanicId <= 0)
-            {
-                ModelState.AddModelError("MechanicId", "Please select a mechanic.");
             }
 
             if (ModelState.IsValid)
@@ -158,7 +136,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
             }
 
-            ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
             return View(service);
         }
 
@@ -175,8 +152,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Service? service = await _context.Services.FindAsync(id);
                 if (service == null) return NotFound();
 
-            ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
-            return View(service);
+                return View(service);
             }
             catch (Exception ex)
             {
@@ -188,7 +164,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice,MechanicId")] Service service)
+        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice")] Service service)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -205,10 +181,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
             }
-            if (service.MechanicId <= 0)
-            {
-                ModelState.AddModelError("MechanicId", "Please select a mechanic.");
-            }
 
             if (ModelState.IsValid)
             {
@@ -218,7 +190,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     if (existing == null) return NotFound();
                     existing.ServiceName = service.ServiceName;
                     existing.ServicePrice = service.ServicePrice;
-                    existing.MechanicId = service.MechanicId;
                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
@@ -241,7 +212,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         return NotFound();
 
                     TempData["ErrorMessage"] = "The service was modified by another user. Please try again.";
-                ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
                     return View(service);
                 }
                 catch (Exception ex)
@@ -251,7 +221,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
             }
 
-            ViewBag.MechanicId = new SelectList(await _context.Mechanics.AsNoTracking().OrderBy(m => m.MechanicName).ToListAsync(), "MechanicId", "MechanicName", service.MechanicId);
             return View(service);
         }
 
@@ -270,7 +239,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 // So we don't check for related ServiceTransactions when deleting a Service
 
                 Service? service = await _context.Services
-                    .Include(s => s.Mechanic)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.ServiceId == id);
 

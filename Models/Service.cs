@@ -20,10 +20,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Category")]
         public int CategoryId { get; set; }
 
-        [Display(Name = "Mechanic")]
-        public int MechanicId { get; set; }
-
         public Category? Category { get; set; }
-        public Mechanic? Mechanic { get; set; }
     }
 }

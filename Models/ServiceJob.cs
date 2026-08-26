@@ -12,14 +12,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public const string StatusStillWorking = "Still Working";
         public const string StatusFinished = "Finished";
         public const string PaymentUnpaid = "Unpaid";
-        public const string PaymentPartiallyPaid = "Partially Paid";
         public const string PaymentPaid = "Paid";
 
         public static readonly string[] AllStatuses =
             { StatusStillWorking, StatusFinished };
 
         public static readonly string[] AllPaymentStatuses =
-            { PaymentUnpaid, PaymentPartiallyPaid, PaymentPaid };
+            { PaymentUnpaid, PaymentPaid };
 
         [Key]
         public int ServiceJobId { get; set; }

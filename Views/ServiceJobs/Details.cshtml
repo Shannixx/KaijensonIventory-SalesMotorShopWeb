@@ -9,12 +9,9 @@
     string StatusBadge(string s) => s == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished
         ? "<span class=\"badge bg-success\">Finished</span>"
         : "<span class=\"badge bg-warning text-dark\">Still Working</span>";
-    string PaymentBadge(string s) => s switch
-    {
-        KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid => "<span class=\"badge bg-success\">Paid</span>",
-        KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPartiallyPaid => "<span class=\"badge bg-warning text-dark\">Partially Paid</span>",
-        _ => "<span class=\"badge bg-danger\">Unpaid</span>"
-    };
+    string PaymentBadge(string s) => s == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid
+        ? "<span class=\"badge bg-success\">Paid</span>"
+        : "<span class=\"badge bg-danger\">Unpaid</span>";
     var ph = CultureInfo.GetCultureInfo("en-PH");
 }
 <div class="page-header">

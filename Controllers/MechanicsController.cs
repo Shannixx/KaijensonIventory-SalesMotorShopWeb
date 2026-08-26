@@ -254,10 +254,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Mechanic? mechanic = await _context.Mechanics.AsNoTracking().FirstOrDefaultAsync(m => m.MechanicId == id);
                 if (mechanic == null) return NotFound();
 
-                bool hasServices = await _context.Services.AnyAsync(s => s.MechanicId == id);
+                bool hasServices = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
                 if (hasServices)
                 {
-                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service records.";
+                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service job records.";
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -284,10 +284,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Mechanic? mechanic = await _context.Mechanics.FindAsync(id);
                 if (mechanic == null) return NotFound();
 
-                bool hasServices = await _context.Services.AnyAsync(s => s.MechanicId == id);
+                bool hasServices = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
                 if (hasServices)
                 {
-                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service records.";
+                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service job records.";
                     return RedirectToAction(nameof(Index));
                 }
 

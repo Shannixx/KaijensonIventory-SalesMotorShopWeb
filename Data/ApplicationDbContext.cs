@@ -55,9 +55,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<Service>()
                 .HasOne(s => s.Category).WithMany().HasForeignKey(s => s.CategoryId).OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Service>()
-                .HasOne(s => s.Mechanic).WithMany().HasForeignKey(s => s.MechanicId).OnDelete(DeleteBehavior.Restrict);
-
             // ServiceJob relationships
             modelBuilder.Entity<ServiceJob>()
                 .HasIndex(j => j.ServiceJobNumber).IsUnique();
