@@ -201,7 +201,41 @@
             </div>
         </div>
 
-        @* ═══════════ INVENTORY REPORT SECTION ═══════════ *@
+        @* Service Transactions (new section) *@
+            <div class="kx-section report-section-card mb-3">
+                <div class="kx-section-head card-header"><i class="bi bi-tools"></i><h5>Service Transactions</h5></div>
+                <div class="kx-section-body card-body">
+                    <div class="mb-3">
+                        <input type="text" id="serviceSearch" class="form-control kx-search-input" placeholder="Search service name, ID, customer..." />
+                    </div>
+                    <div class="kx-table-wrap table-responsive"><table class="table kx-table table-sm table-bordered mb-0">
+                        <thead><tr><th>Service Name</th><th>Service ID</th><th>Job ID</th><th>Customer</th><th class="text-end">Amount Paid</th><th class="text-end">Change</th><th>Date</th><th>Status</th></tr></thead>
+                        <tbody>
+                        @if (Model.ServiceTransactions != null && Model.ServiceTransactions.Any())
+                        {
+                            foreach (var st in Model.ServiceTransactions)
+                            {
+                                <tr>
+                                    <td>@st.ServiceName</td>
+                                    <td>@st.ServiceId</td>
+                                    <td>@st.ServiceJobNumber</td>
+                                    <td>@st.CustomerName</td>
+                                    <td class="text-end">@st.AmountPaid.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                                    <td class="text-end">@st.ChangeAmount.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
+                                    <td>@st.ServiceDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@st.PaymentStatus</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="8" class="kx-empty">No service transactions found for the selected filters.</td></tr>
+                        }
+                        </tbody>
+                    </table></div>
+                </div>
+            </div>
+            @* ═══════════ INVENTORY REPORT SECTION ═══════════ *@
         <div class="tab-pane kx-pane kx-hidden" id="inventoryTab">
             @* Formal centered report header + metadata *@
             <div class="kx-detail-header text-center">
@@ -441,6 +475,27 @@
                     document.querySelector('#inventoryTab tbody').appendChild(noMatchRow);
                 }
                 noMatchRow.style.display = (visibleCount === 0 && term !== '') ? '' : 'none';
+            });
+        }
+        // E. Service Search (new)
+        const serviceSearch = document.getElementById('serviceSearch');
+        if (serviceSearch) {
+            serviceSearch.addEventListener('input', function () {
+                const term = this.value.trim().toLowerCase();
+                const rows = document.querySelectorAll('#salesTab tbody tr');
+                let visibleCount = 0;
+                rows.forEach(row => {
+                    // Service rows have 8 cells; skip other rows
+                    if (row.children.length < 8) return;
+                    const serviceName = row.cells[0].textContent.toLowerCase();
+                    const serviceId = row.cells[1].textContent.toLowerCase();
+                    const jobId = row.cells[2].textContent.toLowerCase();
+                    const customer = row.cells[3].textContent.toLowerCase();
+                    const match = serviceName.includes(term) || serviceId.includes(term) || jobId.includes(term) || customer.includes(term);
+                    row.style.display = match ? '' : 'none';
+                    if (match) visibleCount++;
+                });
+                // optional no-match handling could be added
             });
         }
         // D. Revenue Trend Chart (existing data, Kaijenson palette)

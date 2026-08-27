@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using KaijensonIventory_SalesMotorShopWeb.Services;
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
+using KaijensonIventory_SalesMotorShopWeb.Models;
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Fluent;
@@ -116,14 +117,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             sb.AppendLine();
             // Low Stock Alerts
-            sb.AppendLine("Low Stock Alerts");
-            sb.AppendLine(string.Join(",", new[] { "Product", "Qty On Hand", "Reorder Level", "Status" }));
-            foreach (var a in viewModel.LowStockAlerts)
-            {
-                sb.AppendLine(string.Join(",", new[] { Escape(a.ProductName), a.QuantityOnHand.ToString(), a.ReorderLevel.ToString(), Escape(a.StockStatus) }));
-            }
-            sb.AppendLine();
-            // Stock Movements
+                        sb.AppendLine("Low Stock Alerts");
+                        sb.AppendLine(string.Join(",", new[] { "Product", "Qty On Hand", "Reorder Level", "Status" }));
+                        foreach (var a in viewModel.LowStockAlerts)
+                        {
+                            sb.AppendLine(string.Join(",", new[] { Escape(a.ProductName), a.QuantityOnHand.ToString(), a.ReorderLevel.ToString(), Escape(a.StockStatus) }));
+                        }
+                        sb.AppendLine();
+                        // Service Transactions (new section)
+                        sb.AppendLine("Service Transactions");
+                        sb.AppendLine(string.Join(",", new[] { "Service Name", "Service ID", "Job ID", "Customer", "Amount Paid", "Change", "Date", "Status" }));
+                        foreach (var st in viewModel.ServiceTransactions)
+                        {
+                            sb.AppendLine(string.Join(",", new[] {
+                                Escape(st.ServiceName),
+                                st.ServiceId.ToString(),
+                                Escape(st.ServiceJobNumber),
+                                Escape(st.CustomerName),
+                                st.AmountPaid.ToString("F2"),
+                                st.ChangeAmount.ToString("F2"),
+                                st.ServiceDate.ToString("yyyy-MM-dd"),
+                                Escape(st.PaymentStatus)
+                            }));
+                        }
+                        sb.AppendLine();
+                        // Stock Movements
             sb.AppendLine("Stock Movements");
             sb.AppendLine(string.Join(",", new[] { "Date", "Product", "Type", "Qty", "Reference" }));
             foreach (var m in viewModel.StockMovements)
@@ -484,22 +502,43 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var lowStockAlerts = await _reportService.GetLowStockAlertsAsync(start, end, filter.ProductId, filter.CategoryId);
             var revenueTrend = await _reportService.GetRevenueTrendAsync(start, end, filter.ProductId, filter.CategoryId);
             var salesByCategory = await _reportService.GetSalesByCategoryAsync(start, end, filter.ProductId, filter.CategoryId);
-            return new ReportsPageViewModel
-            {
-                Filter = filter,
-                InventoryReport = inventory,
-                SalesPerformanceReport = salesPerf,
-                RevenueReport = revenue,
-                MostSoldProducts = mostSold,
-                StockMovements = stockMovements,
-                SerialNumberReport = serials,
-                TotalInventoryValue = totalInventoryValue,
-                LowStockItemCount = lowStockItemCount,
-                LowStockAlerts = lowStockAlerts,
-                RevenueTrend = revenueTrend,
-                SalesByCategory = salesByCategory
-            };
-        }
+            var serviceTransactions = await _context.ServiceJobs
+                            .Include(sj => sj.Service)
+                            .Where(sj => sj.PaymentStatus == ServiceJob.PaymentPaid && sj.CompletedDate != null && sj.ServiceDate.Date >= start && sj.ServiceDate.Date < end)
+                            .Select(sj => new ServiceTransactionReportViewModel
+                            {
+                                ServiceJobId = sj.ServiceJobId,
+                                ServiceJobNumber = sj.ServiceJobNumber,
+                                ServiceId = sj.ServiceId,
+                                ServiceName = sj.Service != null ? sj.Service.ServiceName : string.Empty,
+                                CustomerName = sj.CustomerName,
+                                AmountPaid = sj.AmountReceived,
+                                ChangeAmount = sj.ChangeAmount,
+                                ServicePrice = sj.Service != null ? sj.Service.ServicePrice : 0,
+                                ServiceDate = sj.ServiceDate,
+                                CompletedDate = sj.CompletedDate,
+                                PaymentStatus = sj.PaymentStatus,
+                                SalesTransactionId = sj.SalesTransactionId
+                            })
+                            .ToListAsync();
+
+                        return new ReportsPageViewModel
+                        {
+                            Filter = filter,
+                            InventoryReport = inventory,
+                            SalesPerformanceReport = salesPerf,
+                            RevenueReport = revenue,
+                            MostSoldProducts = mostSold,
+                            StockMovements = stockMovements,
+                            SerialNumberReport = serials,
+                            TotalInventoryValue = totalInventoryValue,
+                            LowStockItemCount = lowStockItemCount,
+                            LowStockAlerts = lowStockAlerts,
+                            RevenueTrend = revenueTrend,
+                            SalesByCategory = salesByCategory,
+                            ServiceTransactions = serviceTransactions
+                        };
+                    }
 
     }
 }
