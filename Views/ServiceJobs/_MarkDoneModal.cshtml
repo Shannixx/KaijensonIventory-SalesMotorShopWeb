@@ -21,33 +21,22 @@
                         <dd class="col-sm-8 fw-medium" id="markDoneJobNumber">&mdash;</dd>
 
                         <dt class="col-sm-4">Service</dt>
-                        <dd class="col-sm-8" id="markDoneServiceName">&mdash;</dd>
+                                                <dd class="col-sm-8" id="markDoneServiceName">&mdash;</dd>
 
-                        <dt class="col-sm-4">Price</dt>
-                        <dd class="col-sm-8" id="markDonePrice">&mdash;</dd>
+                                                <dt class="col-sm-4">Price</dt>
+                                                <dd class="col-sm-8" id="markDonePrice">&mdash;</dd>
 
-                        <dt class="col-sm-4">Already Received</dt>
-                        <dd class="col-sm-8" id="markDoneReceived">&mdash;</dd>
+                                                                        <dt class="col-sm-4">Amount Paid</dt>
+                                                <dd class="col-sm-8" id="markDoneReceived">&mdash;</dd>
 
-                        <dt class="col-sm-4">Amount Paid Now</dt>
-                        <dd class="col-sm-8" id="markDoneAmountNowDisplay">&mdash;</dd>
+                                                <dt class="col-sm-4">Change</dt>
+                                                <dd class="col-sm-8" id="markDoneChange">&mdash;</dd>
 
-                        <dt class="col-sm-4">Change</dt>
-                        <dd class="col-sm-8" id="markDoneChange">&mdash;</dd>
-
-                        <dt class="col-sm-4">Payment Status</dt>
-                        <dd class="col-sm-8" id="markDonePaymentStatus">&mdash;</dd>
-
-                        <dt class="col-sm-4">Remaining</dt>
-                        <dd class="col-sm-8" id="markDoneRemaining">&mdash;</dd>
+                                                <dt class="col-sm-4">Payment Status</dt>
+                                                <dd class="col-sm-8" id="markDonePaymentStatus">&mdash;</dd>
                     </dl>
 
-                    <div class="mb-2">
-                        <label class="form-label" for="markDoneAmount">Amount Paid Now (&#8369;)</label>
-                        <input type="number" step="0.01" min="0" class="form-control"
-                               id="markDoneAmount" name="amountPaid" value="0.00" required />
-                        <div class="form-text">Marking done sets the job status to Finished and stamps the completion date. Payment status is computed automatically.</div>
-                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <input type="hidden" name="id" id="markDoneJobId" />
@@ -66,7 +55,6 @@
 <script>
     (function () {
         var fmt = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
-
         document.addEventListener('click', function (event) {
             var trigger = event.target.closest('[data-mark-done]');
             if (!trigger || trigger.disabled) return;
@@ -81,43 +69,21 @@
             document.getElementById('markDonePrice').textContent = fmt.format(price);
             document.getElementById('markDoneReceived').textContent = fmt.format(received);
 
-            // Initial calculations for remaining amount.
-            var remaining = Math.max(0, price - received);
-            document.getElementById('markDoneRemaining').textContent = fmt.format(remaining);
-
-            // Set the amount paid now input to the remaining amount by default.
-            var amountInput = document.getElementById('markDoneAmount');
-            amountInput.value = remaining.toFixed(2);
-            // Do not limit max to remaining to allow overpayment.
-
-            // Update other displays based on current input.
-            updateDisplays();
+            // Compute change and payment status based on stored values.
+            var change = Math.max(0, received - price);
+            var paymentStatus = received >= price ? 'Paid' : 'Unpaid';
+            document.getElementById('markDoneChange').textContent = fmt.format(change);
+            document.getElementById('markDonePaymentStatus').textContent = paymentStatus;
 
             // Show the modal using Bootstrap's API.
             var modalEl = document.getElementById('markDoneModal');
-            var modal = bootstrap.Modal.getInstance(modalEl);
-            if (!modal) {
-                modal = new bootstrap.Modal(modalEl);
-            }
+            // Prefer getOrCreateInstance if available (Bootstrap ≥5.3), otherwise fallback to getInstance/new.
+            var modal = (bootstrap.Modal.getOrCreateInstance && bootstrap.Modal.getOrCreateInstance(modalEl))
+                || (function(){
+                    var existing = bootstrap.Modal.getInstance(modalEl);
+                    return existing ? existing : new bootstrap.Modal(modalEl);
+                })();
             modal.show();
         });
-
-        // Recalculate change, payment status, etc. whenever the amount changes.
-        function updateDisplays() {
-            var price = parseFloat(document.getElementById('markDonePrice').textContent.replace(/[^0-9.-]+/g, '')) || 0;
-            var received = parseFloat(document.getElementById('markDoneReceived').textContent.replace(/[^0-9.-]+/g, '')) || 0;
-            var amountNow = parseFloat(document.getElementById('markDoneAmount').value) || 0;
-
-            var totalAfter = received + amountNow;
-            var change = Math.max(0, totalAfter - price);
-            var paymentStatus = (totalAfter >= price && totalAfter > 0) ? 'Paid' : 'Unpaid';
-
-            document.getElementById('markDoneAmountNowDisplay').textContent = fmt.format(amountNow);
-            document.getElementById('markDoneChange').textContent = fmt.format(change);
-            document.getElementById('markDonePaymentStatus').textContent = paymentStatus;
-            document.getElementById('markDoneRemaining').textContent = fmt.format(Math.max(0, price - totalAfter));
-        }
-
-        document.getElementById('markDoneAmount').addEventListener('input', updateDisplays);
     })();
 </script>

@@ -597,7 +597,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         // The service price always comes from the Service table, never from the browser.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkDone(int id, decimal amountPaid, string? returnUrl = null)
+        public async Task<IActionResult> MarkDone(int id, string? returnUrl = null)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
@@ -621,14 +621,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return Back();
             }
 
-            if (amountPaid < 0)
-            {
-                TempData["ErrorMessage"] = "Amount paid cannot be negative.";
-                return Back();
-            }
 
             decimal servicePrice = job.Service?.ServicePrice ?? 0m;
-            decimal totalAfterPayment = job.AmountReceived + amountPaid;
+            // Total payment is already recorded on the job.
+            decimal totalAfterPayment = job.AmountReceived;
 
             // Require full payment before finishing.
             if (totalAfterPayment < servicePrice)
@@ -641,7 +637,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             // Update payment fields.
-            job.AmountReceived = totalAfterPayment;
             job.ChangeAmount = Math.Max(0m, totalAfterPayment - servicePrice);
             job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
             job.Status = ServiceJob.StatusFinished;
@@ -655,7 +650,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ServiceJobId = job.ServiceJobId,
                     WorkDate = DateTime.Now,
                     Description = string.IsNullOrWhiteSpace(job.Description) ? job.Service?.ServiceName ?? "Service" : job.Description,
-                    AmountReceived = amountPaid,
+                    AmountReceived = job.AmountReceived,
                     PaymentStatus = ServiceJob.PaymentPaid
                 };
                 _context.ServiceHistories.Add(history);
@@ -689,17 +684,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 StaffId = GetCurrentStaffId(),
                 Timestamp = DateTime.Now
             });
-            if (amountPaid > 0)
-            {
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    Action = "Record Payment",
-                    Module = "Service",
-                    Description = $"{job.ServiceJobNumber}: received \u20b1{amountPaid:N2}; total \u20b1{job.AmountReceived:N2} of \u20b1{servicePrice:N2} ({job.PaymentStatus})",
-                    StaffId = GetCurrentStaffId(),
-                    Timestamp = DateTime.Now
-                });
-            }
+            // No separate payment record needed since payment is pre‑recorded.
             _context.ActivityLogs.Add(new ActivityLog
             {
                 Action = "Create Service History",
