@@ -643,18 +643,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             job.CompletedDate ??= DateTime.Now;
 
             // ---- Automatic ServiceHistory (single record) ----
-            if (!job.Histories.Any())
-            {
-                var history = new ServiceHistory
-                {
-                    ServiceJobId = job.ServiceJobId,
-                    WorkDate = DateTime.Now,
-                    Description = string.IsNullOrWhiteSpace(job.Description) ? job.Service?.ServiceName ?? "Service" : job.Description,
-                    AmountReceived = job.AmountReceived,
-                    PaymentStatus = ServiceJob.PaymentPaid
-                };
-                _context.ServiceHistories.Add(history);
-            }
+                        // Determine the description that represents the completion entry.
+                        var completionDescription = string.IsNullOrWhiteSpace(job.Description) ? job.Service?.ServiceName ?? "Service" : job.Description;
+                        // Check if a completion history already exists (by description and paid status).
+                        bool hasCompletionHistory = job.Histories.Any(h =>
+                            h.Description == completionDescription &&
+                            h.PaymentStatus == ServiceJob.PaymentPaid);
+                        if (!hasCompletionHistory)
+                        {
+                            var history = new ServiceHistory
+                            {
+                                ServiceJobId = job.ServiceJobId,
+                                WorkDate = job.CompletedDate ?? DateTime.Now,
+                                Description = completionDescription,
+                                AmountReceived = job.AmountReceived,
+                                PaymentStatus = ServiceJob.PaymentPaid
+                            };
+                            _context.ServiceHistories.Add(history);
+                        }
 
             // ---- Automatic SalesTransaction (single per job) ----
             if (job.SalesTransactionId == null)
