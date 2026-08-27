@@ -26,6 +26,7 @@ builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IBackupService, BackupService>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>

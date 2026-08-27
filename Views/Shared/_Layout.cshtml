@@ -15,6 +15,7 @@
                    string.Equals(staffRole, "Owner", StringComparison.OrdinalIgnoreCase);
     bool isOwnerOrManager = isAdmin ||
                    string.Equals(staffRole, "Manager", StringComparison.OrdinalIgnoreCase);
+    bool isOwner = string.Equals(staffRole, "Owner", StringComparison.OrdinalIgnoreCase);
 
     // Notification bell data (shop-wide alerts, count comes from the database)
     int unreadNotificationCount = await NotificationService.GetUnreadCountAsync();
@@ -144,10 +145,18 @@
                 <div class="nav-section">System</div>
                 <ul class="nav-list">
                     <li class="nav-item">
-                        <a asp-controller="ActivityLog" asp-action="Index" class="nav-link @(IsActive("ActivityLog") ? "active" : "")" data-title="Activity Log" aria-current="@ActiveAttr("ActivityLog")">
-                            <i class="bi bi-clock-history"></i><span>Activity Log</span>
+                        <a asp-controller="Backup" asp-action="Index" class="nav-link @(IsActive("Backup") ? "active" : "")" data-title="Data Backup & Recovery" aria-current="@ActiveAttr("Backup")">
+                            <i class="bi bi-cloud-arrow-up"></i><span>Data Backup & Recovery</span>
                         </a>
                     </li>
+                    @if (isAdmin)
+                    {
+                        <li class="nav-item">
+                            <a asp-controller="ActivityLog" asp-action="Index" class="nav-link @(IsActive("ActivityLog") ? "active" : "")" data-title="Activity Log" aria-current="@ActiveAttr("ActivityLog")">
+                                <i class="bi bi-clock-history"></i><span>Activity Log</span>
+                            </a>
+                        </li>
+                    }
                 </ul>
             </nav>
         </div>

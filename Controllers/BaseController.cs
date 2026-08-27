@@ -18,16 +18,26 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         protected bool IsAdmin()
         {
             string? role = HttpContext.Session.GetString("StaffRole");
-            return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
         }
 
-        protected bool IsOwnerOrManager()
+        // Owner (without Admin privileges)
+        protected bool IsOwner()
         {
             string? role = HttpContext.Session.GetString("StaffRole");
-            return string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase);
+        }
+
+        protected IActionResult? RedirectIfNotOwnerOrManager()
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null) return redirect;
+            if (!IsOwnerOrManager())
+            {
+                TempData["ErrorMessage"] = "Access denied. Owner or Manager privileges required.";
+                return RedirectToAction("Index", "Dashboard");
+            }
+            return null;
         }
 
         protected int GetCurrentStaffId()

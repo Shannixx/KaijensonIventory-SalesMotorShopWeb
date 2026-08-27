@@ -29,6 +29,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         // Service job / work order entities (Service remains the catalog definition)
         public DbSet<ServiceJob> ServiceJobs => Set<ServiceJob>();
         public DbSet<ServiceHistory> ServiceHistories => Set<ServiceHistory>();
+        public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
