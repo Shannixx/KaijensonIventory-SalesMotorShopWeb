@@ -10,6 +10,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form asp-controller="ServiceJobs" asp-action="MarkDone" method="post" id="markDoneForm">
+                @Html.AntiForgeryToken()
                 <div class="modal-header">
                     <h5 class="modal-title" id="markDoneModalLabel">Mark Done &mdash; Record Payment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -87,10 +88,18 @@
             // Set the amount paid now input to the remaining amount by default.
             var amountInput = document.getElementById('markDoneAmount');
             amountInput.value = remaining.toFixed(2);
-            amountInput.max = remaining.toFixed(2);
+            // Do not limit max to remaining to allow overpayment.
 
             // Update other displays based on current input.
             updateDisplays();
+
+            // Show the modal using Bootstrap's API.
+            var modalEl = document.getElementById('markDoneModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (!modal) {
+                modal = new bootstrap.Modal(modalEl);
+            }
+            modal.show();
         });
 
         // Recalculate change, payment status, etc. whenever the amount changes.
