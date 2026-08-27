@@ -23,7 +23,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         // GET: /ServiceJobs
         public async Task<IActionResult> Index(string? searchString, int? mechanicId,
-            string? paymentFilter, int? serviceId, int page = 1)
+            int? serviceId, int page = 1)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -52,8 +52,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (mechanicId.HasValue && mechanicId.Value > 0)
                     query = query.Where(j => j.MechanicId == mechanicId.Value);
 
-                if (!string.IsNullOrWhiteSpace(paymentFilter))
-                    query = query.Where(j => j.PaymentStatus == paymentFilter);
 
                 int total = await query.CountAsync();
 
@@ -67,7 +65,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 ViewBag.ServiceJobsCount = total;
                 ViewData["CurrentFilter"] = searchString;
-                ViewData["PaymentFilter"] = paymentFilter;
+
                 ViewData["ServiceId"] = serviceId;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
@@ -602,11 +600,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         public async Task<IActionResult> MarkDone(int id, decimal amountPaid, string? returnUrl = null)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            if (redirect != null) return redirect;
 
+            // Load job with related data needed for the workflow.
             ServiceJob? job = await _context.ServiceJobs
                 .Include(j => j.Service)
+                .Include(j => j.Histories)
                 .FirstOrDefaultAsync(j => j.ServiceJobId == id);
             if (job == null) return NotFound();
 
@@ -615,73 +614,120 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     ? Redirect(returnUrl)
                     : RedirectToAction(nameof(Details), new { id });
 
-            // Ensure job is still in progress.
-                        if (job.Status != ServiceJob.StatusStillWorking)
-                        {
-                            TempData["ErrorMessage"] = $"{job.ServiceJobNumber} is already finished.";
-                            return Back();
-                        }
-
-                        // Validate amount paid.
-                        if (amountPaid < 0)
-                        {
-                            TempData["ErrorMessage"] = "Amount paid cannot be negative.";
-                            return Back();
-                        }
-
-                        decimal servicePrice = job.Service?.ServicePrice ?? 0m;
-                        decimal totalAfterPayment = job.AmountReceived + amountPaid;
-
-                        // Require full payment before marking finished.
-                        if (totalAfterPayment < servicePrice)
-                        {
-                            TempData["ErrorMessage"] = "Full payment is required before completing the service.";
-                            return Back();
-                        }
-
-                        // Apply payment and compute change.
-                        job.AmountReceived = totalAfterPayment;
-                        job.ChangeAmount = Math.Max(0m, totalAfterPayment - servicePrice);
-                        job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
-                        job.Status = ServiceJob.StatusFinished;
-                        if (job.CompletedDate == null)
-                            job.CompletedDate = DateTime.Now;
-
-            try
+            // Guard: job must be in progress.
+            if (job.Status != ServiceJob.StatusStillWorking)
             {
-                await _context.SaveChangesAsync();
+                TempData["ErrorMessage"] = $"{job.ServiceJobNumber} is already finished.";
+                return Back();
+            }
 
+            if (amountPaid < 0)
+            {
+                TempData["ErrorMessage"] = "Amount paid cannot be negative.";
+                return Back();
+            }
+
+            decimal servicePrice = job.Service?.ServicePrice ?? 0m;
+            decimal totalAfterPayment = job.AmountReceived + amountPaid;
+
+            // Require full payment before finishing.
+            if (totalAfterPayment < servicePrice)
+            {
+                TempData["ErrorMessage"] = "Full payment is required before completing the service.";
+                return Back();
+            }
+
+            // Begin a serializable transaction to ensure all side-effects are atomic.
+            await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            // Update payment fields.
+            job.AmountReceived = totalAfterPayment;
+            job.ChangeAmount = Math.Max(0m, totalAfterPayment - servicePrice);
+            job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
+            job.Status = ServiceJob.StatusFinished;
+            job.CompletedDate ??= DateTime.Now;
+
+            // ---- Automatic ServiceHistory (single record) ----
+            if (!job.Histories.Any())
+            {
+                var history = new ServiceHistory
+                {
+                    ServiceJobId = job.ServiceJobId,
+                    WorkDate = DateTime.Now,
+                    Description = string.IsNullOrWhiteSpace(job.Description) ? job.Service?.ServiceName ?? "Service" : job.Description,
+                    AmountReceived = amountPaid,
+                    PaymentStatus = ServiceJob.PaymentPaid
+                };
+                _context.ServiceHistories.Add(history);
+            }
+
+            // ---- Automatic SalesTransaction (single per job) ----
+            if (job.SalesTransactionId == null)
+            {
+                var transaction = new SalesTransaction
+                {
+                    InvoiceNumber = $"SV-{job.ServiceJobNumber}-{DateTime.Now:yyyyMMdd}",
+                    CheckoutKey = Guid.NewGuid().ToString(),
+                    CustomerName = job.CustomerName,
+                    TransactionDate = DateTime.Now,
+                    TotalAmount = servicePrice,
+                    AmountPaid = job.AmountReceived,
+                    Change = job.ChangeAmount,
+                    StaffId = GetCurrentStaffId()
+                };
+                _context.SalesTransactions.Add(transaction);
+                await _context.SaveChangesAsync(); // assign TransactionId
+                job.SalesTransactionId = transaction.TransactionId;
+            }
+
+            // Activity logs
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Action = "Change Service Status",
+                Module = "Service",
+                Description = $"{job.ServiceJobNumber}: Still Working -> {job.Status}",
+                StaffId = GetCurrentStaffId(),
+                Timestamp = DateTime.Now
+            });
+            if (amountPaid > 0)
+            {
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Change Service Status",
+                    Action = "Record Payment",
                     Module = "Service",
-                    Description = $"{job.ServiceJobNumber}: Still Working -> {job.Status}",
+                    Description = $"{job.ServiceJobNumber}: received \u20b1{amountPaid:N2}; total \u20b1{job.AmountReceived:N2} of \u20b1{servicePrice:N2} ({job.PaymentStatus})",
                     StaffId = GetCurrentStaffId(),
                     Timestamp = DateTime.Now
                 });
-                if (amountPaid > 0)
-                {
-                    _context.ActivityLogs.Add(new ActivityLog
-                    {
-                        Action = "Record Payment",
-                        Module = "Service",
-                        Description = $"{job.ServiceJobNumber}: received ₱{amountPaid:N2}; total ₱{job.AmountReceived:N2} of ₱{servicePrice:N2} ({job.PaymentStatus})",
-                        StaffId = GetCurrentStaffId(),
-                        Timestamp = DateTime.Now
-                    });
-                }
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = $"{job.ServiceJobNumber} marked as finished. Payment status: {job.PaymentStatus}.";
-                return Back();
             }
-            catch (Exception ex)
+            _context.ActivityLogs.Add(new ActivityLog
             {
-                _logger.LogError(ex, "Error occurred while marking service job done. ServiceJobId: {ServiceJobId}", id);
-                TempData["ErrorMessage"] = "An error occurred while finishing the service job. Please try again.";
-                return Back();
+                Action = "Create Service History",
+                Module = "Service",
+                Description = $"{job.ServiceJobNumber}: auto\u2011created work entry",
+                StaffId = GetCurrentStaffId(),
+                Timestamp = DateTime.Now
+            });
+            if (job.SalesTransactionId != null)
+            {
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Action = "Create Service Sale",
+                    Module = "Sales",
+                    Description = $"Service job {job.ServiceJobNumber} recorded in sale #{job.SalesTransactionId}",
+                    StaffId = GetCurrentStaffId(),
+                    Timestamp = DateTime.Now
+                });
             }
+
+            // Persist all changes atomically.
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            TempData["SuccessMessage"] = $"{job.ServiceJobNumber} marked as finished. Payment status: {job.PaymentStatus}.";
+            return Back();
         }
+
 
         // ------------------------------------------------------------------
         // Service receipt
