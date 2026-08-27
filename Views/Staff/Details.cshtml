@@ -15,6 +15,8 @@
     <dd class="col-sm-9">@Model.Address</dd>
     <dt class="col-sm-3">Role</dt>
     <dd class="col-sm-9"><span class="badge @(Model.Role == "Admin" ? "bg-primary" : "bg-secondary")">@Model.Role</span></dd>
+    <dt class="col-sm-3">Status</dt>
+    <dd class="col-sm-9"><span class="badge @(Model.Status == "Pending" ? "bg-warning" : Model.Status == "Approved" ? "bg-success" : "bg-danger")">@Model.Status</span></dd>
 </dl>
 <a asp-action="Edit" asp-route-id="@Model.StaffId" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit</a>
 <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>

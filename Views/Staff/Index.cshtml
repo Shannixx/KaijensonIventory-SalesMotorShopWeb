@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Staff"; }
 <div class="page-header">
     <div><h1>Staff</h1><p>Manage staff accounts.</p></div>
-    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create Staff</a>
+    <!-- Create Staff button removed as per requirements -->
 </div>
 @{
     var searchModel = new SearchToolbarViewModel
@@ -17,7 +17,7 @@
     };
 }
 <partial name="_SearchToolbar" model="searchModel" />
-<div class="card"><div class="card-body p-0"><div class="table-container"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Contact</th><th>Role</th><th class="actions-column actions-column-wide">Actions</th></tr></thead><tbody>
+<div class="card"><div class="card-body p-0"><div class="table-container"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Contact</th><th>Role</th><th>Status</th><th class="actions-column actions-column-wide">Actions</th></tr></thead><tbody>
 @foreach (var item in Model) {
     bool isYou = (ViewData["CurrentStaffId"] as int?) == item.StaffId;
     <tr class="@(isYou ? "table-warning" : "")">
@@ -32,10 +32,22 @@
         <td>@item.UserName</td>
         <td>@item.ContactNumber</td>
         <td><span class="badge @(item.Role == "Admin" ? "bg-primary" : "bg-secondary")">@item.Role</span></td>
+        <td><span class="badge @(item.Status == "Pending" ? "bg-warning" : item.Status == "Approved" ? "bg-success" : "bg-danger")">@item.Status</span></td>
         <td class="action-cell action-cell-wide">
             <div class="action-buttons">
                 <a asp-action="Details" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-view" title="View Staff Details" aria-label="View @item.StaffName"><i class="bi bi-eye"></i></a>
-                <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-edit" title="Edit Staff" aria-label="Edit @item.StaffName"><i class="bi bi-pencil"></i></a>
+                @if (item.Role == "Manager" && item.Status == "Pending") {
+                    <form asp-action="Approve" asp-route-id="@item.StaffId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-icon" title="Approve" aria-label="Approve @item.StaffName"><i class="bi bi-check-circle"></i></button>
+                    </form>
+                    <form asp-action="Disapprove" asp-route-id="@item.StaffId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-icon" title="Disapprove" aria-label="Disapprove @item.StaffName"><i class="bi bi-x-circle"></i></button>
+                    </form>
+                } else {
+                    <a asp-action="Edit" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-edit" title="Edit Staff" aria-label="Edit @item.StaffName"><i class="bi bi-pencil"></i></a>
+                }
                 <a asp-action="ChangePassword" asp-route-id="@item.StaffId" class="btn btn-icon btn-icon-key" title="Change Password" aria-label="Change password for @item.StaffName"><i class="bi bi-key"></i></a>
                 <form asp-action="Delete" asp-route-id="@item.StaffId" method="post" id="delete-staff-@item.StaffId" class="action-form">
                     @Html.AntiForgeryToken()
@@ -45,6 +57,6 @@
         </td>
     </tr>
 }
-@if (!Model.Any()) { <tr><td colspan="6" class="text-center py-4 text-muted">No staff found.</td></tr> }
+@if (!Model.Any()) { <tr><td colspan="7" class="text-center py-4 text-muted">No staff found.</td></tr> }
 </tbody></table></div></div></div>
 <partial name="_Pagination" />

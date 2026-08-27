@@ -51,7 +51,8 @@ using (var scope = app.Services.CreateScope())
             StaffName = "System Admin",
             UserName = "admin",
             PasswordHash = hasher.HashPassword("admin123"),
-            Role = "Admin"
+            Role = "Admin",
+            Status = "Approved"
         });
     }
 

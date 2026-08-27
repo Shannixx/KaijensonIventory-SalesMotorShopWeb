@@ -22,11 +22,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             // Clear any existing session to ensure clean login
             HttpContext.Session.Clear();
-            
+
             // Check if already logged in (shouldn't happen due to Clear above, but just in case)
             if (HttpContext.Session.GetInt32("StaffId") != null)
                 return RedirectToAction("Index", "Dashboard");
-                
+
             return View();
         }
 
@@ -61,6 +61,42 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return View(model);
                 }
 
+                // Status gate: Pending and Rejected accounts must not receive a session.
+                if (!string.Equals(staff.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.Equals(staff.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _context.ActivityLogs.Add(new ActivityLog
+                        {
+                            Action = "Login Blocked",
+                            Module = "Auth",
+                            Description = $"Login blocked for pending Manager account {staff.UserName}."
+                        });
+                        await _context.SaveChangesAsync();
+
+                        ModelState.AddModelError("", "Your Manager account is pending Admin approval.");
+                        return View(model);
+                    }
+
+                    if (string.Equals(staff.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _context.ActivityLogs.Add(new ActivityLog
+                        {
+                            Action = "Login Blocked",
+                            Module = "Auth",
+                            Description = $"Login blocked for rejected Manager account {staff.UserName}."
+                        });
+                        await _context.SaveChangesAsync();
+
+                        ModelState.AddModelError("", "Your Manager account has been rejected and cannot log in.");
+                        return View(model);
+                    }
+
+                    // Any other non-Approved status is treated as not yet authorized.
+                    ModelState.AddModelError("", "Your account is not authorized to log in.");
+                    return View(model);
+                }
+
                 HttpContext.Session.SetInt32("StaffId", staff.StaffId);
                 HttpContext.Session.SetString("StaffName", staff.StaffName);
                 HttpContext.Session.SetString("StaffRole", staff.Role);
@@ -85,31 +121,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public IActionResult Register()
         {
-            // Admin/Owner only
-            if (!IsAdminOrOwner())
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin or Owner privileges required.";
-                return RedirectToAction("Login");
-            }
+            // Public: a new Manager applicant must be able to register before logging in.
             return View();
         }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
-            // Admin/Owner only
-            if (!IsAdminOrOwner())
-            {
-                TempData["ErrorMessage"] = "Access denied. Admin or Owner privileges required.";
-                return RedirectToAction("Login");
-            }
-
             if (!ModelState.IsValid) return View(model);
 
             try
             {
-                if (string.IsNullOrWhiteSpace(model.StaffName) || 
-                    string.IsNullOrWhiteSpace(model.Username) || 
+                if (string.IsNullOrWhiteSpace(model.StaffName) ||
+                    string.IsNullOrWhiteSpace(model.Username) ||
                     string.IsNullOrWhiteSpace(model.Password))
                 {
                     ModelState.AddModelError("", "All fields are required.");
@@ -133,7 +157,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     StaffName = model.StaffName.Trim(),
                     UserName = model.Username.Trim(),
                     PasswordHash = _hashing.HashPassword(model.Password),
-                    Role = "Manager"
+                    Role = "Manager",
+                    Status = "Pending"
                 };
 
                 _context.Staff.Add(staff);
@@ -141,13 +166,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Register",
+                    Action = "Manager Registration",
                     Module = "Auth",
-                    Description = $"New staff registered: {staff.StaffName} ({staff.UserName})"
+                    Description = $"Manager registration submitted for {staff.StaffName}."
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Registration successful.";
+                TempData["SuccessMessage"] = "Registration submitted successfully. Your Manager account is pending Admin approval.";
                 return RedirectToAction("Login");
             }
             catch

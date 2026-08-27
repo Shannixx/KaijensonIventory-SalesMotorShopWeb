@@ -373,6 +373,106 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
+
+            if (id <= 0) return NotFound();
+
+            try
+            {
+                Staff? staff = await _context.Staff.FindAsync(id);
+                if (staff == null) return NotFound();
+
+                if (staff.Status != "Pending")
+                {
+                    TempData["ErrorMessage"] = "This account is not pending approval.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (staff.Role != "Manager")
+                {
+                    TempData["ErrorMessage"] = "Only Manager registrations can be approved.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                staff.Status = "Approved";
+                await _context.SaveChangesAsync();
+
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Action = "Approve Manager Registration",
+                    Module = "Staff",
+                    Description = $"Manager {staff.StaffName} approved.",
+                    StaffId = GetCurrentStaffId(),
+                    Timestamp = DateTime.Now
+                });
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Manager account approved successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving staff ID {StaffId}", id);
+                TempData["ErrorMessage"] = "An error occurred while approving the account. Please try again.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Disapprove(int id)
+        {
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
+
+            if (id <= 0) return NotFound();
+
+            try
+            {
+                Staff? staff = await _context.Staff.FindAsync(id);
+                if (staff == null) return NotFound();
+
+                if (staff.Status != "Pending")
+                {
+                    TempData["ErrorMessage"] = "This account is not pending approval.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (staff.Role != "Manager")
+                {
+                    TempData["ErrorMessage"] = "Only Manager registrations can be disapproved.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                staff.Status = "Rejected";
+                await _context.SaveChangesAsync();
+
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Action = "Disapprove Manager Registration",
+                    Module = "Staff",
+                    Description = $"Manager {staff.StaffName} registration rejected.",
+                    StaffId = GetCurrentStaffId(),
+                    Timestamp = DateTime.Now
+                });
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Manager account rejected.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error disapproving staff ID {StaffId}", id);
+                TempData["ErrorMessage"] = "An error occurred while rejecting the account. Please try again.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
         public async Task<IActionResult> ChangePassword(int? id)
         {
             if (!IsSessionValid())
