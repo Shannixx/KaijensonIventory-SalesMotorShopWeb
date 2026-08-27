@@ -492,102 +492,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return View(history);
         }
 
-        // GET: /ServiceJobs/ConnectToSale/5
-        public async Task<IActionResult> ConnectToSale(int? id)
-        {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
-            if (id == null) return NotFound();
-
-            try
-            {
-                ServiceJob? job = await _context.ServiceJobs
-                    .Include(j => j.Service)
-                    .Include(j => j.SalesTransaction)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(j => j.ServiceJobId == id);
-                if (job == null) return NotFound();
-
-                List<SalesTransaction> transactions = await _context.SalesTransactions
-                    .AsNoTracking()
-                    .OrderByDescending(t => t.TransactionId)
-                    .Take(100)
-                    .ToListAsync();
-
-                ViewBag.ServiceJob = job;
-                ViewBag.TransactionId = new SelectList(
-                    transactions.Select(t => new {
-                        t.TransactionId,
-                        Label = $"{t.InvoiceNumber} — {(string.IsNullOrWhiteSpace(t.CustomerName) ? "Walk-in" : t.CustomerName)} — ₱{t.TotalAmount:N2} — {t.TransactionDate:MMM dd, yyyy}"
-                    }),
-                    "TransactionId", "Label", job.SalesTransactionId);
-
-                return View(job);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while loading connect to sale. ServiceJobId: {ServiceJobId}", id);
-                TempData["ErrorMessage"] = "An error occurred while loading sales. Please try again.";
-                return RedirectToAction(nameof(Details), new { id });
-            }
-        }
-
-        // POST: /ServiceJobs/ConnectToSale/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ConnectToSale(int id, int? transactionId)
-        {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
-            ServiceJob? job = await _context.ServiceJobs
-                .Include(j => j.SalesTransaction)
-                .FirstOrDefaultAsync(j => j.ServiceJobId == id);
-            if (job == null) return NotFound();
-
-            if (!transactionId.HasValue || transactionId.Value <= 0)
-            {
-                TempData["ErrorMessage"] = "Please select a sale to connect.";
-                return RedirectToAction(nameof(ConnectToSale), new { id });
-            }
-
-            try
-            {
-                SalesTransaction? transaction = await _context.SalesTransactions
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.TransactionId == transactionId.Value);
-                if (transaction == null) return NotFound();
-
-                int? previous = job.SalesTransactionId;
-                job.SalesTransactionId = transaction.TransactionId;
-                await _context.SaveChangesAsync();
-
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    Action = "Connect Service Job to Sale",
-                    Module = "Service",
-                    Description = previous.HasValue
-                        ? $"{job.ServiceJobNumber}: moved sale link from invoice #{(await _context.SalesTransactions.AsNoTracking().Where(t => t.TransactionId == previous.Value).Select(t => t.InvoiceNumber).FirstOrDefaultAsync()) ?? previous.Value.ToString()} to #{transaction.InvoiceNumber}"
-                        : $"{job.ServiceJobNumber}: connected to invoice #{transaction.InvoiceNumber}",
-                    StaffId = GetCurrentStaffId(),
-                    Timestamp = DateTime.Now
-                });
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = $"{job.ServiceJobNumber} connected to invoice #{transaction.InvoiceNumber}.";
-                return RedirectToAction(nameof(Details), new { id });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while connecting service job to sale. ServiceJobId: {ServiceJobId}", id);
-                TempData["ErrorMessage"] = "An error occurred while connecting the service job to a sale. Please try again.";
-                return RedirectToAction(nameof(Details), new { id });
-            }
-        }
-
         // ------------------------------------------------------------------
         // Mark Done (payment confirmation workflow)
         // ------------------------------------------------------------------
@@ -662,24 +566,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             _context.ServiceHistories.Add(history);
                         }
 
-            // ---- Automatic SalesTransaction (single per job) ----
-            if (job.SalesTransactionId == null)
-            {
-                var transaction = new SalesTransaction
-                {
-                    InvoiceNumber = $"SV-{job.ServiceJobNumber}-{DateTime.Now:yyyyMMdd}",
-                    CheckoutKey = Guid.NewGuid().ToString(),
-                    CustomerName = job.CustomerName,
-                    TransactionDate = DateTime.Now,
-                    TotalAmount = servicePrice,
-                    AmountPaid = job.AmountReceived,
-                    Change = job.ChangeAmount,
-                    StaffId = GetCurrentStaffId()
-                };
-                _context.SalesTransactions.Add(transaction);
-                await _context.SaveChangesAsync(); // assign TransactionId
-                job.SalesTransactionId = transaction.TransactionId;
-            }
+            // Removed automatic SalesTransaction creation for Service Jobs as per requirement.
+            // No SalesTransaction is created here.
 
             // Activity logs
             _context.ActivityLogs.Add(new ActivityLog
@@ -699,17 +587,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 StaffId = GetCurrentStaffId(),
                 Timestamp = DateTime.Now
             });
-            if (job.SalesTransactionId != null)
-            {
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    Action = "Create Service Sale",
-                    Module = "Sales",
-                    Description = $"Service job {job.ServiceJobNumber} recorded in sale #{job.SalesTransactionId}",
-                    StaffId = GetCurrentStaffId(),
-                    Timestamp = DateTime.Now
-                });
-            }
+            // Removed Service Sale activity logging as per requirement – no SalesTransaction is created for Service Jobs.
+            // if (job.SalesTransactionId != null)
+            // {
+            //     _context.ActivityLogs.Add(new ActivityLog
+            //     {
+            //         Action = "Create Service Sale",
+            //         Module = "Sales",
+            //         Description = $"Service job {job.ServiceJobNumber} recorded in sale #{job.SalesTransactionId}",
+            //         StaffId = GetCurrentStaffId(),
+            //         Timestamp = DateTime.Now
+            //     });
+            // }
 
             // Persist all changes atomically.
             await _context.SaveChangesAsync();

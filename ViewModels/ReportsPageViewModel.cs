@@ -17,8 +17,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
                 public decimal TotalInventoryValue { get; set; }
                 public int LowStockItemCount { get; set; }
                 public System.Collections.Generic.List<LowStockAlertViewModel> LowStockAlerts { get; set; } = new();
-                // Service Transactions section
-                public System.Collections.Generic.List<ServiceTransactionReportViewModel> ServiceTransactions { get; set; } = new();
+
     }
 
 }
