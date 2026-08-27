@@ -288,10 +288,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (staff == null) return NotFound();
 
                 if (string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(staff.Role, "Owner", StringComparison.OrdinalIgnoreCase))
+                    string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase))
                 {
                     int adminCount = await _context.Staff.CountAsync(s =>
-                        s.Role == "Admin" || s.Role == "Owner");
+                        s.Role == "Admin" || s.Role == "Admin");
                     if (adminCount <= 1)
                     {
                         TempData["ErrorMessage"] = "Cannot delete the last administrator account.";
@@ -328,10 +328,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (staff == null) return NotFound();
 
                 if (string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(staff.Role, "Owner", StringComparison.OrdinalIgnoreCase))
+                    string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase))
                 {
                     int adminCount = await _context.Staff.CountAsync(s =>
-                        s.Role == "Admin" || s.Role == "Owner");
+                        s.Role == "Admin" || s.Role == "Admin");
                     if (adminCount <= 1)
                     {
                         TempData["ErrorMessage"] = "Cannot delete the last administrator account.";

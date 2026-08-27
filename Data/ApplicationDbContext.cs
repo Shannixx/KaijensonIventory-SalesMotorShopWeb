@@ -96,6 +96,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<PurchaseOrder>()
                 .HasIndex(p => p.PurchaseOrderNumber).IsUnique();
 
+            // Explicit relationship for DatabaseBackup.CreatedBy -> Staff.StaffId
+            modelBuilder.Entity<DatabaseBackup>()
+                .HasOne(b => b.CreatedByStaff)
+                .WithMany()
+                .HasForeignKey(b => b.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<PurchaseOrderItem>()
                 .HasOne(i => i.PurchaseOrder).WithMany(po => po.Items).HasForeignKey(i => i.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
 

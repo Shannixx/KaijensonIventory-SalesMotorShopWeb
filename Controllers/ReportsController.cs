@@ -29,7 +29,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (redirect != null) return redirect;
             if (!IsOwnerOrManager())
             {
-                TempData["ErrorMessage"] = "Access denied. Manager or Owner required.";
+                TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
             }
             // Preserve the active report across Generate ("Sales" / "Inventory"; null = landing page)
@@ -154,7 +154,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (redirect != null) return redirect;
             if (!IsOwnerOrManager())
             {
-                TempData["ErrorMessage"] = "Access denied. Manager or Owner required.";
+                TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
             }
             try
@@ -285,7 +285,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (redirect != null) return redirect;
             if (!IsOwnerOrManager())
             {
-                TempData["ErrorMessage"] = "Access denied. Manager or Owner required.";
+                TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
             }
             try

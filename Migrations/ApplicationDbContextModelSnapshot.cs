@@ -781,6 +781,50 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.ToTable("Staff");
                 });
 
+                // DatabaseBackup entity mapping (added for snapshot consistency)
+                modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.DatabaseBackup", b =>
+                {
+                    b.Property<int>("BackupId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BackupId"));
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+                    b.Property<string>("BackupType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+                    b.Property<string>("Status")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+                    b.HasKey("BackupId");
+                    b.HasIndex("CreatedBy");
+                    b.ToTable("DatabaseBackups");
+                });
+                // Relationship for DatabaseBackup.CreatedBy -> Staff.StaffId
+                modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.DatabaseBackup", b =>
+                {
+                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "CreatedByStaff")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Supplier", b =>
                 {
                     b.Property<int>("SupplierId")

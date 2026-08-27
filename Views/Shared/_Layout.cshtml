@@ -11,11 +11,9 @@
     string? staffName = Context.Session.GetString("StaffName");
     string? staffRole = Context.Session.GetString("StaffRole");
     string avatarChar = !string.IsNullOrEmpty(staffName) ? staffName[..1].ToUpper() : "K";
-    bool isAdmin = string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(staffRole, "Owner", StringComparison.OrdinalIgnoreCase);
-    bool isOwnerOrManager = isAdmin ||
-                   string.Equals(staffRole, "Manager", StringComparison.OrdinalIgnoreCase);
-    bool isOwner = string.Equals(staffRole, "Owner", StringComparison.OrdinalIgnoreCase);
+    bool isAdmin = string.Equals(staffRole, "Admin", StringComparison.OrdinalIgnoreCase);
+    bool isManager = string.Equals(staffRole, "Manager", StringComparison.OrdinalIgnoreCase);
+    bool isAdminOrManager = isAdmin || isManager;
 
     // Notification bell data (shop-wide alerts, count comes from the database)
     int unreadNotificationCount = await NotificationService.GetUnreadCountAsync();
@@ -104,7 +102,7 @@
                             <i class="bi bi-box-seam-fill"></i><span>Product</span>
                         </a>
                     </li>
-                    @if (isOwnerOrManager)
+                    @if (isAdminOrManager)
                     {
                         <li class="nav-item">
                             <a asp-controller="PurchaseOrders" asp-action="Index" class="nav-link @(IsActive("PurchaseOrders") ? "active" : "")" data-title="Purchase Order" aria-current="@ActiveAttr("PurchaseOrders")">

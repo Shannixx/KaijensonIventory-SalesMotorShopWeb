@@ -30,7 +30,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             if (!IsOwnerOrManager())
             {
-                TempData["ErrorMessage"] = "Access denied. Owner or Manager privileges required.";
+                TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
             }
             return null;

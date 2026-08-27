@@ -7,8 +7,11 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using KaijensonIventory_SalesMotorShopWeb.Data;
+using Microsoft.Extensions.Options;
 using KaijensonIventory_SalesMotorShopWeb.Models;
-using Microsoft.Extensions.Hosting;
+using System.Security.AccessControl;
+using System.Security.Principal;
+using System.Text.Json;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Services
 {
@@ -16,17 +19,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IActivityLogService _activityLog;
-        private readonly string _backupRoot;
         private readonly string _connectionString;
+        private readonly IOptionsMonitor<BackupSettings> _backupSettings;
+        private readonly Microsoft.Extensions.Hosting.IHostEnvironment _env;
 
-        public BackupService(ApplicationDbContext context, IActivityLogService activityLog, Microsoft.Extensions.Hosting.IHostEnvironment env)
+        private readonly ILogger<BackupService> _logger;
+
+        public BackupService(ApplicationDbContext context, IActivityLogService activityLog, Microsoft.Extensions.Hosting.IHostEnvironment env, IOptionsMonitor<BackupSettings> backupSettings, ILogger<BackupService> logger)
         {
             _context = context;
             _activityLog = activityLog;
-            // Ensure backup directory exists under App_Data/Backups
-            _backupRoot = Path.Combine(env.ContentRootPath, "App_Data", "Backups");
-            Directory.CreateDirectory(_backupRoot);
+            _env = env;
+            _backupSettings = backupSettings;
             _connectionString = context.Database.GetDbConnection().ConnectionString;
+            _logger = logger;
+            // No automatic validation on construction; call explicitly if needed.
         }
 
         private string GetDatabaseName()
@@ -44,10 +51,62 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return $"{safeDb}_{timestamp}{extra}.bak";
         }
 
-        private string GetBackupFilePath(string fileName)
+        // Determine backup directory: custom config or controlled app folder
+        private string GetBackupRoot()
         {
-            return Path.Combine(_backupRoot, fileName);
+            var custom = _backupSettings.CurrentValue.BackupDirectory;
+            if (!string.IsNullOrWhiteSpace(custom))
+            {
+                // Resolve relative paths against the content root, keep absolute as‑is
+                string resolvedPath;
+                if (Path.IsPathRooted(custom))
+                {
+                    resolvedPath = Path.GetFullPath(custom);
+                }
+                else
+                {
+                    resolvedPath = Path.GetFullPath(Path.Combine(_env.ContentRootPath, custom));
+                }
+                if (!Directory.Exists(resolvedPath))
+                    Directory.CreateDirectory(resolvedPath);
+                return resolvedPath;
+            }
+
+            // Default fallback – always use the app's content root
+            var fallback = Path.Combine(_env.ContentRootPath, "App_Data", "Backups");
+            if (!Directory.Exists(fallback))
+                Directory.CreateDirectory(fallback);
+            return fallback;
         }
+
+        // Validate that the application can read/write the backup directory at startup
+        private async Task ValidateBackupDirectoryAccessAsync()
+        {
+            var dir = GetBackupRoot();
+            try
+            {
+                // Ensure directory exists (already ensured by GetBackupRoot)
+                // Attempt to create a temporary file to verify write permission
+                var testPath = Path.Combine(dir, $"_hermes_backup_test_{Guid.NewGuid()}.tmp");
+                await File.WriteAllTextAsync(testPath, "test");
+                // Verify file exists and can be read
+                var content = await File.ReadAllTextAsync(testPath);
+                if (content != "test")
+                    throw new IOException("Test file content mismatch.");
+                // Cleanup
+                File.Delete(testPath);
+                // Log success (debug level)
+                // Assuming a logger is available via _activityLog or other, we log via activity log for diagnostics
+                await _activityLog.LogAsync("Backup Directory Validation", "System", $"Backup directory '{dir}' is accessible for read/write.", staffId: null);
+            }
+            catch (Exception ex)
+            {
+                // Log detailed error but do not throw to avoid breaking app start
+                await _activityLog.LogAsync("Backup Directory Validation", "System", $"Failed to access backup directory '{dir}': {ex.Message}", staffId: null);
+            }
+        }
+
+        private string GetBackupFilePath(string fileName) => Path.Combine(GetBackupRoot(), fileName);
 
         public async Task<DatabaseBackup> CreateBackupAsync(int staffId)
         {
@@ -62,6 +121,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 await conn.OpenAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
+
                 var info = new FileInfo(filePath);
                 var backup = new DatabaseBackup
                 {
@@ -70,7 +130,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     FileSize = info.Length,
                     CreatedAt = DateTime.Now,
                     CreatedBy = staffId,
-                    BackupType = "Full Database Backup",
+                    BackupType = "Manual",
                     Status = "Successful",
                     Description = null
                 };
@@ -81,7 +141,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             }
             catch (Exception ex)
             {
-                // Log failure
                 await _activityLog.LogAsync("Create Database Backup", "System", $"Failed: {ex.Message}", staffId);
                 var failed = new DatabaseBackup
                 {
@@ -90,7 +149,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     FileSize = 0,
                     CreatedAt = DateTime.Now,
                     CreatedBy = staffId,
-                    BackupType = "Full Database Backup",
+                    BackupType = "Manual",
                     Status = "Failed",
                     Description = ex.Message
                 };
@@ -112,6 +171,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 await conn.OpenAsync();
                 using var cmd = new SqlCommand(sql, conn);
                 await cmd.ExecuteNonQueryAsync();
+
                 var info = new FileInfo(filePath);
                 var backup = new DatabaseBackup
                 {
@@ -149,14 +209,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             }
         }
 
-        public async Task<DatabaseBackup?> GetBackupAsync(int backupId)
+        public async Task<DatabaseBackup> GetBackupAsync(int backupId)
         {
             return await _context.DatabaseBackups.FindAsync(backupId);
         }
 
         public async Task<List<DatabaseBackup>> GetBackupHistoryAsync()
         {
-            // Include staff navigation for name display
             return await _context.DatabaseBackups
                 .Include(b => b.CreatedByStaff)
                 .OrderByDescending(b => b.CreatedAt)
@@ -169,7 +228,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             if (backup == null || backup.Status != "Successful" || !File.Exists(backup.FilePath))
                 return false;
 
-            // Ensure file is not empty
             var fileInfo = new FileInfo(backup.FilePath);
             if (fileInfo.Length == 0)
             {
@@ -185,7 +243,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
-                // Run HEADERONLY and read DatabaseName
                 using var cmdHeader = new SqlCommand(sqlHeader, conn);
                 using var reader = await cmdHeader.ExecuteReaderAsync();
                 if (!reader.HasRows)
@@ -197,7 +254,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 string? backupDbName = null;
                 if (await reader.ReadAsync())
                 {
-                    // Column name may be "DatabaseName" per SQL Server output
                     backupDbName = reader["DatabaseName"] as string;
                 }
                 if (backupDbName == null || !backupDbName.Equals(expectedDbName, StringComparison.OrdinalIgnoreCase))
@@ -206,21 +262,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     await _context.SaveChangesAsync();
                     return false;
                 }
-                // Verify only
                 using var cmdVerify = new SqlCommand(sqlVerify, conn);
                 await cmdVerify.ExecuteNonQueryAsync();
-                // All checks passed – keep status as Successful
                 return true;
             }
             catch
             {
-                // On any error mark as Invalid
                 backup.Status = "Invalid";
                 await _context.SaveChangesAsync();
                 return false;
             }
         }
-
 
         public async Task<string> GetDatabaseStatusAsync()
         {
@@ -245,8 +297,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
-                // Simple checks for core tables existence & queryability
-                var checks = new[] {
+                var checks = new[]
+                {
                     "SELECT TOP 1 StaffId FROM Staff",
                     "SELECT TOP 1 ProductId FROM Products",
                     "SELECT TOP 1 SaleId FROM SalesTransactions",
@@ -265,6 +317,55 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             }
         }
 
+        // Automatic Backup Method
+        public async Task<DatabaseBackup> CreateAutomaticBackupAsync()
+        {
+            var dbName = GetDatabaseName();
+            var fileName = GenerateBackupFileName("Automatic");
+            var filePath = GetBackupFilePath(fileName);
+            var sql = $"BACKUP DATABASE [{dbName}] TO DISK = N'{filePath}' WITH INIT, STATS = 10";
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                using var cmd = new SqlCommand(sql, conn);
+                await cmd.ExecuteNonQueryAsync();
+
+                var info = new FileInfo(filePath);
+                var backup = new DatabaseBackup
+                {
+                    FileName = fileName,
+                    FilePath = filePath,
+                    FileSize = info.Length,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = null,
+                    BackupType = "Automatic",
+                    Status = "Successful",
+                    Description = null
+                };
+                _context.DatabaseBackups.Add(backup);
+                await _context.SaveChangesAsync();
+                                return backup;
+            }
+            catch (Exception ex)
+            {
+                                var backup = new DatabaseBackup
+                {
+                    FileName = fileName,
+                    FilePath = filePath,
+                    FileSize = 0,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = null,
+                    BackupType = "Automatic",
+                    Status = "Failed",
+                    Description = ex.Message
+                };
+                _context.DatabaseBackups.Add(backup);
+                await _context.SaveChangesAsync();
+                return backup;
+            }
+        }
+
         public async Task<bool> RestoreBackupAsync(int backupId, int staffId)
         {
             var backup = await GetBackupAsync(backupId);
@@ -272,6 +373,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 return false;
 
             var dbName = GetDatabaseName();
+
             // 1. Create pre‑restore safety backup
             try
             {
@@ -279,22 +381,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             }
             catch (Exception ex)
             {
-                // Safety backup failed – abort restore
                 await _activityLog.LogAsync("Create Pre‑Restore Backup", "System", $"Failed: {ex.Message}", staffId);
-                // Mark the attempted restore as failed in activity log (already logged above)
                 return false;
             }
 
-            var sql = $@"USE [master];
+            var sql = $@"
+                USE [master];
                 ALTER DATABASE [{dbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
                 RESTORE DATABASE [{dbName}] FROM DISK = N'{backup.FilePath}' WITH REPLACE;
                 ALTER DATABASE [{dbName}] SET MULTI_USER;";
 
             try
             {
-                await ExecuteNonQueryAsync(sql);
+                await using var connRestore = new SqlConnection(_connectionString);
+                await connRestore.OpenAsync();
+                using var cmdRestore = new SqlCommand(sql, connRestore);
+                await cmdRestore.ExecuteNonQueryAsync();
                 await _activityLog.LogAsync("Restore Database", "System", $"Restored from Backup ID: {backupId}", staffId);
-                // Post‑restore verification
+
                 var verified = await VerifyDatabaseAsync();
                 if (!verified)
                 {
@@ -310,13 +414,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             }
             finally
             {
-                // Ensure database is returned to MULTI_USER even if restore fails
                 try
                 {
                     var sqlMulti = $"ALTER DATABASE [{dbName}] SET MULTI_USER;";
-                    await ExecuteNonQueryAsync(sqlMulti);
+                    await using var connMulti = new SqlConnection(_connectionString);
+                    await connMulti.OpenAsync();
+                    using var cmdMulti = new SqlCommand(sqlMulti, connMulti);
+                    await cmdMulti.ExecuteNonQueryAsync();
                 }
-                catch { /* ignore – best‑effort */ }
+                catch { /* ignore */ }
             }
         }
     }

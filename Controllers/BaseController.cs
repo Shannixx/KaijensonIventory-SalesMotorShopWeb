@@ -21,22 +21,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
         }
 
-        // Owner (without Admin privileges)
-        protected bool IsOwner()
-        {
-            string? role = HttpContext.Session.GetString("StaffRole");
-            return string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase);
-        }
+        // Admin or Manager role check (no Owner)
+        protected bool IsOwnerOrManager()
+                {
+                    string? role = HttpContext.Session.GetString("StaffRole");
+                    return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase);
+                }
 
         protected IActionResult? RedirectIfNotOwnerOrManager()
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
             if (!IsOwnerOrManager())
-            {
-                TempData["ErrorMessage"] = "Access denied. Owner or Manager privileges required.";
-                return RedirectToAction("Index", "Dashboard");
-            }
+                            {
+                                TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
+                                return RedirectToAction("Index", "Dashboard");
+                            }
             return null;
         }
 
