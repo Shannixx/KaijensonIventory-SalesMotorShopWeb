@@ -13,7 +13,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [MaxLength(20)]
         public string Frequency { get; set; } = "Daily";
 
-        public int Hour { get; set; } = 21;
+        public int Hour { get; set; } = 0;
         public int Minute { get; set; } = 0;
 
         // For Weekly: 0=Sunday .. 6=Saturday

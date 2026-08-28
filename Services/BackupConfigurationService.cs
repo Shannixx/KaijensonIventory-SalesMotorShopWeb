@@ -27,18 +27,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return config;
         }
 
-        public async Task SaveAsync(BackupConfiguration config)
+public async Task SaveAsync(BackupConfiguration config)
         {
-            // Ensure NextAutomaticRun is set appropriately before persisting
-            if (config.Enabled)
-            {
-                config.NextAutomaticRun = ComputeNextOccurrence(DateTime.Now, config);
-            }
-            else
-            {
-                config.NextAutomaticRun = null;
-            }
-
+            // Direct save without recomputing schedule. Used by admin after computing NextAutomaticRun explicitly.
             var existing = await _context.BackupConfigurations.FirstOrDefaultAsync();
             if (existing == null)
             {
@@ -46,7 +37,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             }
             else
             {
-                // Update fields
                 existing.Enabled = config.Enabled;
                 existing.Frequency = config.Frequency;
                 existing.Hour = config.Hour;
@@ -56,9 +46,37 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 existing.RetentionCount = config.RetentionCount;
                 existing.BackupDirectory = config.BackupDirectory;
                 existing.LastAutomaticRun = config.LastAutomaticRun;
-                // Persist NextAutomaticRun (already computed on config)
                 existing.NextAutomaticRun = config.NextAutomaticRun;
             }
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task SaveAdminSettingsAsync(BackupConfiguration config)
+        {
+            // Compute NextAutomaticRun based on admin changes.
+            if (config.Enabled)
+            {
+                config.NextAutomaticRun = ComputeNextOccurrence(DateTime.Now, config);
+            }
+            else
+            {
+                config.NextAutomaticRun = null;
+            }
+            // Ensure LastAutomaticRun stays as is (may be null or existing value).
+            await SaveAsync(config);
+        }
+
+        public async Task SaveSchedulerStateAsync(DateTime? lastAutomaticRun, DateTime? nextAutomaticRun)
+        {
+            var existing = await _context.BackupConfigurations.FirstOrDefaultAsync();
+            if (existing == null)
+            {
+                // Should not happen, but create a new record with minimal data.
+                existing = new BackupConfiguration();
+                _context.BackupConfigurations.Add(existing);
+            }
+            existing.LastAutomaticRun = lastAutomaticRun;
+            existing.NextAutomaticRun = nextAutomaticRun;
             await _context.SaveChangesAsync();
         }
 

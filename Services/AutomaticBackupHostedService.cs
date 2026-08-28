@@ -52,47 +52,34 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     // If the scheduled time has passed, attempt a backup.
                     if (scheduledOccurrence != null && now >= scheduledOccurrence.Value)
                     {
-                        // Prevent duplicate backups for the same scheduled occurrence.
-                        var existing = await dbContext.DatabaseBackups
-                            .Where(b => b.BackupType == "Automatic" && b.Status == "Successful")
-                            .Where(b => b.CreatedAt >= scheduledOccurrence && b.CreatedAt < scheduledOccurrence.Value.AddDays(1))
-                            .AnyAsync(stoppingToken);
+                        var backup = await backupService.CreateAutomaticBackupAsync();
 
-                        if (!existing)
+                        if (backup.Status == "Successful")
                         {
-                            var backup = await backupService.CreateAutomaticBackupAsync();
+                            // Record that this occurrence has been processed
+                            settings.LastAutomaticRun = scheduledOccurrence.Value;
+                            // Calculate next occurrence and persist
+                            settings.NextAutomaticRun = ComputeNextOccurrence(DateTime.Now, settings);
+                            await configService.SaveSchedulerStateAsync(settings.LastAutomaticRun, settings.NextAutomaticRun);
 
-                            if (backup.Status == "Successful")
-                            {
-                                // Record that this occurrence has been processed
-                                settings.LastAutomaticRun = scheduledOccurrence.Value;
-                                // Calculate next occurrence and persist
-                                settings.NextAutomaticRun = ComputeNextOccurrence(DateTime.Now, settings);
-                                await configService.SaveAsync(settings);
+                            await activityLog.LogAsync(
+                                action: "Automatic Database Backup",
+                                module: "System",
+                                description: "System attempted automatic database backup. Status: Successful",
+                                staffId: null);
 
-                                await activityLog.LogAsync(
-                                    action: "Automatic Database Backup",
-                                    module: "System",
-                                    description: "System attempted automatic database backup. Status: Successful",
-                                    staffId: null);
-
-                                _logger.LogInformation($"Automatic backup created: {backup.FileName}");
-                                await EnforceRetentionAsync(dbContext, settings.RetentionCount);
-                            }
-                            else
-                            {
-                                await activityLog.LogAsync(
-                                    action: "Automatic Database Backup",
-                                    module: "System",
-                                    description: $"System attempted automatic database backup. Status: Failed. Reason: {backup.Description ?? "unknown"}",
-                                    staffId: null);
-
-                                _logger.LogWarning($"Automatic backup failed: {backup.FileName}");
-                            }
+                            _logger.LogInformation($"Automatic backup created: {backup.FileName}");
+                            await EnforceRetentionAsync(dbContext, settings.RetentionCount);
                         }
                         else
                         {
-                            _logger.LogInformation("Automatic backup for scheduled time already exists; skipping duplicate.");
+                            await activityLog.LogAsync(
+                                action: "Automatic Database Backup",
+                                module: "System",
+                                description: $"System attempted automatic database backup. Status: Failed. Reason: {backup.Description ?? "unknown"}",
+                                staffId: null);
+
+                            _logger.LogWarning($"Automatic backup failed: {backup.FileName}");
                         }
                     }
 
@@ -185,8 +172,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
     public class BackupSettings
     {
-        public bool Enabled { get; set; } = true;
-        public int Hour { get; set; } = 21;
+        public bool Enabled { get; set; } = false;
+        public int Hour { get; set; } = 0;
         public int Minute { get; set; } = 0;
         public int RetentionCount { get; set; } = 7;
         public string? BackupDirectory { get; set; }

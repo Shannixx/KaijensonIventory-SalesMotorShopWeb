@@ -1,11 +1,14 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using KaijensonIventory_SalesMotorShopWeb.Models;
 using KaijensonIventory_SalesMotorShopWeb.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using KaijensonIventory_SalesMotorShopWeb.Data;
 using System.IO;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
@@ -15,13 +18,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         private readonly IActivityLogService _activityLog;
         private readonly IWebHostEnvironment _env;
         private readonly IBackupConfigurationService _configService;
-
-        public BackupController(IBackupService backupService, IActivityLogService activityLog, IWebHostEnvironment env, IBackupConfigurationService configService)
+        private readonly ApplicationDbContext _dbContext;
+        private readonly ILogger<BackupController> _logger;
+        public BackupController(IBackupService backupService, IActivityLogService activityLog, IWebHostEnvironment env, IBackupConfigurationService configService, ApplicationDbContext dbContext, ILogger<BackupController> logger)
         {
             _backupService = backupService;
             _activityLog = activityLog;
             _env = env;
             _configService = configService;
+            _dbContext = dbContext;
+            _logger = logger;
         }
 
         // List backup history (Admin view)
@@ -32,21 +38,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var redirect = RedirectIfNotAdmin();
             if (redirect != null) return redirect;
-            await _configService.SaveAsync(model);
+            await _configService.SaveAdminSettingsAsync(model);
             // Log the change
             await _activityLog.LogAsync("Backup Settings Updated", "System", "Automatic backup settings changed", staffId: GetCurrentStaffId());
             return RedirectToAction(nameof(Index));
         }
         public async Task<IActionResult> Index()
         {
-            var redirect = RedirectIfNotOwnerOrManager();
+            var redirect = RedirectIfNotAdmin();
             if (redirect != null) return redirect;
 
-var history = await _backupService.GetBackupHistoryAsync();
+            var history = await _backupService.GetBackupHistoryAsync();
             var dbStatus = await _backupService.GetDatabaseStatusAsync();
             var settings = await _configService.GetAsync();
 
-            // Compute summary properties for the view model
             var lastSuccess = history
                 .Where(b => b.Status == "Successful")
                 .OrderByDescending(b => b.CreatedAt)
@@ -59,39 +64,7 @@ var history = await _backupService.GetBackupHistoryAsync();
             DateTime? nextScheduled = null;
             if (settings.Enabled)
             {
-                // Reuse the same scheduling logic as the hosted service
-                var now = DateTime.Now;
-                switch (settings.Frequency?.ToLowerInvariant())
-                {
-                    case "weekly":
-                        var targetDow = settings.DayOfWeek ?? 0;
-                        var daysUntil = ((int)targetDow - (int)now.DayOfWeek + 7) % 7;
-                        var candidate = new DateTime(now.Year, now.Month, now.Day, settings.Hour, settings.Minute, 0).AddDays(daysUntil);
-                        if (candidate <= now) candidate = candidate.AddDays(7);
-                        nextScheduled = candidate;
-                        break;
-                    case "monthly":
-                        var day = settings.DayOfMonth ?? 1;
-                        int daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-                        if (day > daysInMonth) day = daysInMonth;
-                        var candidateMonth = new DateTime(now.Year, now.Month, day, settings.Hour, settings.Minute, 0);
-                        if (candidateMonth <= now)
-                        {
-                            var nextMonth = now.AddMonths(1);
-                            daysInMonth = DateTime.DaysInMonth(nextMonth.Year, nextMonth.Month);
-                            var nextDay = settings.DayOfMonth ?? 1;
-                            if (nextDay > daysInMonth) nextDay = daysInMonth;
-                            candidateMonth = new DateTime(nextMonth.Year, nextMonth.Month, nextDay, settings.Hour, settings.Minute, 0);
-                        }
-                        nextScheduled = candidateMonth;
-                        break;
-                    case "daily":
-                    default:
-                        var candidateDaily = new DateTime(now.Year, now.Month, now.Day, settings.Hour, settings.Minute, 0);
-                        if (candidateDaily <= now) candidateDaily = candidateDaily.AddDays(1);
-                        nextScheduled = candidateDaily;
-                        break;
-                }
+                nextScheduled = settings.NextAutomaticRun;
             }
 
             var viewModel = new KaijensonIventory_SalesMotorShopWeb.ViewModels.BackupPageViewModel
@@ -109,31 +82,8 @@ var history = await _backupService.GetBackupHistoryAsync();
             return View(viewModel);
         }
 
-
-
-        // Show confirmation page for creating backup (Admin)
-        public IActionResult Create()
-        {
-            var redirect = RedirectIfNotAdmin();
-            if (redirect != null) return redirect;
-            return View();
-        }
-
-        // POST: actually create backup
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateConfirmed()
-        {
-            var redirect = RedirectIfNotAdmin();
-            if (redirect != null) return redirect;
-
-            var staffId = GetCurrentStaffId();
-            await _backupService.CreateBackupAsync(staffId);
-            return RedirectToAction(nameof(Index));
-        }
-
-        // Download backup file (Admin, secure path)
-        public async Task<IActionResult> Download(int id)
+        // New Review action for displaying backup details and data coverage
+        public async Task<IActionResult> Review(int id)
         {
             var redirect = RedirectIfNotAdmin();
             if (redirect != null) return redirect;
@@ -142,83 +92,148 @@ var history = await _backupService.GetBackupHistoryAsync();
             if (backup == null || backup.Status != "Successful")
                 return NotFound();
 
-            // Use stored backup file path directly (already validated on creation)
-            var fullPath = backup.FilePath;
-            if (!System.IO.File.Exists(fullPath))
-                return NotFound();
+            // Get list of entity names from DbContext via reflection
+            // Use EF Core metadata to get actual table names
+            var entityTypes = _dbContext.Model.GetEntityTypes();
+            var entityNames = entityTypes
+                .Select(e => (e.GetSchema() != null ? $"{e.GetSchema()}." : "") + e.GetTableName())
+                .OrderBy(n => n)
+                .ToList();
+            ViewBag.EntityNames = entityNames;
 
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            return File(fileBytes, "application/octet-stream", backup.FileName);
-        }
+            // Get real database name from connection string
+            var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_dbContext.Database.GetDbConnection().ConnectionString);
+            ViewBag.DatabaseName = builder.InitialCatalog;
 
-        // Step A/B: Validate backup and show result page
-        public async Task<IActionResult> ValidateBackup(int id)
-        {
-            var redirect = RedirectIfNotAdmin();
-            if (redirect != null) return redirect;
-
-            var backup = await _backupService.GetBackupAsync(id);
-            if (backup == null)
-                return NotFound();
-
-            var isValid = await _backupService.ValidateBackupAsync(id);
-            // Pass info via ViewBag for status display
-            ViewBag.IsValid = isValid;
-            // Pass the backup as the model for the view
-            return View("Validate", backup);
+            return View(backup);
         }
 
 
-        // Step C: Show restore preview (requires prior validation success)
-        public async Task<IActionResult> PreviewRestore(int id)
-        {
-            var redirect = RedirectIfNotAdmin();
-            if (redirect != null) return redirect;
 
-            var backup = await _backupService.GetBackupAsync(id);
-            if (backup == null)
-                return NotFound();
-
-            var isValid = await _backupService.ValidateBackupAsync(id);
-            if (!isValid)
-                return BadRequest("Backup validation failed. Cannot preview restore.");
-
-            // Pass backup as model instead of ViewBag
-            return View("Preview", backup);
-        }
-
-        // Step D: Final confirmation page (GET) – shows same info with strong confirmation
-        public async Task<IActionResult> ConfirmRestore(int id)
-        {
-            var redirect = RedirectIfNotAdmin();
-            if (redirect != null) return redirect;
-
-            var backup = await _backupService.GetBackupAsync(id);
-            if (backup == null)
-                return NotFound();
-
-            var isValid = await _backupService.ValidateBackupAsync(id);
-            if (!isValid)
-                return BadRequest("Backup validation failed. Cannot confirm restore.");
-
-            // Pass backup as model to the view
-            return View("Confirm", backup);
-        }
-
-        // Step E/F/G/H/I: Execute restore after final confirmation (POST)
+        // POST: Manual backup directly from Backup page
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ExecuteRestore(int id)
+        public async Task<IActionResult> BackupNow()
         {
             var redirect = RedirectIfNotAdmin();
             if (redirect != null) return redirect;
 
             var staffId = GetCurrentStaffId();
+            var backup = await _backupService.CreateBackupAsync(staffId);
+            if (backup.Status != "Successful")
+            {
+                // Log already done in service; show error view
+                ViewBag.ErrorMessage = backup.Description ?? "Manual backup failed.";
+                return View("Error", backup);
+            }
+            // Log manual backup
+            await _activityLog.LogAsync("Manual Database Backup", "System", "Manual backup performed", staffId);
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Delete backup (Admin)
+        public async Task<IActionResult> Delete(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var backup = await _backupService.GetBackupAsync(id);
+            if (backup == null)
+                return NotFound();
+
+            // Only allow deletion of eligible backups (Manual or Automatic Successful, not safety backup)
+            if (backup.BackupType == "Pre-Restore Safety Backup" || backup.Status != "Successful")
+                return BadRequest("Backup cannot be deleted.");
+
+            return View("Delete", backup);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var backup = await _backupService.GetBackupAsync(id);
+            if (backup == null)
+                return NotFound();
+
+            // Delete file and record
+            try
+            {
+                if (System.IO.File.Exists(backup.FilePath))
+                {
+                    System.IO.File.Delete(backup.FilePath);
+                }
+                else
+                {
+                    // Log missing physical file
+                    await _activityLog.LogAsync("Backup Delete", "System", $"Physical file missing for backup ID {id} at path {backup.FilePath}", GetCurrentStaffId());
+                }
+                _dbContext.DatabaseBackups.Remove(backup);
+                await _dbContext.SaveChangesAsync();
+                await _activityLog.LogAsync("Backup Deleted", "System", $"Deleted backup ID {id}", GetCurrentStaffId());
+            }
+            catch (Exception ex)
+            {
+                await _activityLog.LogAsync("Backup Delete Failed", "System", ex.Message, GetCurrentStaffId());
+                // Show error view
+                ViewBag.ErrorMessage = "Failed to delete backup.";
+                return View("Error", backup);
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+// GET: confirmation page for recovery
+        [HttpGet]
+        public async Task<IActionResult> ConfirmRecover(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var backup = await _backupService.GetBackupAsync(id);
+            if (backup == null || backup.Status != "Successful")
+                return BadRequest("Invalid backup for recovery.");
+
+            // Get real database name from connection string
+            var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_dbContext.Database.GetDbConnection().ConnectionString);
+            ViewBag.DatabaseName = builder.InitialCatalog;
+
+            // Show confirmation view with backup details
+            return View("ConfirmRecover", backup);
+        }
+
+        // POST: perform the actual restore after confirmation
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Recover(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var backup = await _backupService.GetBackupAsync(id);
+            if (backup == null || backup.Status != "Successful")
+                return BadRequest("Invalid backup for recovery.");
+
+            // Validate backup before recovery
+            var isValid = await _backupService.ValidateBackupAsync(id);
+            if (!isValid)
+            {
+                await _activityLog.LogAsync("Recovery Validation Failed", "System", $"Backup ID {id} failed validation", GetCurrentStaffId());
+                return BadRequest("Backup validation failed. Cannot recover.");
+            }
+
+            var staffId = GetCurrentStaffId();
+            // Log start of recovery
+            _logger?.LogInformation("[Recovery] Starting restore for BackupId={BackupId}", id);
             var success = await _backupService.RestoreBackupAsync(id, staffId);
-            // Result UI
+            // Result UI – reuse Result view
             ViewBag.Success = success;
             ViewBag.BackupId = id;
             return View("Result");
         }
+
+        // Remove outdated confirm and execute actions
     }
 }

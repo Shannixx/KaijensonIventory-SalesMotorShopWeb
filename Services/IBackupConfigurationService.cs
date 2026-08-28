@@ -7,5 +7,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
     {
         Task<BackupConfiguration> GetAsync();
         Task SaveAsync(BackupConfiguration config);
+        Task SaveAdminSettingsAsync(BackupConfiguration config);
+        Task SaveSchedulerStateAsync(DateTime? lastAutomaticRun, DateTime? nextAutomaticRun);
     }
 }
