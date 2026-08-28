@@ -30,6 +30,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<ServiceJob> ServiceJobs => Set<ServiceJob>();
         public DbSet<ServiceHistory> ServiceHistories => Set<ServiceHistory>();
         public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
+        public DbSet<BackupConfiguration> BackupConfigurations => Set<BackupConfiguration>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -1,4 +1,5 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
+using Microsoft.Extensions.Logging;
 using KaijensonIventory_SalesMotorShopWeb.Models;
 using KaijensonIventory_SalesMotorShopWeb.Services;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IBackupService, BackupService>();
+builder.Services.AddScoped<IBackupConfigurationService, BackupConfigurationService>();
 builder.Services.AddHostedService<AutomaticBackupHostedService>();
 
 builder.Services.AddDistributedMemoryCache();
@@ -38,6 +40,24 @@ builder.Services.AddSession(options =>
 });
 
 var app = builder.Build();
+
+// Apply pending migrations on startup in Development when enabled
+if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("ApplyMigrationsOnStartup"))
+{
+    using var migrationScope = app.Services.CreateScope();
+    var migrationDb = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = migrationScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        migrationDb.Database.Migrate();
+        logger.LogInformation("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error applying database migrations on startup.");
+        throw;
+    }
+}
 
 
 
