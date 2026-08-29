@@ -23,13 +23,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
         {
             var deliveries = await _context.Deliveries
-                .Include(d => d.PurchaseOrder)
+                .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Supplier)
-                .Include(d => d.PurchaseOrder)
+                .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Staff)
-                .Include(d => d.PurchaseOrder)
+                .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Items)
-                        .ThenInclude(i => i.Product)
+                        .ThenInclude(i => i.Product!)
                             .ThenInclude(p => p.Category)
                 .AsNoTracking()
                 .OrderByDescending(d => d.CreatedDate)
@@ -37,18 +37,18 @@ public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
                 {
                     DeliveryId = d.DeliveryId,
                     PurchaseOrderId = d.PurchaseOrderId,
-                    PurchaseOrderNumber = d.PurchaseOrder != null ? d.PurchaseOrder.PurchaseOrderNumber : null,
+                    PurchaseOrderNumber = d.PurchaseOrder != null ? d.PurchaseOrder.PurchaseOrderNumber : string.Empty,
                     Status = d.Status,
-                    SupplierName = d.PurchaseOrder != null && d.PurchaseOrder.Supplier != null ? d.PurchaseOrder.Supplier.CompanyName : null,
+                    SupplierName = d.PurchaseOrder != null && d.PurchaseOrder.Supplier != null ? d.PurchaseOrder.Supplier.CompanyName : string.Empty,
                     OrderDate = d.PurchaseOrder != null ? d.PurchaseOrder.OrderDate : DateTime.MinValue,
                     DeliveredDate = d.DeliveredDate,
-                    CreatedByName = d.PurchaseOrder != null && d.PurchaseOrder.Staff != null ? d.PurchaseOrder.Staff.StaffName : null,
+                    CreatedByName = d.PurchaseOrder != null && d.PurchaseOrder.Staff != null ? d.PurchaseOrder.Staff.StaffName : string.Empty,
 Items = d.PurchaseOrder != null
                 ? d.PurchaseOrder.Items.Select(i => new DeliveryItemViewModel
                 {
-                    ProductName = i.Product != null ? i.Product.ProductName : null,
-                    Brand = i.Product != null ? i.Product.Brand : null,
-                    Category = i.Product != null && i.Product.Category != null ? i.Product.Category.CategoryName : null,
+                    ProductName = i.Product != null ? i.Product.ProductName : string.Empty,
+                    Brand = i.Product != null ? i.Product.Brand : string.Empty,
+                    Category = i.Product != null && i.Product.Category != null ? i.Product.Category.CategoryName : string.Empty,
                     Quantity = i.Quantity,
                     ReceivedQuantity = i.ReceivedQuantity,
                     PurchaseOrderItemId = i.PurchaseOrderItemId
@@ -63,13 +63,13 @@ Items = d.PurchaseOrder != null
         public async Task<DeliveryViewModel?> GetDeliveryDetailsAsync(int id)
         {
             var delivery = await _context.Deliveries
-                .Include(d => d.PurchaseOrder)
+                .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Supplier)
-                .Include(d => d.PurchaseOrder)
+                .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Staff)
-                .Include(d => d.PurchaseOrder)
+                .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Items)
-                        .ThenInclude(i => i.Product)
+                        .ThenInclude(i => i.Product!)
                             .ThenInclude(p => p.Category)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.DeliveryId == id);
@@ -119,11 +119,11 @@ Items = d.PurchaseOrder != null
                 OrderDate = order?.OrderDate ?? DateTime.MinValue,
                 DeliveredDate = delivery.DeliveredDate,
                 CreatedByName = order?.Staff?.StaffName,
-                Items = order?.Items.Select(i => new DeliveryItemViewModel
-                {
-                    ProductName = i.Product?.ProductName,
-                    Brand = i.Product?.Brand,
-                    Category = i.Product?.Category?.CategoryName,
+Items = order?.Items?.Select(i => new DeliveryItemViewModel
+{
+                    ProductName = i.Product != null ? i.Product.ProductName : string.Empty,
+                    Brand = i.Product != null ? i.Product.Brand : string.Empty,
+                    Category = i.Product != null && i.Product.Category != null ? i.Product.Category.CategoryName : string.Empty,
                     Quantity = i.Quantity,
                     ReceivedQuantity = i.ReceivedQuantity,
                     PurchaseOrderItemId = i.PurchaseOrderItemId
@@ -135,9 +135,9 @@ Items = d.PurchaseOrder != null
         public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId)
         {
             var delivery = await _context.Deliveries
-                .Include(d => d.PurchaseOrder)
+                .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Items)
-                        .ThenInclude(i => i.Product)
+                        .ThenInclude(i => i.Product!)
                             .ThenInclude(p => p.Category)
                 .FirstOrDefaultAsync(d => d.DeliveryId == id);
 
@@ -181,8 +181,8 @@ Items = d.PurchaseOrder != null
                 }
 
                 // Update product inventory
-                int previousQty = item.Product!.QuantityOnHand;
-                item.Product.QuantityOnHand += receiveNow;
+                int previousQty = item.Product?.QuantityOnHand ?? 0;
+                item.Product!.QuantityOnHand += receiveNow;
                 item.Product.LastStockInDate = DateTime.Now;
 
                 decimal unitCost = item.Product.Price > 0 ? item.Product.Price : item.Product.AverageCost;
@@ -192,10 +192,10 @@ Items = d.PurchaseOrder != null
                     receiveNow,
                     unitCost);
 
-                item.Product.StockStatus = StockHelper.GetStockStatus(item.Product.QuantityOnHand);
+                item.Product!.StockStatus = StockHelper.GetStockStatus(item.Product!.QuantityOnHand);
 
                 // Track restocked products for post-save notification evaluation
-                restockedProducts.Add(item.Product!);
+                if (item.Product != null) restockedProducts.Add(item.Product);
 
                 // Update PO item received quantity
                 item.ReceivedQuantity += receiveNow;

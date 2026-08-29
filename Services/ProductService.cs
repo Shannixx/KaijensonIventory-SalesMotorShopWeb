@@ -140,7 +140,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 ModelCompatibility = model.ModelCompatibility,
                 PurchaseOrderId = model.PurchaseOrderId,
                 LeadTimeDays = 30,
-                Price = model.Price.Value,
+                Price = model.Price ?? 0m,
                 IsSerialized = model.IsSerialized,
                 AverageCost = 0,
                 ReorderLevel = model.ReorderLevel,

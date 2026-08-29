@@ -24,7 +24,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 .Select(p => new InventoryReportItemViewModel
                 {
                     ProductName = p.ProductName,
-                    CategoryName = p.Category.CategoryName,
+                    CategoryName = p.Category != null ? p.Category.CategoryName : string.Empty,
                     QuantityOnHand = p.QuantityOnHand,
                     StockStatus = StockHelper.GetStockStatus(p.QuantityOnHand),
                     ReorderLevel = p.ReorderLevel
@@ -104,10 +104,10 @@ var startInclusive = start.Date;
                 .Select(di => new StockMovementViewModel
                 {
                     Date = di.ReceivedDate,
-                    ProductName = di.PurchaseOrderItem.Product.ProductName,
+                    ProductName = di.PurchaseOrderItem.Product != null ? di.PurchaseOrderItem.Product.ProductName : string.Empty,
                     MovementType = "Purchase",
                     Quantity = di.ReceivedQuantity,
-                    Reference = di.Delivery.PurchaseOrder.PurchaseOrderNumber
+                    Reference = di.Delivery.PurchaseOrder != null ? di.Delivery.PurchaseOrder.PurchaseOrderNumber : string.Empty
                 })
                 .ToListAsync();
 
@@ -230,7 +230,7 @@ var alerts = await query
             var data = await itemsQuery
                 .Include(i => i.Product)
                 .ThenInclude(p => p.Category)
-                .GroupBy(i => i.Product.Category.CategoryName)
+                .GroupBy(i => i.Product.Category != null ? i.Product.Category.CategoryName : string.Empty)
                 .Select(g => new SalesByCategoryViewModel
                 {
                     CategoryName = g.Key,

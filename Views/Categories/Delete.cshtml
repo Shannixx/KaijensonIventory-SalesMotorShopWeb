@@ -18,11 +18,16 @@
             <dd class="col-sm-8">@Html.DisplayFor(m => m.CategoryName)</dd>
         </dl>
 
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Warning:</strong> This action cannot be undone.
+        </div>
+
         <form asp-action="Delete">
             <input type="hidden" asp-for="CategoryId" />
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</button>
-                <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
+                <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Categories</a>
             </div>
         </form>
     </div>

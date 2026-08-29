@@ -11,17 +11,32 @@
 <div class="card" style="max-width:600px; margin:0 auto;">
     <div class="card-body">
         <dl class="row">
-            <dt class="col-sm-4">@Html.DisplayNameFor(m => m.BrandId)</dt>
-            <dd class="col-sm-8">@Html.DisplayFor(m => m.BrandId)</dd>
+            <dt class="col-sm-4">Brand ID</dt>
+            <dd class="col-sm-8">@Model.BrandId</dd>
 
-            <dt class="col-sm-4">@Html.DisplayNameFor(m => m.BrandName)</dt>
-            <dd class="col-sm-8">@Html.DisplayFor(m => m.BrandName)</dd>
+            <dt class="col-sm-4">Brand Name</dt>
+            <dd class="col-sm-8">@Model.BrandName</dd>
 
-            <dt class="col-sm-4">@Html.DisplayNameFor(m => m.CountryOrigin)</dt>
-            <dd class="col-sm-8">@Html.DisplayFor(m => m.CountryOrigin)</dd>
+            <dt class="col-sm-4">Brand Description</dt>
+            <dd class="col-sm-8">@Model.Description</dd>
 
-            <dt class="col-sm-4">@Html.DisplayNameFor(m => m.Status)</dt>
-            <dd class="col-sm-8">@Html.DisplayFor(m => m.Status)</dd>
+            <dt class="col-sm-4">Country of Origin</dt>
+            <dd class="col-sm-8">@Model.CountryOrigin</dd>
+
+            <dt class="col-sm-4">Status</dt>
+            <dd class="col-sm-8">@Model.Status</dd>
+
+            <dt class="col-sm-4">Supplier</dt>
+            <dd class="col-sm-8">@((Model.Supplier != null) ? Model.Supplier.CompanyName : "Not Assigned")</dd>
+
+            <dt class="col-sm-4">Number of Products</dt>
+            <dd class="col-sm-8">@ViewBag.ProductCount</dd>
+
+            <dt class="col-sm-4">Created By</dt>
+            <dd class="col-sm-8">@((Model.CreatedByStaff != null) ? Model.CreatedByStaff.StaffName : "System")</dd>
+
+            <dt class="col-sm-4">Date Created</dt>
+            <dd class="col-sm-8">@Model.CreatedAt.ToString("MMMM dd, yyyy")</dd>
         </dl>
 
         <div class="d-flex gap-2">

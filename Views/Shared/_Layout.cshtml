@@ -142,11 +142,6 @@
 
                 <div class="nav-section">System</div>
                 <ul class="nav-list">
-                    <li class="nav-item">
-                        <a asp-controller="Backup" asp-action="Index" class="nav-link @(IsActive("Backup") ? "active" : "")" data-title="Data Backup & Recovery" aria-current="@ActiveAttr("Backup")">
-                            <i class="bi bi-cloud-arrow-up"></i><span>Data Backup & Recovery</span>
-                        </a>
-                    </li>
                     @if (isAdmin)
                     {
                         <li class="nav-item">

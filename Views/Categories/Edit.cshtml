@@ -8,16 +8,40 @@
     </div>
 </div>
 
-<div class="card form-card-narrow">
+<div class="card">
     <div class="card-body">
         <form asp-action="Edit">
             <input asp-for="CategoryId" type="hidden" />
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
             <div class="mb-3">
+                <label class="form-label">Category ID</label>
+                <p class="form-control-plaintext">@Model.CategoryId</p>
+                
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="CategoryName" class="form-label"></label>
                 <input asp-for="CategoryName" class="form-control" placeholder="e.g. Lubricant" required />
                 <span asp-validation-for="CategoryName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Optional description"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Created By</label>
+                <p class="form-control-plaintext">@(Model.CreatedByStaff?.StaffName ?? "System Admin")</p>
+                
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Date Created</label>
+                <p class="form-control-plaintext">@Model.CreatedAt.ToString("MMMM dd, yyyy")</p>
+                
             </div>
 
             <div class="form-actions">

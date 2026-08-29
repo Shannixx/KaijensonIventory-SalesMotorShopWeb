@@ -27,9 +27,6 @@ builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 builder.Services.AddScoped<IReportService, ReportService>();
-builder.Services.AddScoped<IBackupService, BackupService>();
-builder.Services.AddScoped<IBackupConfigurationService, BackupConfigurationService>();
-builder.Services.AddHostedService<AutomaticBackupHostedService>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -82,9 +79,24 @@ using (var scope = app.Services.CreateScope())
     if (!db.Categories.Any())
     {
         db.Categories.AddRange(
-            new Category { CategoryName = "Lubricant" },
-            new Category { CategoryName = "Accessories" },
-            new Category { CategoryName = "SpareParts" }
+            new Category
+            {
+                CategoryName = "Lubricant",
+                Description = "Products used to lubricate and maintain motorcycle engines, transmissions, and other moving components.",
+                CreatedAt = DateTime.UtcNow
+            },
+            new Category
+            {
+                CategoryName = "Accessories",
+                Description = "Motorcycle accessories and add-on items intended to improve functionality, convenience, protection, or appearance.",
+                CreatedAt = DateTime.UtcNow
+            },
+            new Category
+            {
+                CategoryName = "Spare Parts",
+                Description = "Replacement components used to repair, maintain, or restore motorcycles and their mechanical systems.",
+                CreatedAt = DateTime.UtcNow
+            }
         );
     }
 

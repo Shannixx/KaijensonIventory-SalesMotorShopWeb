@@ -38,9 +38,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Brand Name</th>
-                        <th>Country</th>
                         <th>Status</th>
-                        <th>Products</th>
                         <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
@@ -53,7 +51,7 @@
                         <tr>
                             <td>@item.BrandId</td>
                             <td>@item.BrandName</td>
-                            <td>@item.CountryOrigin</td>
+                            
                             <td>
                                 @if (item.Status == "Active")
                                 {
@@ -64,7 +62,7 @@
                                     <span class="badge bg-secondary">Inactive</span>
                                 }
                             </td>
-                            <td>@prodCount</td>
+                            
                             <td class="action-cell">
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.BrandId" class="btn btn-icon btn-icon-view" title="View brand" aria-label="View brand @item.BrandName"><i class="bi bi-eye"></i></a>
@@ -92,7 +90,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">No brands found.</td>
+                            <td colspan="4" class="text-center py-4 text-muted">No brands found.</td>
                         </tr>
                     }
                 </tbody>

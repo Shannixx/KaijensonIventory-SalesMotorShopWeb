@@ -1,4 +1,4 @@
-@model KaijensonIventory_SalesMotorShopWeb.Models.Brand
+@model KaijensonIventory_SalesMotorShopWeb.ViewModels.BrandFormViewModel
 @{ ViewData["Title"] = "Edit Brand"; }
 
 <div class="page-header">
@@ -26,16 +26,43 @@
                 <span asp-validation-for="CountryOrigin" class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="Status" class="form-label"></label>
-                <select asp-for="Status" class="form-select" required>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                </select>
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
+                <div class="mb-3">
+                    <label asp-for="Status" class="form-label"></label>
+                    <select asp-for="Status" class="form-select" required>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
 
-            <div class="form-actions">
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="Enter brand description (optional)"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="SupplierId" class="form-label"></label>
+                    <select asp-for="SupplierId" class="form-select" asp-items="Model.Suppliers">
+                        <option value="">Select Supplier</option>
+                    </select>
+                    <span asp-validation-for="SupplierId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Brand ID</label>
+                    <p class="form-control-plaintext">@Model.BrandId</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Created By</label>
+                    <p class="form-control-plaintext">@Model.CreatedByName</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Date Created</label>
+                    <p class="form-control-plaintext">@Model.CreatedAt.ToString("MMMM dd, yyyy")</p>
+                </div>
+
+                <div class="form-actions">
                 <button type="submit" class="btn btn-app-primary">
                     <i class="bi bi-check-lg" aria-hidden="true"></i>
                     <span>Save Changes</span>

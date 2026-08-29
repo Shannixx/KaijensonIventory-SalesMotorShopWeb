@@ -59,20 +59,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Take(pageSize)
                     .ToListAsync();
 
-                var categoryIds = categories.Select(c => c.CategoryId).ToList();
-
-                ViewData["ProductCounts"] = await _context.Products
-                    .Where(p => categoryIds.Contains(p.CategoryId))
-                    .GroupBy(p => p.CategoryId)
-                    .Select(g => new { CategoryId = g.Key, Count = g.Count() })
-                    .ToDictionaryAsync(k => k.CategoryId, v => v.Count);
-
-                ViewData["ServiceCounts"] = await _context.Services
-                    .Where(s => s.CategoryId != null && categoryIds.Contains(s.CategoryId.Value))
-                    .GroupBy(s => s.CategoryId!.Value)
-                    .Select(g => new { CategoryId = g.Key, Count = g.Count() })
-                    .ToDictionaryAsync(k => k.CategoryId, v => v.Count);
-
                 ViewData["CurrentFilter"] = searchString;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
@@ -96,7 +82,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.CategoryId == id);
+                var category = await _context.Categories
+                    .AsNoTracking()
+                    .Include(c => c.CreatedByStaff)
+                    .FirstOrDefaultAsync(c => c.CategoryId == id);
                 if (category == null) return NotFound();
                 return View(category);
             }
@@ -129,6 +118,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     ModelState.AddModelError("CategoryName", "Category name is required.");
                 }
+                else
+                {
+                    category.CategoryName = category.CategoryName.Trim();
+                }
+
+                if (!string.IsNullOrWhiteSpace(category.Description))
+                {
+                    category.Description = category.Description.Trim();
+                }
 
                 if (ModelState.IsValid)
                 {
@@ -138,6 +136,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         ModelState.AddModelError("CategoryName", "A category with this name already exists.");
                         return View(category);
                     }
+
+                    category.CreatedBy = GetStaffId();
+                    category.CreatedAt = DateTime.UtcNow;
 
                     _context.Categories.Add(category);
                     await _context.SaveChangesAsync();
@@ -174,7 +175,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var category = await _context.Categories.FindAsync(id);
+                var category = await _context.Categories
+                    .AsNoTracking()
+                    .Include(c => c.CreatedByStaff)
+                    .FirstOrDefaultAsync(c => c.CategoryId == id);
                 if (category == null) return NotFound();
                 return View(category);
             }
@@ -199,6 +203,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 ModelState.AddModelError("CategoryName", "Category name is required.");
             }
+            else
+            {
+                category.CategoryName = category.CategoryName.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(category.Description))
+            {
+                category.Description = category.Description.Trim();
+            }
 
             if (ModelState.IsValid)
             {
@@ -211,7 +224,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         return View(category);
                     }
 
-                    _context.Categories.Update(category);
+                    var existing = await _context.Categories.FindAsync(id);
+                    if (existing == null) return NotFound();
+
+                    existing.CategoryName = category.CategoryName;
+                    existing.Description = category.Description;
+
                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
@@ -219,12 +237,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         StaffId = GetStaffId(),
                         Action = "Edit",
                         Module = "Category",
-                        Description = $"Edited category: {category.CategoryName}",
+                        Description = $"Edited category: {existing.CategoryName}",
                         Timestamp = DateTime.UtcNow
                     });
                     await _context.SaveChangesAsync();
 
-                    TempData["SuccessMessage"] = $"Category '{category.CategoryName}' updated successfully.";
+                    TempData["SuccessMessage"] = $"Category '{existing.CategoryName}' updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException ex)
@@ -271,14 +289,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 int productCount = await _context.Products.CountAsync(p => p.CategoryId == id);
                 if (productCount > 0)
                 {
-                    TempData["ErrorMessage"] = "This category cannot be deleted because products or services are assigned to it.";
+                    TempData["ErrorMessage"] = $"\"{category.CategoryName}\" is currently being used by one or more products. Please reassign those records before deleting this category.";
                     return RedirectToAction(nameof(Index));
                 }
 
                 int serviceCount = await _context.Services.CountAsync(s => s.CategoryId == id);
                 if (serviceCount > 0)
                 {
-                    TempData["ErrorMessage"] = "This category cannot be deleted because products or services are assigned to it.";
+                    TempData["ErrorMessage"] = $"\"{category.CategoryName}\" is currently being used by one or more services. Please reassign those records before deleting this category.";
                     return RedirectToAction(nameof(Index));
                 }
 

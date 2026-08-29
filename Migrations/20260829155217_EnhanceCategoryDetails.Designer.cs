@@ -4,6 +4,7 @@ using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829155217_EnhanceCategoryDetails")]
+    partial class EnhanceCategoryDetails
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -75,32 +78,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int?>("SupplierId")
-                        .HasColumnType("int");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("BrandId");
 
                     b.HasIndex("BrandName")
                         .IsUnique();
-
-                    b.HasIndex("CreatedBy");
-
-                    b.HasIndex("SupplierId");
 
                     b.ToTable("Brands");
 
@@ -110,8 +95,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandId = 1,
                             BrandName = "Honda",
                             CountryOrigin = "Japan",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese motorcycle and automotive brand known for motorcycles, engines, and related mobility products.",
                             Status = "Active"
                         },
                         new
@@ -119,8 +102,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandId = 2,
                             BrandName = "Yamaha",
                             CountryOrigin = "Japan",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese manufacturer known for motorcycles, engines, and a wide range of mobility products.",
                             Status = "Active"
                         },
                         new
@@ -128,8 +109,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandId = 3,
                             BrandName = "Suzuki",
                             CountryOrigin = "Japan",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese manufacturer producing motorcycles, engines, and other mobility-related products.",
                             Status = "Active"
                         },
                         new
@@ -137,8 +116,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandId = 4,
                             BrandName = "Kawasaki",
                             CountryOrigin = "Japan",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese manufacturer known for motorcycles, engines, and other transportation and industrial products.",
                             Status = "Active"
                         },
                         new
@@ -146,8 +123,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandId = 5,
                             BrandName = "Kymco",
                             CountryOrigin = "Taiwan",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Taiwanese manufacturer specializing in scooters, motorcycles, and related mobility products.",
                             Status = "Active"
                         });
                 });
@@ -189,21 +164,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         {
                             CategoryId = 1,
                             CategoryName = "Lubricant",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Products used to lubricate and maintain motorcycle engines, transmissions, and other moving components."
                         },
                         new
                         {
                             CategoryId = 2,
                             CategoryName = "Accessories",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Motorcycle accessories and add-on items intended to improve functionality, convenience, protection, or appearance."
                         },
                         new
                         {
                             CategoryId = 3,
                             CategoryName = "Spare Parts",
-                            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Replacement components used to repair, maintain, or restore motorcycles and their mechanical systems."
                         });
                 });
@@ -868,23 +843,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Staff");
-                });
-
-            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Brand", b =>
-                {
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "CreatedByStaff")
-                        .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Supplier", "Supplier")
-                        .WithMany()
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("CreatedByStaff");
-
-                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Category", b =>

@@ -8,19 +8,28 @@
     </div>
 </div>
 
-<div class="card" style="max-width:600px; margin:0 auto;">
+<div class="card">
     <div class="card-body">
+        <h5 class="card-title mb-4">Category Information</h5>
         <dl class="row">
             <dt class="col-sm-4">@Html.DisplayNameFor(m => m.CategoryId)</dt>
             <dd class="col-sm-8">@Html.DisplayFor(m => m.CategoryId)</dd>
 
             <dt class="col-sm-4">@Html.DisplayNameFor(m => m.CategoryName)</dt>
             <dd class="col-sm-8">@Html.DisplayFor(m => m.CategoryName)</dd>
+
+            <dt class="col-sm-4">@Html.DisplayNameFor(m => m.Description)</dt>
+            <dd class="col-sm-8">@Html.DisplayFor(m => m.Description)</dd>
+
+            <dt class="col-sm-4">Created By</dt>
+            <dd class="col-sm-8">@(Model.CreatedByStaff?.StaffName ?? "System Admin")</dd>
+
+            <dt class="col-sm-4">Date Created</dt>
+            <dd class="col-sm-8">@Model.CreatedAt.ToString("MMMM dd, yyyy")</dd>
         </dl>
 
         <div class="d-flex gap-2">
-
-            <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
+            <a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Categories</a>
         </div>
     </div>
 </div>

@@ -1878,5 +1878,38 @@ textarea.form-control { min-height: 80px; resize: vertical; }
     }
 }
 
+/* Category table custom styling */
+.category-table {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+.category-table th,
+.category-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+.category-table th:nth-child(1),
+.category-table td:nth-child(1) {
+    width: 12%;
+    min-width: 50px;
+}
+.category-table th:nth-child(2),
+.category-table td:nth-child(2) {
+    width: 58%;
+    min-width: 200px;
+}
+.category-table th:nth-child(3),
+.category-table td:nth-child(3) {
+    width: 30%;
+    min-width: 120px;
+}
+/* Override action column widths for category table */
+.category-table .actions-column,
+.category-table .action-cell {
+    width: auto;
+    min-width: auto;
+}
+
 
 
