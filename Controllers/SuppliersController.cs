@@ -1,6 +1,7 @@
 using System.Linq;
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +18,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -32,10 +33,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     query = query.Where(s => s.CompanyName.Contains(searchString) ||
                                              (s.ContactPerson != null && s.ContactPerson.Contains(searchString)) ||
-                                             (s.ContactNumber != null && s.ContactNumber.Contains(searchString)));
+                                             (s.ContactNumber != null && s.ContactNumber.Contains(searchString)) ||
+                                             (s.EmailAddress != null && s.EmailAddress.Contains(searchString)));
+                }
+
+                // Status filter
+                if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All")
+                {
+                    query = query.Where(s => s.Status == statusFilter);
                 }
 
                 int total = await query.CountAsync();
+
 
                 List<Supplier> suppliers = await query
                     .OrderBy(s => s.SupplierId)
@@ -44,6 +53,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .ToListAsync();
 
                 ViewData["CurrentFilter"] = searchString;
+                ViewData["StatusFilter"] = statusFilter;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 return View(suppliers);
@@ -68,6 +78,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 var supplier = await _context.Suppliers
                     .Include(s => s.Products)
+                    .Include(s => s.CreatedByStaff)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.SupplierId == id);
 
@@ -96,7 +107,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("CompanyName,ContactPerson,ContactNumber,Address")] Supplier supplier)
+        public async Task<IActionResult> Create([Bind("CompanyName,ContactPerson,ContactNumber,Address,EmailAddress")] Supplier supplier)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -132,6 +143,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         return View(supplier);
                     }
 
+                    // Set audit fields and default status
+                    supplier.Status = "Active";
+                    supplier.CreatedAt = DateTime.UtcNow;
+                    supplier.CreatedBy = GetCurrentStaffId();
                     _context.Suppliers.Add(supplier);
                     await _context.SaveChangesAsync();
 
@@ -182,7 +197,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("SupplierId,CompanyName,ContactPerson,ContactNumber,Address")] Supplier supplier)
+        public async Task<IActionResult> Edit(int id, [Bind("SupplierId,CompanyName,ContactPerson,ContactNumber,Address,EmailAddress,Status")] Supplier supplier)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -208,7 +223,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     try
                     {
-                        _context.Suppliers.Update(supplier);
+                        var existing = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == id);
+                        if (existing == null) return NotFound();
+
+                        // Update editable fields only
+                        existing.CompanyName = supplier.CompanyName;
+                        existing.ContactPerson = supplier.ContactPerson;
+                        existing.ContactNumber = supplier.ContactNumber;
+                        existing.Address = supplier.Address;
+                        existing.EmailAddress = supplier.EmailAddress;
+                        existing.Status = supplier.Status;
+
                         await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
@@ -261,6 +286,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
+                // Additional check for purchase orders
+                bool hasPurchaseOrders = await _context.PurchaseOrders.AnyAsync(po => po.SupplierId == id);
+                if (hasPurchaseOrders)
+                {
+                    TempData["ErrorMessage"] = "Cannot delete supplier. This supplier has associated purchase orders.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 var supplier = await _context.Suppliers
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.SupplierId == id);
@@ -299,6 +332,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
+                // Check if supplier has associated purchase orders
+                if (await _context.PurchaseOrders.AnyAsync(po => po.SupplierId == id))
+                {
+                    TempData["ErrorMessage"] = "Cannot delete supplier. This supplier has associated purchase orders.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 string name = supplier.CompanyName;
 
                 _context.Suppliers.Remove(supplier);
@@ -316,12 +356,44 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["SuccessMessage"] = $"Supplier '{name}' deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
+
+
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while deleting supplier. SupplierId: {SupplierId}", id);
                 TempData["ErrorMessage"] = "An error occurred while deleting the supplier. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+[HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleStatus(int id)
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null) return redirect;
+            var authRedirect = RedirectIfNotOwnerOrManager();
+            if (authRedirect != null) return authRedirect;
+
+            var supplier = await _context.Suppliers.FindAsync(id);
+            if (supplier == null) return NotFound();
+
+            // Toggle status
+            supplier.Status = supplier.Status == "Active" ? "Inactive" : "Active";
+            await _context.SaveChangesAsync();
+
+            // Log activity
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                StaffId = GetCurrentStaffId(),
+                Action = "Toggle Supplier Status",
+                Module = "Supplier",
+                Description = $"Toggled status of '{supplier.CompanyName}' to {supplier.Status}."
+            });
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Supplier status updated successfully.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

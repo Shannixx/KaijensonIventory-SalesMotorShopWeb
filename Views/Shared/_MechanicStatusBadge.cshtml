@@ -1,0 +1,26 @@
+@model (string Status, string WorkStatus)
+
+@if (Model.Status == "Active")
+{
+    <span class="badge bg-success">Active</span>
+}
+else
+{
+    <span class="badge bg-secondary">Inactive</span>
+}
+
+@if (Model.Status == "Active")
+{
+    if (Model.WorkStatus == "Available")
+    {
+        <span class="badge bg-success ms-1">Available</span>
+    }
+    else
+    {
+        <span class="badge bg-secondary ms-1">Working</span>
+    }
+}
+else
+{
+    <span class="badge bg-danger ms-1">Working</span>
+}

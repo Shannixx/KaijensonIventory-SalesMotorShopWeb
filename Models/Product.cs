@@ -79,6 +79,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public int SupplierId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public int? CreatedBy { get; set; }
+        public Staff? CreatedByStaff { get; set; }
+        public DateTime LastUpdated { get; set; } = DateTime.Now;
 
         public Category? Category { get; set; }
         public Supplier? Supplier { get; set; }

@@ -8,7 +8,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public string? Brand { get; set; }
+        [Display(Name = "Category")]
         public int CategoryId { get; set; }
+        [Display(Name = "Supplier")]
         public int SupplierId { get; set; }
         public int QuantityOnHand { get; set; }
         public string? Description { get; set; }

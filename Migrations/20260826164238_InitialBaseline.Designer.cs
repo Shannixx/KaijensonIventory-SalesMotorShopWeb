@@ -397,8 +397,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<DateTime?>("DeliveredDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("ExpectedDeliveryDate")
-                        .HasColumnType("datetime2");
+
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");

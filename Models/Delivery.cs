@@ -16,6 +16,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
         public DateTime? DeliveredDate { get; set; }
+        // Staff who performed the receiving
+        public int? ReceivedBy { get; set; }
+
+        // Optional remarks about the delivery
+        [StringLength(500)]
+        public string? Remarks { get; set; }
 
         // Navigation property (optional)
         public PurchaseOrder? PurchaseOrder { get; set; }

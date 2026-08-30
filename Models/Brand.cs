@@ -18,9 +18,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [StringLength(50)]
         public string CountryOrigin { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(20)]
-        public string Status { get; set; } = "Active";
+
 
         // Supplier relationship (optional)
         public int? SupplierId { get; set; }

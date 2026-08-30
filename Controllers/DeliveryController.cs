@@ -62,7 +62,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var result = await _deliveryService.DeliverAsync(model.DeliveryId, model.ReceiveQuantities, GetCurrentStaffId());
+            var result = await _deliveryService.DeliverAsync(model.DeliveryId, model.ReceiveQuantities, GetCurrentStaffId(), model.Remarks);
 
             if (!result.Succeeded)
             {
@@ -83,29 +83,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            // Load delivery details to compute remaining quantities
-            var delivery = await _deliveryService.GetDeliveryDetailsAsync(id);
-            if (delivery == null) return NotFound();
-
-            if (delivery.Status == "Delivered")
-            {
-                // Already delivered, just redirect
-                TempData["SuccessMessage"] = "Delivery already marked as delivered.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Build dictionary of remaining quantities per item
-            var remaining = new Dictionary<int, int>();
-            foreach (var item in delivery.Items)
-            {
-                int remainingQty = item.Quantity - item.ReceivedQuantity;
-                if (remainingQty > 0)
-                {
-                    remaining[item.PurchaseOrderItemId] = remainingQty;
-                }
-            }
-
-            var result = await _deliveryService.DeliverAsync(id, remaining, GetCurrentStaffId());
+            var result = await _deliveryService.MarkDeliveredAsync(id, GetCurrentStaffId());
 
             if (!result.Succeeded)
             {

@@ -1,7 +1,11 @@
-@model IEnumerable<Mechanic>
+@model IEnumerable<KaijensonIventory_SalesMotorShopWeb.Models.Mechanic>
 @{
     ViewData["Title"] = "Mechanics";
     string? currentFilter = ViewData["CurrentFilter"] as string;
+    string? statusFilter = ViewData["StatusFilter"] as string ?? "All";
+    string? workStatusFilter = ViewData["WorkStatusFilter"] as string ?? "All";
+    int page = (int)(ViewData["Page"] ?? 1);
+    int totalPages = (int)(ViewData["TotalPages"] ?? 1);
 }
 <div class="page-header">
     <div>
@@ -16,7 +20,7 @@
     {
         ControllerName = "Mechanics",
         QueryValue = currentFilter,
-        Placeholder = "Search ID, name, specialization, contact...",
+        Placeholder = "Search ID, name, specialization, contact, email, address...",
         AriaLabel = "Search mechanics",
         InputId = "searchMechanics",
         ClearActionName = "Index",
@@ -25,31 +29,80 @@
 }
 <partial name="_SearchToolbar" model="searchModel" />
 
+<form method="get" asp-action="Index" class="row g-2 mb-3 align-items-center">
+    <input type="hidden" name="searchString" value="@currentFilter" />
+    <div class="col-auto">
+        <label class="form-label mb-0">Status</label>
+        <select name="statusFilter" class="form-select">
+            <option value="All" selected="@(statusFilter == "All" ? "selected" : null)">All</option>
+            <option value="Active" selected="@(statusFilter == "Active" ? "selected" : null)">Active</option>
+            <option value="Inactive" selected="@(statusFilter == "Inactive" ? "selected" : null)">Inactive</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0">Work Status</label>
+        <select name="workStatusFilter" class="form-select">
+            <option value="All" selected="@(workStatusFilter == "All" ? "selected" : null)">All</option>
+            <option value="Available" selected="@(workStatusFilter == "Available" ? "selected" : null)">Available</option>
+            <option value="Working" selected="@(workStatusFilter == "Working" ? "selected" : null)">Working</option>
+        </select>
+    </div>
+    <div class="col-auto align-self-end">
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </div>
+</form>
+
 <div class="card">
     <div class="card-body p-0">
         <div class="table-container">
             <table class="table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Specialization</th>
-                        <th>Contact</th>
-                        <th class="actions-column">Actions</th>
+                        <th class="text-center">ID</th>
+                        <th class="text-center">Mechanic Name</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Work Status</th>
+                        <th class="text-center actions-column">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>@item.MechanicId</td>
-                            <td>@item.MechanicName</td>
-                            <td>@item.Specialization</td>
-                            <td>@item.ContactNumber</td>
+                            <td class="text-center">@item.MechanicId</td>
+                            <td class="text-center">@item.MechanicName</td>
+                            <td class="text-center">
+    @if (item.Status == "Active")
+    {
+        <span class="badge bg-success">Active</span>
+    }
+    else
+    {
+        <span class="badge bg-secondary">Inactive</span>
+    }
+</td>
+                            <td class="text-center">
+    @if (item.Status == "Active")
+    {
+        if (item.WorkStatus == "Available")
+        {
+            <span class="badge bg-success">Available</span>
+        }
+        else
+        {
+            <span class="badge bg-danger">Working</span>
+        }
+    }
+    else
+    {
+        <span class="badge bg-secondary">Not Available</span>
+    }
+</td>
                             <td class="action-cell">
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-view" title="View Mechanic Details" aria-label="View @item.MechanicName"><i class="bi bi-eye"></i></a>
                                     <a asp-action="Edit" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-edit" title="Edit Mechanic" aria-label="Edit @item.MechanicName"><i class="bi bi-pencil"></i></a>
+
                                     <form asp-action="Delete" asp-route-id="@item.MechanicId" method="post" id="delete-mechanic-@item.MechanicId" class="action-form">
                                         @Html.AntiForgeryToken()
                                         <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-mechanic-@item.MechanicId" data-delete-record-name="@item.MechanicName" data-delete-entity-name="mechanic" title="Delete mechanic" aria-label="Delete mechanic @item.MechanicName"><i class="bi bi-trash"></i></button>

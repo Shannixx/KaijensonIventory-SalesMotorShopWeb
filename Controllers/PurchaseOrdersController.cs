@@ -271,8 +271,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 {
                                     infoCol.Item().AlignRight().Text($"PO #: {order.PurchaseOrderNumber}").Bold();
                                     infoCol.Item().AlignRight().Text($"Date: {order.OrderDate:MMM dd, yyyy}");
-                                    if (order.ExpectedDeliveryDate.HasValue)
-                                        infoCol.Item().AlignRight().Text($"Expected Delivery: {order.ExpectedDeliveryDate:MMM dd, yyyy}");
+
                                     infoCol.Item().AlignRight().Text($"Status: {order.Status}");
                                 });
                             });
@@ -302,34 +301,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                 {
                                     columns.ConstantColumn(25);
                                     columns.RelativeColumn(3);
-                                    columns.RelativeColumn(2);
                                     columns.ConstantColumn(55);
                                     columns.ConstantColumn(65);
                                     columns.ConstantColumn(90);
                                 });
 
                                 table.Header(header =>
-                                {
+                                 {
                                     header.Cell().Background("#FF7F11").Padding(5).Text("#")
                                         .FontColor("#fff").FontSize(10).Bold();
                                     header.Cell().Background("#FF7F11").Padding(5).Text("Product")
                                         .FontColor("#fff").FontSize(10).Bold();
-                                    header.Cell().Background("#FF7F11").Padding(5).Text("Brand")
+                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Unit Price")
                                         .FontColor("#fff").FontSize(10).Bold();
-                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Price")
-                                        .FontColor("#fff").FontSize(10).Bold();
-                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Qty")
+                                    header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Quantity")
                                         .FontColor("#fff").FontSize(10).Bold();
                                     header.Cell().Background("#FF7F11").Padding(5).AlignRight().Text("Subtotal")
                                         .FontColor("#fff").FontSize(10).Bold();
-                                });
+                                 });
 
                                 int index = 1;
                                 foreach (var item in order.Items)
                                 {
                                     table.Cell().Padding(5).Text(index.ToString()).FontSize(10);
                                     table.Cell().Padding(5).Text(item.Product?.ProductName ?? "").FontSize(10);
-                                    table.Cell().Padding(5).Text(item.Product?.Brand ?? "").FontSize(10);
+
                                     table.Cell().Padding(5).AlignRight().Text(item.Price.ToString("N2")).FontSize(10);
                                     table.Cell().Padding(5).AlignRight().Text(item.Quantity.ToString()).FontSize(10);
                                     table.Cell().Padding(5).AlignRight().Text(item.Subtotal.ToString("N2")).FontSize(10);

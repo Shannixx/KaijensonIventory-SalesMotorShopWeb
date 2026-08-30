@@ -53,7 +53,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, int page = 1)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
@@ -70,11 +70,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                                              b.CountryOrigin.ToLower().Contains(s));
                 }
 
-                if (!string.IsNullOrWhiteSpace(statusFilter) &&
-                    (statusFilter == "Active" || statusFilter == "Inactive"))
-                {
-                    query = query.Where(b => b.Status == statusFilter);
-                }
+
 
                 int total = await query.CountAsync();
 
@@ -95,7 +91,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["ProductCounts"] = productCounts.ToDictionary(k => k.Brand, v => v.Count);
 
                 ViewData["CurrentFilter"] = searchString;
-                ViewData["StatusFilter"] = statusFilter;
+
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 ViewBag.CanDelete = IsAdmin();
@@ -145,7 +141,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             var model = new BrandFormViewModel
             {
-                Status = "Active",
                 Suppliers = await GetSupplierOptionsAsync()
             };
             return View(model);
@@ -182,7 +177,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     BrandName = model.BrandName.Trim(),
                     Description = model.Description,
                     CountryOrigin = model.CountryOrigin.Trim(),
-                    Status = "Active",
+   
                     SupplierId = model.SupplierId,
                     CreatedBy = GetStaffId(),
                     CreatedAt = DateTime.UtcNow
@@ -196,7 +191,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     StaffId = GetStaffId(),
                     Action = "Add",
                     Module = "Brand",
-                    Description = $"Added brand: {brand.BrandName} ({brand.CountryOrigin}, {brand.Status})",
+                     Description = $"Added brand: {brand.BrandName} ({brand.CountryOrigin})",
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
@@ -234,7 +229,7 @@ public async Task<IActionResult> Edit(int? id)
                     BrandName = brand.BrandName,
                     Description = brand.Description,
                     CountryOrigin = brand.CountryOrigin,
-                    Status = brand.Status,
+
                     SupplierId = brand.SupplierId,
                     CreatedByName = brand.CreatedByStaff?.StaffName ?? "System",
                     CreatedAt = brand.CreatedAt,
@@ -265,8 +260,7 @@ public async Task<IActionResult> Edit(int? id)
                 ModelState.AddModelError(nameof(model.BrandName), "Brand name is required.");
             if (string.IsNullOrWhiteSpace(model.CountryOrigin))
                 ModelState.AddModelError(nameof(model.CountryOrigin), "Country of origin is required.");
-            if (model.Status != "Active" && model.Status != "Inactive")
-                ModelState.AddModelError(nameof(model.Status), "Status must be 'Active' or 'Inactive'.");
+
 
             if (!ModelState.IsValid)
             {
@@ -304,7 +298,7 @@ public async Task<IActionResult> Edit(int? id)
                 existing.BrandName = model.BrandName.Trim();
                 existing.Description = model.Description;
                 existing.CountryOrigin = model.CountryOrigin.Trim();
-                existing.Status = model.Status;
+
                 existing.SupplierId = model.SupplierId;
 
                 await _context.SaveChangesAsync();
@@ -314,7 +308,7 @@ public async Task<IActionResult> Edit(int? id)
                     StaffId = GetStaffId(),
                     Action = "Edit",
                     Module = "Brand",
-                    Description = $"Edited brand: {model.BrandName} ({model.CountryOrigin}, {model.Status})",
+                     Description = $"Edited brand: {model.BrandName} ({model.CountryOrigin})",
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();

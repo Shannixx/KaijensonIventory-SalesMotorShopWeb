@@ -29,6 +29,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 
         // New delivery history entries (one per receiving event)
         public List<DeliveryHistoryViewModel> History { get; set; } = new();
+
+        // Optional remarks
+        public string? Remarks { get; set; }
+
+        // Name of staff who received
+        public string? ReceivedByName { get; set; }
     }
 
     public class DeliveryItemViewModel

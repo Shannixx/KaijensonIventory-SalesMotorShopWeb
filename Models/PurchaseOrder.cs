@@ -20,9 +20,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Order Date")]
         public DateTime OrderDate { get; set; } = DateTime.Now;
 
-        [DataType(DataType.Date)]
-        [Display(Name = "Expected Delivery Date")]
-        public DateTime? ExpectedDeliveryDate { get; set; }
+
 
         [Required, StringLength(30)]
         public string Status { get; set; } = "Pending";
@@ -48,8 +46,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Delivered Date")]
         public DateTime? DeliveredDate { get; set; }
 
+        [DataType(DataType.Date)]
+        [Display(Name = "Expected Delivery Date")]
+        public DateTime? ExpectedDeliveryDate { get; set; }
+
         [Display(Name = "Delivered By")]
         public int? DeliveredBy { get; set; }
+
+
 
         public Supplier? Supplier { get; set; }
 

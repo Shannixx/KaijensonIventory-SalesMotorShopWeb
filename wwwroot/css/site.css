@@ -1911,5 +1911,15 @@ textarea.form-control { min-height: 80px; resize: vertical; }
     min-width: auto;
 }
 
+/* Supplier table column widths */
+.table.supplier-table th:nth-child(1),
+.table.supplier-table td:nth-child(1) { width: 12%; min-width: 50px; }
+.table.supplier-table th:nth-child(2),
+.table.supplier-table td:nth-child(2) { width: 50%; min-width: 200px; }
+.table.supplier-table th:nth-child(3),
+.table.supplier-table td:nth-child(3) { width: 18%; min-width: 100px; }
+.table.supplier-table th:nth-child(4),
+.table.supplier-table td:nth-child(4) { width: 20%; min-width: 120px; }
+
 
 

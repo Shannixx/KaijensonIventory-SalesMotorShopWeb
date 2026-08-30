@@ -36,7 +36,7 @@
         else
         {
             <button type="button" class="btn btn-primary" onclick="openServiceReceiptPreview(@Model.ServiceJobId, '@Model.ServiceJobNumber')"><i class="bi bi-receipt"></i> View Receipt</button>
-                        <button type="button" class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer"></i> Print Receipt</button>
+
                         <a asp-action="ReceiptPdf" asp-route-id="@Model.ServiceJobId" class="btn btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
         }
         <a asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Back to Service Jobs</a>

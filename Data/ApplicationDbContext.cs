@@ -51,6 +51,25 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
                 .HasForeignKey(b => b.CreatedBy)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // Supplier -> CreatedByStaff (audit)
+            modelBuilder.Entity<Supplier>()
+                .HasOne(s => s.CreatedByStaff)
+                .WithMany()
+                .HasForeignKey(s => s.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Brand>()
+                .HasOne(b => b.CreatedByStaff)
+                .WithMany()
+                .HasForeignKey(b => b.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Mechanic -> HiredByStaff (audit)
+            modelBuilder.Entity<Mechanic>()
+                .HasOne(m => m.HiredByStaff)
+                .WithMany()
+                .HasForeignKey(m => m.HiredBy)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<Category>()
                 .HasIndex(c => c.CategoryName).IsUnique();
 
@@ -66,10 +85,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.PurchaseOrder).WithMany().HasForeignKey(p => p.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
 
+            // Audit relationship for CreatedByStaff (Product)
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.CreatedByStaff)
+                .WithMany()
+                .HasForeignKey(p => p.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // Category is optional for services: they are created with only
             // ServiceName and ServicePrice; products still require a category.
             modelBuilder.Entity<Service>()
                 .HasOne(s => s.Category).WithMany().HasForeignKey(s => s.CategoryId).OnDelete(DeleteBehavior.Restrict);
+
+            // Audit relationship for CreatedByStaff (Service)
+            modelBuilder.Entity<Service>()
+                .HasOne(s => s.CreatedByStaff)
+                .WithMany()
+                .HasForeignKey(s => s.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // ServiceJob relationships
             modelBuilder.Entity<ServiceJob>()
@@ -187,11 +220,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             );
 
             modelBuilder.Entity<Brand>().HasData(
-                new Brand { BrandId = 1, BrandName = "Honda", Description = "Japanese motorcycle and automotive brand known for motorcycles, engines, and related mobility products.", CountryOrigin = "Japan", Status = "Active", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
-                new Brand { BrandId = 2, BrandName = "Yamaha", Description = "Japanese manufacturer known for motorcycles, engines, and a wide range of mobility products.", CountryOrigin = "Japan", Status = "Active", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
-                new Brand { BrandId = 3, BrandName = "Suzuki", Description = "Japanese manufacturer producing motorcycles, engines, and other mobility-related products.", CountryOrigin = "Japan", Status = "Active", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
-                new Brand { BrandId = 4, BrandName = "Kawasaki", Description = "Japanese manufacturer known for motorcycles, engines, and other transportation and industrial products.", CountryOrigin = "Japan", Status = "Active", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
-                new Brand { BrandId = 5, BrandName = "Kymco", Description = "Taiwanese manufacturer specializing in scooters, motorcycles, and related mobility products.", CountryOrigin = "Taiwan", Status = "Active", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) }
+                new Brand { BrandId = 1, BrandName = "Honda", Description = "Japanese motorcycle and automotive brand known for motorcycles, engines, and related mobility products.", CountryOrigin = "Japan", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
+                new Brand { BrandId = 2, BrandName = "Yamaha", Description = "Japanese manufacturer known for motorcycles, engines, and a wide range of mobility products.", CountryOrigin = "Japan", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
+                new Brand { BrandId = 3, BrandName = "Suzuki", Description = "Japanese manufacturer producing motorcycles, engines, and other mobility-related products.", CountryOrigin = "Japan", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
+                new Brand { BrandId = 4, BrandName = "Kawasaki", Description = "Japanese manufacturer known for motorcycles, engines, and other transportation and industrial products.", CountryOrigin = "Japan", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) },
+                new Brand { BrandId = 5, BrandName = "Kymco", Description = "Taiwanese manufacturer specializing in scooters, motorcycles, and related mobility products.", CountryOrigin = "Taiwan", CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc) }
             );
         }
     }

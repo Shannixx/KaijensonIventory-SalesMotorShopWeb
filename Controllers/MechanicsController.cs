@@ -6,7 +6,12 @@ using Microsoft.EntityFrameworkCore;
 namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 {
     public class MechanicsController : BaseController
-    {
+{
+    // Existing code omitted for brevity
+    // ---------------------------------------------------------------------
+    // Removed manual ToggleWorkStatus action – work status is now managed automatically.
+    // Existing members follow below
+
         private readonly ApplicationDbContext _context;
         private readonly ILogger<MechanicsController> _logger;
 
@@ -16,16 +21,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, string? statusFilter, string? workStatusFilter, int page = 1)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            if (redirect != null) return redirect;
 
             try
             {
                 int pageSize = 10;
-                IQueryable<Mechanic> query = _context.Mechanics.AsNoTracking();
+                var query = _context.Mechanics.AsNoTracking();
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
@@ -35,19 +39,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         m.MechanicName.Contains(s) ||
                         (m.Specialization != null && m.Specialization.Contains(s)) ||
                         (m.ContactNumber != null && m.ContactNumber.Contains(s)) ||
-                        (m.Address != null && m.Address.Contains(s))
-                    );
+                        (m.EmailAddress != null && m.EmailAddress.Contains(s)) ||
+                        (m.Address != null && m.Address.Contains(s)));
+                }
+
+                if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All")
+                {
+                    query = query.Where(m => m.Status == statusFilter);
+                }
+
+                if (!string.IsNullOrWhiteSpace(workStatusFilter) && workStatusFilter != "All")
+                {
+                    query = query.Where(m => m.WorkStatus == workStatusFilter);
                 }
 
                 int total = await query.CountAsync();
 
-                List<Mechanic> mechanics = await query
+                var mechanics = await query
                     .OrderBy(m => m.MechanicId)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();
 
                 ViewData["CurrentFilter"] = searchString;
+                ViewData["StatusFilter"] = statusFilter;
+                ViewData["WorkStatusFilter"] = workStatusFilter;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
 
@@ -55,7 +71,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while loading mechanics.");
+                _logger.LogError(ex, "Error loading mechanics index.");
                 TempData["ErrorMessage"] = "An error occurred while loading mechanics. Please try again.";
                 return View(new List<Mechanic>());
             }
@@ -64,21 +80,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         public async Task<IActionResult> Details(int? id)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
+            if (redirect != null) return redirect;
             if (id == null) return NotFound();
 
             try
             {
-                Mechanic? mechanic = await _context.Mechanics.AsNoTracking().FirstOrDefaultAsync(m => m.MechanicId == id);
+                var mechanic = await _context.Mechanics.AsNoTracking()
+                    .Include(m => m.HiredByStaff)
+                    .FirstOrDefaultAsync(m => m.MechanicId == id);
                 if (mechanic == null) return NotFound();
-
                 return View(mechanic);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while loading mechanic details. MechanicId: {MechanicId}", id);
+                _logger.LogError(ex, "Error loading mechanic details. Id: {MechanicId}", id);
                 TempData["ErrorMessage"] = "An error occurred while loading mechanic details. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -87,42 +102,28 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         public IActionResult Create()
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
+            if (redirect != null) return redirect;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("MechanicName,Specialization,ContactNumber,Address")] Mechanic mechanic)
+        public async Task<IActionResult> Create([Bind("MechanicName,Specialization,ContactNumber,EmailAddress,Address,YearsOfExperience")] Mechanic mechanic)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            if (redirect != null) return redirect;
 
-            // Server-side validation
-            if (string.IsNullOrWhiteSpace(mechanic.MechanicName))
-            {
-                ModelState.AddModelError("MechanicName", "Mechanic name is required.");
-            }
-            if (string.IsNullOrWhiteSpace(mechanic.Specialization))
-            {
-                ModelState.AddModelError("Specialization", "Specialization is required.");
-            }
-            if (string.IsNullOrWhiteSpace(mechanic.ContactNumber))
-            {
-                ModelState.AddModelError("ContactNumber", "Contact number is required.");
-            }
-            if (string.IsNullOrWhiteSpace(mechanic.Address))
-            {
-                ModelState.AddModelError("Address", "Address is required.");
-            }
-
+            // Server-side validation (basic required fields handled by data annotations)
             if (ModelState.IsValid)
             {
                 try
                 {
+                    // Set automatic fields
+                    mechanic.Status = "Active";
+                    mechanic.WorkStatus = "Available";
+                    mechanic.DateHired = DateTime.UtcNow;
+                    mechanic.HiredBy = GetCurrentStaffId();
+
                     _context.Mechanics.Add(mechanic);
                     await _context.SaveChangesAsync();
 
@@ -141,71 +142,84 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error occurred while creating mechanic.");
+                    _logger.LogError(ex, "Error creating mechanic.");
                     TempData["ErrorMessage"] = "An error occurred while creating the mechanic. Please try again.";
                     return View(mechanic);
                 }
             }
-
             return View(mechanic);
         }
 
         public async Task<IActionResult> Edit(int? id)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
+            if (redirect != null) return redirect;
             if (id == null) return NotFound();
 
             try
             {
-                Mechanic? mechanic = await _context.Mechanics.FindAsync(id);
+                var mechanic = await _context.Mechanics.FindAsync(id);
                 if (mechanic == null) return NotFound();
-
                 return View(mechanic);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while loading mechanic for editing. MechanicId: {MechanicId}", id);
-                TempData["ErrorMessage"] = "An error occurred while loading mechanic for editing. Please try again.";
+                _logger.LogError(ex, "Error loading mechanic for edit. Id: {MechanicId}", id);
+                TempData["ErrorMessage"] = "An error occurred while loading the mechanic. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("MechanicId,MechanicName,Specialization,ContactNumber,Address")] Mechanic mechanic)
+        public async Task<IActionResult> Edit(int id, [Bind("MechanicId,MechanicName,Specialization,ContactNumber,EmailAddress,Address,YearsOfExperience,Status")] Mechanic mechanic)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
+            if (redirect != null) return redirect;
+            var authRedirect = RedirectIfNotOwnerOrManager();
+            if (authRedirect != null) return authRedirect;
             if (id != mechanic.MechanicId) return NotFound();
-
-            // Server-side validation
-            if (string.IsNullOrWhiteSpace(mechanic.MechanicName))
-            {
-                ModelState.AddModelError("MechanicName", "Mechanic name is required.");
-            }
-            if (string.IsNullOrWhiteSpace(mechanic.Specialization))
-            {
-                ModelState.AddModelError("Specialization", "Specialization is required.");
-            }
-            if (string.IsNullOrWhiteSpace(mechanic.ContactNumber))
-            {
-                ModelState.AddModelError("ContactNumber", "Contact number is required.");
-            }
-            if (string.IsNullOrWhiteSpace(mechanic.Address))
-            {
-                ModelState.AddModelError("Address", "Address is required.");
-            }
-
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Mechanics.Update(mechanic);
+                    var existing = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == id);
+                    if (existing == null) return NotFound();
+
+                    existing.MechanicName = mechanic.MechanicName;
+                    existing.Specialization = mechanic.Specialization;
+                    existing.ContactNumber = mechanic.ContactNumber;
+                    existing.EmailAddress = mechanic.EmailAddress;
+                    existing.Address = mechanic.Address;
+                    existing.YearsOfExperience = mechanic.YearsOfExperience;
+// Capture previous employment status before change
+var previousStatus = existing.Status;
+
+// Apply new status
+existing.Status = mechanic.Status;
+
+// Adjust WorkStatus based on transition rules
+if (existing.Status == "Inactive")
+{
+    // Inactive mechanics must be Unavailable
+    existing.WorkStatus = "Unavailable";
+}
+else // Active
+{
+    if (previousStatus == "Inactive")
+    {
+        // Reactivation: determine work status based on active service jobs
+        bool hasActiveJob = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == existing.MechanicId && j.Status == ServiceJob.StatusStillWorking);
+        existing.WorkStatus = hasActiveJob ? "Working" : "Available";
+    }
+    else
+    {
+        // Preserve existing work status, but ensure not Unavailable
+        if (existing.WorkStatus == "Unavailable")
+            existing.WorkStatus = "Available";
+    }
+}
+
                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
@@ -223,39 +237,37 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
                 catch (DbUpdateConcurrencyException ex)
                 {
-                    _logger.LogWarning(ex, "Concurrency conflict while updating mechanic. MechanicId: {MechanicId}", id);
+                    _logger.LogWarning(ex, "Concurrency error editing mechanic Id {MechanicId}", id);
                     if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == id))
                         return NotFound();
-
                     TempData["ErrorMessage"] = "The mechanic was modified by another user. Please try again.";
                     return View(mechanic);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error occurred while updating mechanic. MechanicId: {MechanicId}", id);
+                    _logger.LogError(ex, "Error editing mechanic Id {MechanicId}", id);
                     TempData["ErrorMessage"] = "An error occurred while updating the mechanic. Please try again.";
                     return View(mechanic);
                 }
             }
-
             return View(mechanic);
         }
 
         public async Task<IActionResult> Delete(int? id)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
+            if (redirect != null) return redirect;
             if (id == null) return NotFound();
 
             try
             {
-                Mechanic? mechanic = await _context.Mechanics.AsNoTracking().FirstOrDefaultAsync(m => m.MechanicId == id);
+                var mechanic = await _context.Mechanics.AsNoTracking()
+                    .Include(m => m.HiredByStaff)
+                    .FirstOrDefaultAsync(m => m.MechanicId == id);
                 if (mechanic == null) return NotFound();
 
-                bool hasServices = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
-                if (hasServices)
+                bool hasJobs = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
+                if (hasJobs)
                 {
                     TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service job records.";
                     return RedirectToAction(nameof(Index));
@@ -265,8 +277,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while loading mechanic for deletion. MechanicId: {MechanicId}", id);
-                TempData["ErrorMessage"] = "An error occurred while loading mechanic for deletion. Please try again.";
+                _logger.LogError(ex, "Error loading mechanic for delete. Id: {MechanicId}", id);
+                TempData["ErrorMessage"] = "An error occurred while loading the mechanic. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -276,23 +288,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            if (redirect != null) return redirect;
 
             try
             {
-                Mechanic? mechanic = await _context.Mechanics.FindAsync(id);
+                var mechanic = await _context.Mechanics.FindAsync(id);
                 if (mechanic == null) return NotFound();
 
-                bool hasServices = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
-                if (hasServices)
+                bool hasJobs = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
+                if (hasJobs)
                 {
                     TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service job records.";
                     return RedirectToAction(nameof(Index));
                 }
 
                 string name = mechanic.MechanicName;
-
                 _context.Mechanics.Remove(mechanic);
                 await _context.SaveChangesAsync();
 
@@ -311,11 +321,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while deleting mechanic. MechanicId: {MechanicId}", id);
+                _logger.LogError(ex, "Error deleting mechanic Id {MechanicId}", id);
                 TempData["ErrorMessage"] = "An error occurred while deleting the mechanic. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
         }
-
     }
 }

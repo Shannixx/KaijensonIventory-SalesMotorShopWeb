@@ -35,16 +35,14 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Supplier</th>
-                        <th>Brand</th>
-                        <th>Price</th>
-                        <th>Category</th>
-                        
-                        <th>Stock</th>
-                        <th>Status</th>
-                        <th class="actions-column">Actions</th>
+<th>ID</th>
+                    <th>Name</th>
+                    <th>Brand</th>
+                    <th>Price</th>
+                    <th>Category</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -53,7 +51,7 @@
                         <tr>
                             <td>@item.ProductId</td>
                             <td><span class="fw-medium">@item.ProductName</span></td>
-                            <td>@item.Supplier?.CompanyName</td>
+                            
                             <td>@(item.Brand ?? "-")</td>
                             <td>@item.Price.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td>
                             <td>@item.Category?.CategoryName</td>
@@ -68,7 +66,7 @@
 <div class="action-buttons">
                                      <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-view" title="View Product Details" aria-label="View @item.ProductName"><i class="bi bi-eye"></i></a>
                                      <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product" aria-label="Edit @item.ProductName"><i class="bi bi-pencil"></i></a>
-                                     @if (item.QuantityOnHand <= item.ReorderLevel)
+                                     @if (item.QuantityOnHand <= item.ReorderLevel && item.Supplier?.Status == "Active")
                                      {
                                          <a asp-controller="Sales" asp-action="Search" asp-route-reorder="true" asp-route-productId="@item.ProductId" class="btn btn-icon btn-icon-primary" title="Create Purchase Order" aria-label="Create PO for @item.ProductName"><i class="bi bi-cart-plus"></i></a>
                                      }

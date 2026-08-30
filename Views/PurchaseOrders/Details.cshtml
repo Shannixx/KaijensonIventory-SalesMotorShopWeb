@@ -42,15 +42,25 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="metric-card">
-            <div class="metric-icon warning-light"><i class="bi bi-calendar"></i></div>
-            <div class="metric-info">
-                <p class="metric-label">Order Date</p>
-                <h3 class="metric-value" style="font-size:1.1rem;">@Model.OrderDate.ToString("MMM dd, yyyy")</h3>
-            </div>
-        </div>
-    </div>
+     <div class="col-md-3">
+         <div class="metric-card">
+             <div class="metric-icon warning-light"><i class="bi bi-calendar"></i></div>
+             <div class="metric-info">
+                 <p class="metric-label">Order Date</p>
+                 <h3 class="metric-value" style="font-size:1.1rem;">@Model.OrderDate.ToString("MMM dd, yyyy")</h3>
+             </div>
+         </div>
+     </div>
+     <div class="col-md-3">
+         <div class="metric-card">
+             <div class="metric-icon info-light"><i class="bi bi-clock"></i></div>
+             <div class="metric-info">
+                 <p class="metric-label">Expected Delivery</p>
+                 <h3 class="metric-value" style="font-size:1.1rem;">@(Model.ExpectedDeliveryDate.HasValue ? Model.ExpectedDeliveryDate.Value.ToString("MMM dd, yyyy") : "Not Set")</h3>
+             </div>
+         </div>
+     </div>
+
 </div>
 
 <div class="card mb-4">
@@ -80,9 +90,9 @@
                     <tr>
                         <th>#</th>
                         <th>Product</th>
-                        <th>Brand</th>
-                        <th>Stock</th>
-                        <th>Qty</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,28 +101,30 @@
                         foreach (var item in Model.Items)
                         {
                             <tr>
-                                <td>@idx</td>
-                                <td>
-                                    <span class="fw-medium">@item.ProductName</span>
-                                </td>
-                                <td>@(item.Brand ?? "")</td>
-                                <td>@item.CurrentStock</td>
-                                
-                                <td>@item.Quantity</td>
-                                
+<td>@idx</td>
+                                 <td><span class="fw-medium">@item.ProductName</span></td>
+                                 <td>@item.Quantity</td>
+                                 <td>₱@item.Price.ToString("N2")</td>
+                                 <td>₱@item.Subtotal.ToString("N2")</td>
+
                             </tr>
                             idx++;
                         }
                     }
                     @if (!Model.Items.Any())
                     {
-                        <tr><td colspan="5" class="text-center py-3 text-muted">No items.</td></tr>
+                         <tr><td colspan="5" class="text-center py-3 text-muted">No items.</td></tr>
                     }
                 </tbody>
 
             </table>
         </div>
     </div>
+</div>
+
+<div class="po-total text-end mt-2" style="font-size:1.2rem;">
+    <span>Total Amount</span>
+    <strong>₱@Model.TotalAmount.ToString("N2")</strong>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.Remarks))

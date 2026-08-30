@@ -9,5 +9,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
 
         // Key: PurchaseOrderItemId, Value: quantity to receive now
         public Dictionary<int, int> ReceiveQuantities { get; set; } = new();
+        public string? Remarks { get; set; }
     }
 }

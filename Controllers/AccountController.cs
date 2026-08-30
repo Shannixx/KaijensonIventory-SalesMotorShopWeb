@@ -20,10 +20,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public IActionResult Login()
         {
-            // Clear any existing session to ensure clean login
-            HttpContext.Session.Clear();
-
-            // Check if already logged in (shouldn't happen due to Clear above, but just in case)
+            // Do not clear session here; logout handles it.
+            // If already authenticated, redirect to dashboard.
             if (HttpContext.Session.GetInt32("StaffId") != null)
                 return RedirectToAction("Index", "Dashboard");
 
@@ -101,6 +99,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 HttpContext.Session.SetString("StaffName", staff.StaffName);
                 HttpContext.Session.SetString("StaffRole", staff.Role);
 
+                // Set session flag for forced password change
+                if (staff.MustChangePassword)
+                {
+                    HttpContext.Session.SetString("MustChangePassword", "true");
+                }
+
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     StaffId = staff.StaffId,
@@ -109,6 +113,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     Description = $"Staff {staff.StaffName} logged in."
                 });
                 await _context.SaveChangesAsync();
+
+                // Enforce password change if flagged
+                if (staff.MustChangePassword)
+                {
+                    return RedirectToAction("ChangePassword", new { id = staff.StaffId });
+                }
 
                 return RedirectToAction("Index", "Dashboard");
             }
@@ -180,6 +190,28 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ModelState.AddModelError("", "An error occurred during registration. Please try again.");
                 return View(model);
             }
+        }
+
+        // Forgot Password - offline flow
+        public IActionResult ForgotPassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ForgotPassword(ForgotPasswordViewModel model)
+        {
+
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            // Do not reveal whether the username exists.
+            TempData["InfoMessage"] = "For security, please contact an Administrator to reset your password.";
+            return RedirectToAction("Login");
         }
 
         public async Task<IActionResult> Logout()

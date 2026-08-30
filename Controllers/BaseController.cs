@@ -55,6 +55,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             if (!IsSessionValid())
                 return RedirectToLogin();
+            // Enforce forced password change if flag set in session
+            var mustChange = HttpContext.Session.GetString("MustChangePassword");
+            if (string.Equals(mustChange, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                // Allow access to ChangePassword actions only
+                var path = HttpContext.Request.Path.Value ?? string.Empty;
+                if (!path.Contains("ChangePassword", StringComparison.OrdinalIgnoreCase))
+                {
+                    return RedirectToAction("ChangePassword", "Staff", new { id = GetCurrentStaffId() });
+                }
+            }
             return null;
         }
 

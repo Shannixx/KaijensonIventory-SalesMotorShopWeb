@@ -36,11 +36,16 @@
                         <div id="supplierAddress"></div>
                     </div>
 </div>
-            <div class="col-md-3">
-                <label asp-for="OrderDate" class="form-label"></label>
-                <input asp-for="OrderDate" class="form-control" type="date" />
-                <span asp-validation-for="OrderDate" class="text-danger small"></span>
-            </div>
+                 <div class="col-md-3">
+                    <label asp-for="OrderDate" class="form-label"></label>
+                    <input asp-for="OrderDate" class="form-control" type="date" />
+                    <span asp-validation-for="OrderDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="ExpectedDeliveryDate" class="form-label"></label>
+                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
+                    <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
+                </div>
         </div>
 
         @if (Model.IsReorder && Model.Items?.Any() == true)
@@ -65,13 +70,13 @@
                 <div class="table-container">
                     <table class="table mb-0" id="itemsTable">
                         <thead>
-                            <tr>
-                                <th style="width:45%;">Product</th>
-                                <th style="width:20%;">Brand</th>
-                        <th style="width:20%;">Category</th>
-                                <th style="width:20%;">Quantity</th>
-                                <th style="width:40px;"></th>
-                            </tr>
+<tr>
+                                 <th style="width:45%;">Product</th>
+                                 <th style="width:20%;">Unit Price</th>
+                                 <th style="width:20%;">Quantity</th>
+                                 <th style="width:20%;">Subtotal</th>
+                                 <th style="width:40px;"></th>
+                             </tr>
                         </thead>
                         <tbody id="itemsContainer">
                         </tbody>
@@ -80,6 +85,10 @@
                 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addItemBtn" @(Model.IsReorder ? "style=\"display:none;\"" : "")>
                     <i class="bi bi-plus-lg"></i> Add Product
                 </button>
+                <div class="po-total text-end mt-2" style="font-size:1.2rem;">
+                    <span>Total Amount</span>
+                    <strong>₱<span id="poTotal">0.00</span></strong>
+                </div>
             </div>
 
             <div class="mb-3">
@@ -145,33 +154,52 @@
 
             var options = buildProductOptions(data);
 
-row.innerHTML =
+            row.innerHTML =
                 '<td><select name="Items[' + itemIndex + '].ProductId" class="form-select form-select-sm product-select">' + options + '</select></td>' +
-                '<td class="brand-display align-middle">' + (data ? (data.brand || '') : '') + '</td>' +
-                '<td class="category-display align-middle">' + (data ? (data.category || '') : '') + '</td>' +
-                '<td><input type="number" name="Items[' + itemIndex + '].Quantity" class="form-control form-control-sm item-qty" value="' + (data && data.quantity > 0 ? data.quantity : '') + '" min="1" required /></td>' +
+                '<td><input type="number" name="Items[' + itemIndex + '].Price" class="form-control form-control-sm item-price" value="' + (data && data.price ? data.price : '') + '" min="0" step="0.01" required /></td>' +
+                '<td><input type="number" name="Items[' + itemIndex + '].Quantity" class="form-control form-control-sm item-qty" value="' + (data && data.quantity ? data.quantity : 1) + '" min="1" required /></td>' +
+                '<td><input type="text" name="Items[' + itemIndex + '].Subtotal" class="form-control form-control-sm item-subtotal" value="' + (data && data.subtotal ? data.subtotal : '') + '" readonly /></td>' +
                 '<td><button type="button" class="btn btn-icon btn-icon-delete remove-item" style="width:28px;height:28px;font-size:11px;"><i class="bi bi-x"></i></button></td>';
 
             container.appendChild(row);
             itemIndex++;
 
             var select = row.querySelector('.product-select');
-            select.addEventListener('change', function () {
-                var selectedOption = select.options[select.selectedIndex];
-                row.querySelector('.brand-display').textContent = selectedOption ? selectedOption.getAttribute('data-brand') || '' : '';
-                row.querySelector('.category-display').textContent = selectedOption ? selectedOption.getAttribute('data-category') || '' : '';
-            });
+            var priceInput = row.querySelector('.item-price');
+            var qtyInput = row.querySelector('.item-qty');
+            var subtotalInput = row.querySelector('.item-subtotal');
+
+            function updateSubtotal() {
+                var price = parseFloat(priceInput.value) || 0;
+                var qty = parseInt(qtyInput.value) || 0;
+                subtotalInput.value = (price * qty).toFixed(2);
+            }
+
+            priceInput.addEventListener('input', function(){ updateSubtotal(); updateTotal(); });
+            qtyInput.addEventListener('input', function(){ updateSubtotal(); updateTotal(); });
+
+            // No brand/category handling needed
 
             row.querySelector('.remove-item').addEventListener('click', function () {
                 if (!confirm('Remove this product from the order?')) return;
                 row.remove();
+                updateTotal();
             });
 
             if (data && data.productId) {
-                var selectedOption = select.options[select.selectedIndex];
-                row.querySelector('.brand-display').textContent = selectedOption ? selectedOption.getAttribute('data-brand') || '' : '';
-                row.querySelector('.category-display').textContent = selectedOption ? selectedOption.getAttribute('data-category') || '' : '';
+                updateSubtotal();
             }
+            updateTotal();
+        }
+
+        // Calculate and display the PO total
+        function updateTotal() {
+            var total = 0;
+            document.querySelectorAll('.item-subtotal').forEach(function (el) {
+                var val = parseFloat(el.value) || 0;
+                total += val;
+            });
+            document.getElementById('poTotal').textContent = total.toFixed(2);
         }
 
         function updateSupplierInfo() {
@@ -229,6 +257,7 @@ addItemRow();
             }
         }
 
+        updateTotal();
         // Form validation
         document.getElementById('poForm').addEventListener('submit', function (e) {
             var supplierId = document.getElementById('supplierSelect').value;

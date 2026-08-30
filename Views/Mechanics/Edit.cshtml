@@ -1,4 +1,4 @@
-@model Mechanic
+@model KaijensonIventory_SalesMotorShopWeb.Models.Mechanic
 @{ ViewData["Title"] = "Edit Mechanic"; }
 <div class="page-header">
     <div>
@@ -11,6 +11,10 @@
     <div class="card-body">
         <form asp-action="Edit" method="post">
             <input type="hidden" asp-for="MechanicId" />
+            <div class="mb-3">
+                <label class="form-label">Mechanic ID</label>
+                <p class="form-control-plaintext">@Model.MechanicId</p>
+            </div>
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
             <div class="mb-3">
@@ -32,9 +36,49 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="EmailAddress" class="form-label"></label>
+                <input asp-for="EmailAddress" class="form-control" type="email" />
+                <span asp-validation-for="EmailAddress" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="Address" class="form-label"></label>
                 <textarea asp-for="Address" class="form-control" rows="3"></textarea>
                 <span asp-validation-for="Address" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="YearsOfExperience" class="form-label"></label>
+                <input asp-for="YearsOfExperience" class="form-control" type="number" min="0" max="60" step="1" />
+                <span asp-validation-for="YearsOfExperience" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Status" class="form-label"></label>
+                <select asp-for="Status" class="form-select">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Work Status</label>
+                <p class="form-control-plaintext">@Model.WorkStatus</p>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Date Hired</label>
+                <p class="form-control-plaintext">
+                    @(Model.DateHired?.ToString("MMMM dd, yyyy") ?? "Not Provided")
+                </p>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Hired By</label>
+                <p class="form-control-plaintext">
+                    @(Model.HiredByStaff?.StaffName ?? "System")
+                </p>
             </div>
 
             <div class="form-actions">

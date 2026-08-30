@@ -3,6 +3,7 @@ using KaijensonIventory_SalesMotorShopWeb.Models;
 using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace KaijensonIventory_SalesMotorShopWeb.Services
 {
@@ -77,9 +78,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 PurchaseOrderId = order.PurchaseOrderId,
                 PurchaseOrderNumber = order.PurchaseOrderNumber,
                 SupplierId = order.SupplierId,
-                OrderDate = order.OrderDate,
-                ExpectedDeliveryDate = order.ExpectedDeliveryDate,
-                Status = order.Status,
+                 OrderDate = order.OrderDate,
+                 ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+                 
+                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
                 Remarks = order.Remarks,
                 Items = order.Items.Select(i => new PurchaseOrderItemViewModel
@@ -95,7 +97,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 }).ToList()
             };
 
-            return await PopulateListsAsync(viewModel);
+            // Populate supplier dropdown: include all active suppliers and, if the current supplier is inactive, include it for display
+            viewModel.Suppliers = await _context.Suppliers.AsNoTracking()
+                .Where(s => s.Status == "Active" || s.SupplierId == viewModel.SupplierId)
+                .OrderBy(s => s.CompanyName)
+                .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
+                .ToListAsync();
+            return viewModel;
         }
 
         public async Task<PurchaseOrderViewModel> PrepareEditViewModelAsync(PurchaseOrderViewModel model)
@@ -123,9 +131,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 ContactPerson = order.Supplier?.ContactPerson,
                 ContactNumber = order.Supplier?.ContactNumber,
                 SupplierAddress = order.Supplier?.Address,
-                OrderDate = order.OrderDate,
-                ExpectedDeliveryDate = order.ExpectedDeliveryDate,
-                Status = order.Status,
+                 OrderDate = order.OrderDate,
+                 ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+
+                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
                 Remarks = order.Remarks,
                 CreatedByName = order.Staff?.StaffName,
@@ -156,22 +165,28 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             var order = new PurchaseOrder
             {
                 PurchaseOrderNumber = poNumber,
-                SupplierId = model.SupplierId,
-                OrderDate = model.OrderDate,
-                Status = "Pending",
-                Remarks = model.Remarks,
+                 SupplierId = model.SupplierId,
+                 OrderDate = model.OrderDate,
+                 ExpectedDeliveryDate = model.ExpectedDeliveryDate,
+                 Status = "Pending",
+                 Remarks = model.Remarks,
                 CreatedBy = currentStaffId,
                 CreatedDate = DateTime.Now
             };
 
             foreach (var item in model.Items.Where(i => i.ProductId > 0))
             {
+                var subtotal = item.Quantity * item.Price;
                 order.Items.Add(new PurchaseOrderItem
                 {
                     ProductId = item.ProductId,
-                    Quantity = item.Quantity
+                    Quantity = item.Quantity,
+                    Price = item.Price,
+                    Subtotal = subtotal
                 });
             }
+            // Calculate total amount
+            order.TotalAmount = order.Items.Sum(i => i.Subtotal);
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -198,10 +213,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         public async Task<Result> UpdateAsync(PurchaseOrderViewModel model, int currentStaffId)
         {
-            var validation = await ValidateItemsAsync(model);
-            if (!validation.Succeeded)
-                return validation;
-
+            // Load existing order first to allow supplier‑change rules.
             PurchaseOrder? order = await _context.PurchaseOrders
                 .Include(p => p.Items)
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == model.PurchaseOrderId);
@@ -212,25 +224,63 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             if (order.Status == "Delivered" || order.Status == "Cancelled")
                 return Result.Failure(null, "Cannot edit a purchase order that has been delivered or cancelled.");
 
-            order.SupplierId = model.SupplierId;
-            order.OrderDate = model.OrderDate;
-            order.Remarks = model.Remarks;
+            // Validate supplier change according to business rules.
+            if (model.SupplierId <= 0)
+                return Result.Failure("SupplierId", "Please select a supplier.");
+
+            bool supplierChanged = model.SupplierId != order.SupplierId;
+            if (supplierChanged)
+            {
+                var newSupplier = await _context.Suppliers.FindAsync(model.SupplierId);
+                if (newSupplier == null || newSupplier.Status != "Active")
+                    return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be used for a purchase order.");
+            }
+
+            // Validate items (product existence, no duplicates, quantity >0).
+            if (model.Items == null || model.Items.Count == 0 || model.Items.All(i => i.ProductId <= 0))
+                return Result.Failure("Items", "Please add at least one product.");
+
+            var validItems = model.Items.Where(i => i.ProductId > 0).ToList();
+            foreach (var item in validItems)
+            {
+                if (item.Quantity <= 0)
+                    return Result.Failure($"Items[{validItems.IndexOf(item)}].Quantity", "Quantity must be greater than 0.");
+            }
+
+            var duplicateIds = validItems.GroupBy(i => i.ProductId).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+            if (duplicateIds.Any())
+                return Result.Failure("Items", "Duplicate products are not allowed.");
+
+            var productIds = validItems.Select(i => i.ProductId).Distinct().ToList();
+            int existingCount = await _context.Products.CountAsync(p => productIds.Contains(p.ProductId));
+            if (existingCount != productIds.Count)
+                return Result.Failure("Items", "One or more selected products are not valid.");
+
+            // Apply updates.
+             order.SupplierId = model.SupplierId;
+             order.OrderDate = model.OrderDate;
+             order.ExpectedDeliveryDate = model.ExpectedDeliveryDate;
+             order.Remarks = model.Remarks;
             order.UpdatedDate = DateTime.Now;
 
             _context.PurchaseOrderItems.RemoveRange(order.Items);
             order.Items.Clear();
 
-            foreach (var item in model.Items.Where(i => i.ProductId > 0))
+            foreach (var item in validItems)
             {
+                var subtotal = item.Quantity * item.Price;
                 order.Items.Add(new PurchaseOrderItem
                 {
                     ProductId = item.ProductId,
-                    Quantity = item.Quantity
+                    Quantity = item.Quantity,
+                    Price = item.Price,
+                    Subtotal = subtotal
                 });
             }
+            // Recalculate total amount
+            order.TotalAmount = order.Items.Sum(i => i.Subtotal);
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
-
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -313,7 +363,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         {
             return await _context.Products
                 .AsNoTracking()
-                .Where(p => p.SupplierId == id)
+                .Where(p => p.SupplierId == id && p.Supplier != null && p.Supplier.Status == "Active")
                 .OrderBy(p => p.ProductName)
                 .Select(p => new ProductLookupDto
                 {
@@ -334,6 +384,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 return Result.Failure("Items", "Please add at least one product.");
 
             var validItems = model.Items.Where(i => i.ProductId > 0).ToList();
+            // Ensure supplier is active
+            var supplier = await _context.Suppliers.FindAsync(model.SupplierId);
+            if (supplier == null || supplier.Status != "Active")
+                return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be used for a new purchase order.");
 
             for (int i = 0; i < model.Items.Count; i++)
             {
@@ -361,9 +415,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         private async Task<PurchaseOrderViewModel> PopulateListsAsync(PurchaseOrderViewModel model)
         {
-            model.Suppliers = await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName)
-                .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
-                .ToListAsync();
+model.Suppliers = await _context.Suppliers.AsNoTracking()
+                 .Where(s => s.Status == "Active")
+                 .OrderBy(s => s.CompanyName)
+                 .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
+                 .ToListAsync();
 
             return model;
         }

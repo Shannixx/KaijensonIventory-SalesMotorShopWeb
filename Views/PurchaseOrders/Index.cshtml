@@ -41,9 +41,8 @@
                         <th>PO Number</th>
                         <th>Supplier</th>
                         <th>Order Date</th>
-                        
+                        <th>Total</th>
                         <th>Status</th>
-                        <!-- Removed Total Amount column -->
                         <th class="actions-column actions-column-wide">Actions</th>
                     </tr>
                 </thead>
@@ -53,15 +52,14 @@
                         <tr>
                             <td><span class="fw-medium">@item.PurchaseOrderNumber</span></td>
                             <td>@item.Supplier?.CompanyName</td>
-                            <td>@item.OrderDate.ToString("MMM dd, yyyy")</td>
-
-                            <td>
-                                @if (item.Status == "Pending") { <span class="badge bg-warning">Pending</span> }
-                                else if (item.Status == "Approved") { <span class="badge bg-primary">Approved</span> }
-                                else if (item.Status == "Delivered") { <span class="badge bg-success">Delivered</span> }
-                                else if (item.Status == "Cancelled") { <span class="badge bg-danger">Cancelled</span> }
-                            </td>
-                            @* <td class="fw-semibold">@item.TotalAmount.ToString("N2")</td> *@
+<td>@item.OrderDate.ToString("MMM dd, yyyy")</td>
+<td>₱@item.TotalAmount.ToString("N2")</td>
+<td>
+    @if (item.Status == "Pending") { <span class="badge bg-warning">Pending</span> }
+    else if (item.Status == "Approved") { <span class="badge bg-primary">Approved</span> }
+    else if (item.Status == "Delivered") { <span class="badge bg-success">Delivered</span> }
+    else if (item.Status == "Cancelled") { <span class="badge bg-danger">Cancelled</span> }
+</td>
                             <td class="action-cell action-cell-wide">
                 <div class="action-buttons">
                     <a asp-action="Details" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-view" title="View Purchase Order" aria-label="View @item.PurchaseOrderNumber"><i class="bi bi-eye"></i></a>
@@ -84,7 +82,7 @@
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="5" class="text-center py-4 text-muted">No purchase orders found.</td></tr>
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No purchase orders found.</td></tr>
                     }
                 </tbody>
             </table>

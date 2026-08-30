@@ -1,15 +1,14 @@
 @model DeliveryViewModel
 @{
     ViewData["Title"] = "Delivery Details";
-    string badgeClass = Model.Status switch
-    {
-        "Pending" => "bg-warning",
-        "Approved" => "bg-primary",
-        "Delivered" => "bg-success",
-        "Partially Delivered" => "bg-warning",
-        "Cancelled" => "bg-danger",
-        _ => "bg-secondary"
-    };
+string badgeClass = Model.Status switch
+{
+    "Pending" => "bg-warning",
+    "Partially Delivered" => "bg-primary",
+    "Delivered" => "bg-success",
+    "Cancelled" => "bg-danger",
+    _ => "bg-secondary"
+};
 }
 
 <div class="page-header">
@@ -46,12 +45,16 @@
                                 <td>@item.ReceivedQuantity</td>
                                 <td>@remaining</td>
                                 <td>
-                                    <input type="number" name="ReceiveQuantities[@item.PurchaseOrderItemId]" min="0" max="@remaining" class="form-control" value="@remaining" />
+                                    <input type="number" name="ReceiveQuantities[@item.PurchaseOrderItemId]" min="0" max="@remaining" class="form-control" value="0" @(remaining == 0 ? "disabled" : "") />
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
+                <div class="mb-3">
+                    <label class="form-label">Remarks</label>
+                    <textarea name="Remarks" class="form-control" rows="2"></textarea>
+                </div>
                 <button type="submit" class="btn btn-success" onclick="return confirm('Process this delivery? Stock will be updated.');">
                     <i class="bi bi-check-all"></i> Receive
                 </button>
@@ -96,6 +99,21 @@
                 <p class="metric-label">Delivered Date</p>
                 <h3 class="metric-value" style="font-size:1.1rem;">@(Model.DeliveredDate?.ToString("MMM dd, yyyy") ?? "-")</h3>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><span>Remarks</span></div>
+            <div class="card-body"><p>@(Model.Remarks ?? "-")</p></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><span>Received By</span></div>
+            <div class="card-body"><p>@(Model.ReceivedByName ?? "-")</p></div>
         </div>
     </div>
 </div>

@@ -11,8 +11,7 @@
         _ => "bg-success"
     };
     string statusLabel = Model.StockStatus;
-    if (Model.QuantityOnHand <= 0) { statusLabel = "Out of Stock"; badgeClass = "bg-danger"; }
-    else { statusLabel = "Available"; badgeClass = "bg-success"; }
+
 }
 
 <div class="page-header">
@@ -50,12 +49,23 @@
                     <tr><th>Model Compatibility</th><td>@(Model.ModelCompatibility ?? "-")</td></tr>
                     <tr><th>Description</th><td>@(Model.Description ?? "-")</td></tr>
                     <tr><th>Category</th><td>@Model.Category?.CategoryName</td></tr>
-                    <tr><th>Supplier</th><td><a asp-controller="Suppliers" asp-action="Details" asp-route-id="@Model.SupplierId">@Model.Supplier?.CompanyName</a> &middot; @Model.Supplier?.ContactNumber</td></tr>
+                    <tr><th>Supplier</th><td>
+    @if (Model.Supplier != null)
+    {
+        <a asp-controller="Suppliers" asp-action="Details" asp-route-id="@Model.SupplierId">@Model.Supplier.CompanyName</a>
+    }
+    else
+    {
+        @:Not Assigned
+    }
+</td></tr>
                     
                     <tr><th>Current Stock</th><td>@Model.QuantityOnHand <span class="badge @badgeClass ms-2">@statusLabel</span></td></tr>
 
                     <tr><th>Price</th><td>@Model.Price.ToString("C", CultureInfo.GetCultureInfo("en-PH"))</td></tr>
-                    <tr><th>Created At</th><td>@Model.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td></tr>
+                    <tr><th>Created Date</th><td>@Model.CreatedAt.ToString("MMMM dd, yyyy")</td></tr>
+<tr><th>Created By</th><td>@(Model.CreatedByStaff?.StaffName ?? "System")</td></tr>
+<tr><th>Last Updated</th><td>@Model.LastUpdated.ToString("MMMM dd, yyyy")</td></tr>
                 </table>
             </div>
         </div>

@@ -94,7 +94,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice")] Service service)
+        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice,Description,DurationMinutes")] Service service)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -114,8 +114,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
-                    // CategoryId stays null: the Add Service form only collects
-                    // ServiceName and ServicePrice, per the service catalog spec.
+                    // Set audit fields and defaults
+                    service.Status = "Active";
+                    service.CreatedAt = DateTime.UtcNow;
+                    service.CreatedBy = GetCurrentStaffId();
+                    // Duration will be provided by user input
+                    // CategoryId stays null: the Add Service form only collects ServiceName and ServicePrice.
                     _context.Services.Add(service);
                     await _context.SaveChangesAsync();
 
@@ -172,7 +176,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice")] Service service)
+        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice,DurationMinutes,Status,Description")] Service service)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -196,9 +200,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     Service? existing = await _context.Services.FindAsync(id);
                     if (existing == null) return NotFound();
-                    existing.ServiceName = service.ServiceName;
-                    existing.ServicePrice = service.ServicePrice;
-                    await _context.SaveChangesAsync();
+existing.ServiceName = service.ServiceName;
+                     existing.ServicePrice = service.ServicePrice;
+                     existing.DurationMinutes = service.DurationMinutes;
+                     existing.Status = service.Status;
+                     // Persist description changes
+                     existing.Description = service.Description;
+                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
@@ -278,6 +286,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 Service? service = await _context.Services.FindAsync(id);
                 if (service == null) return NotFound();
+
+                // Prevent deletion if there are existing ServiceJobs referencing this service
+                bool hasJobs = await _context.ServiceJobs.AnyAsync(j => j.ServiceId == id);
+                if (hasJobs)
+                {
+                    TempData["ErrorMessage"] = "This service cannot be deleted because it has existing service records.";
+                    return RedirectToAction(nameof(Index));
+                }
 
                 string name = service.ServiceName;
 

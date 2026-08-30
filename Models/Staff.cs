@@ -31,5 +31,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Required, StringLength(20)]
         [Display(Name = "Status")]
         public string Status { get; set; } = "Approved";
-    }
+    public bool MustChangePassword { get; set; } = false;
+}
 }

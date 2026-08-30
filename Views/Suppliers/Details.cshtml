@@ -37,8 +37,16 @@
             <dd class="col-sm-9">@Html.DisplayFor(m => m.ContactPerson)</dd>
             <dt class="col-sm-3">@Html.DisplayNameFor(m => m.ContactNumber)</dt>
             <dd class="col-sm-9">@Html.DisplayFor(m => m.ContactNumber)</dd>
-            <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Address)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(m => m.Address)</dd>
+<dt class="col-sm-3">@Html.DisplayNameFor(m => m.Address)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(m => m.Address)</dd>
+                <dt class="col-sm-3">@Html.DisplayNameFor(m => m.EmailAddress)</dt>
+                <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.EmailAddress) ? "Not Provided" : Model.EmailAddress)</dd>
+                <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Status)</dt>
+                <dd class="col-sm-9">@{ if (Model.Status == "Active") { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> } }</dd>
+                <dt class="col-sm-3">@Html.DisplayNameFor(m => m.CreatedAt)</dt>
+                <dd class="col-sm-9">@(Model.CreatedAt.HasValue ? Model.CreatedAt.Value.ToString("MMMM dd, yyyy") : "Not Provided")</dd>
+                <dt class="col-sm-3">Created By</dt>
+                <dd class="col-sm-9">@(Model.CreatedByStaff != null ? Model.CreatedByStaff.StaffName : "System")</dd>
         </dl>
     </div>
 </div>

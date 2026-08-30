@@ -187,6 +187,7 @@ if (product.IsSerialized)
                 product.LastSaleDate = DateTime.Now;
 
                 product.StockStatus = StockHelper.GetStockStatus(product.QuantityOnHand);
+                product.LastUpdated = DateTime.Now;
 
                 // Notification on status transition (deduplicated: an unread alert
                 // of the same type for this product is never duplicated)

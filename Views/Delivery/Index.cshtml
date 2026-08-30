@@ -30,13 +30,22 @@
                             <td><span class="fw-medium">@item.PurchaseOrderNumber</span></td>
                             <td>@item.SupplierName</td>
                             <td>@item.OrderDate.ToString("MMM dd, yyyy")</td>
-                            <td>
-    @item.Items.Count
-    @foreach (var it in item.Items) {
-        <span class="badge bg-secondary ms-1">@it.ProductName</span>
+                            <td class="text-center">
+    @{
+        var count = item.Items.Count;
+        var label = count == 1 ? "Product" : "Products";
     }
+    @count @label
 </td>
-                            @{var badgeClass = item.Status == "Pending" ? "bg-warning" : item.Status == "Delivered" ? "bg-success" : "bg-primary";}
+                            @{var badgeClass = item.Status switch
+    {
+        "Pending" => "bg-warning",
+        "Partially Delivered" => "bg-primary",
+        "Delivered" => "bg-success",
+        "Cancelled" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
                     <td><span class="badge @badgeClass">@item.Status</span></td>
                             <td class="action-cell">
                                 <div class="action-buttons">

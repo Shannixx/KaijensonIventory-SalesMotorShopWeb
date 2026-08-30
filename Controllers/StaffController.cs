@@ -550,21 +550,27 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (ModelState.IsValid)
                 {
-                    staff.PasswordHash = _hashing.HashPassword(NewPassword);
-                    await _context.SaveChangesAsync();
-
-                    _context.ActivityLogs.Add(new ActivityLog
-                    {
-                        Action = "Change Password",
-                        Module = "Staff",
-                        Description = $"Password changed for staff {staff.StaffName}",
-                        StaffId = GetCurrentStaffId(),
-                        Timestamp = DateTime.Now
-                    });
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Password changed successfully.";
-                    return RedirectToAction(nameof(Index));
+                     staff.PasswordHash = _hashing.HashPassword(NewPassword);
+                     // Reset forced-change flag after successful password update
+                     staff.MustChangePassword = false;
+                     await _context.SaveChangesAsync();
+ 
+                     // Clear forced change session flag
+                     HttpContext.Session.Remove("MustChangePassword");
+ 
+                     _context.ActivityLogs.Add(new ActivityLog
+                     {
+                         Action = "Change Password",
+                         Module = "Staff",
+                         Description = $"Password changed for staff {staff.StaffName}",
+                         StaffId = GetCurrentStaffId(),
+                         Timestamp = DateTime.Now
+                     });
+                     await _context.SaveChangesAsync();
+ 
+                     TempData["SuccessMessage"] = "Password changed successfully.";
+                     // Redirect to Dashboard after password change
+                     return RedirectToAction("Index", "Dashboard");
                 }
 
                 ViewData["TargetStaffId"] = id;
@@ -577,6 +583,74 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "An error occurred while changing password. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+        // Admin resets a manager's password (offline flow)
+        [HttpGet]
+        public async Task<IActionResult> ResetPassword(int? id)
+        {
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
+            if (id == null) return NotFound();
+
+            Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
+            if (staff == null) return NotFound();
+            if (staff.Role != "Manager")
+            {
+                TempData["ErrorMessage"] = "Can only reset password for Manager accounts.";
+                return RedirectToAction(nameof(Index));
+            }
+            ViewData["TargetStaffId"] = id;
+            ViewData["TargetStaffName"] = staff.StaffName;
+            return View(); // view should contain fields for temporary password & confirm
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(int id, string TemporaryPassword, string ConfirmTemporaryPassword)
+        {
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
+
+            if (string.IsNullOrWhiteSpace(TemporaryPassword))
+                ModelState.AddModelError("TemporaryPassword", "Temporary password is required.");
+            else if (TemporaryPassword.Length < 6)
+                ModelState.AddModelError("TemporaryPassword", "Password must be at least 6 characters.");
+            if (TemporaryPassword != ConfirmTemporaryPassword)
+                ModelState.AddModelError("ConfirmTemporaryPassword", "Passwords do not match.");
+
+            if (!ModelState.IsValid)
+            {
+                ViewData["TargetStaffId"] = id;
+                ViewData["TargetStaffName"] = (await _context.Staff.FindAsync(id))?.StaffName ?? "";
+                return View();
+            }
+
+Staff? staff = await _context.Staff.FindAsync(id);
+                     if (staff == null) return NotFound();
+                     if (staff.Role != "Manager")
+                     {
+                         TempData["ErrorMessage"] = "Can only reset password for Manager accounts.";
+                         return RedirectToAction(nameof(Index));
+                     }
+
+                     // Hash and set temporary password, enforce password change on next login
+                     staff.PasswordHash = _hashing.HashPassword(TemporaryPassword);
+                     staff.MustChangePassword = true;
+            await _context.SaveChangesAsync();
+
+            // Log activity without storing passwords
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Action = "Reset Password",
+                Module = "Staff",
+                Description = $"Administrator reset the password for Manager: {staff.StaffName}.",
+                StaffId = GetCurrentStaffId(),
+                Timestamp = DateTime.Now
+            });
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Password reset successfully. Manager must change password on next login.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

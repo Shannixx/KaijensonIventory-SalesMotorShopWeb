@@ -170,6 +170,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "Please assign a supplier to this product before creating a purchase order.";
                 return RedirectToAction(nameof(Index));
             }
+            // Ensure supplier is active for reorder
+            if (product.Supplier?.Status != "Active")
+            {
+                TempData["ErrorMessage"] = "This product cannot be reordered because its supplier is inactive.";
+                return RedirectToAction(nameof(Index));
+            }
 
             // Quantity will be entered manually by the user; no placeholder variable needed
 

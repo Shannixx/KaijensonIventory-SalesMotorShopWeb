@@ -88,18 +88,28 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label" for="quickServiceName">Service Name</label>
-                        <input id="quickServiceName" name="ServiceName" class="form-control" placeholder="e.g. Oil Change" required maxlength="150" />
-                    </div>
+                     <div class="mb-3">
+                         <label class="form-label" for="quickServiceName">Service Name</label>
+                         <input id="quickServiceName" name="ServiceName" class="form-control" placeholder="e.g. Oil Change" required maxlength="150" />
+                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label" for="quickServicePrice">Price (&#8369;)</label>
-                        <div class="input-group">
-                            <span class="input-group-text">₱</span>
-                            <input id="quickServicePrice" name="ServicePrice" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" required />
-                        </div>
-                    </div>
+                     <div class="mb-3">
+                         <label class="form-label" for="quickServiceDescription">Description</label>
+                         <textarea id="quickServiceDescription" name="Description" class="form-control" rows="3" placeholder="Optional description"></textarea>
+                     </div>
+
+                     <div class="mb-3">
+                         <label class="form-label" for="quickServiceDuration">Duration (minutes)</label>
+                         <input id="quickServiceDuration" name="DurationMinutes" class="form-control" type="number" min="1" placeholder="e.g. 60" required />
+                     </div>
+
+                     <div class="mb-3">
+                         <label class="form-label" for="quickServicePrice">Price (&#8369;)</label>
+                         <div class="input-group">
+                             <span class="input-group-text">₱</span>
+                             <input id="quickServicePrice" name="ServicePrice" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" required />
+                         </div>
+                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

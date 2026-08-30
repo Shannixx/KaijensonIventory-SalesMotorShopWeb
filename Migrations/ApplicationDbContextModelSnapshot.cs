@@ -85,11 +85,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
@@ -111,8 +106,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandName = "Honda",
                             CountryOrigin = "Japan",
                             CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese motorcycle and automotive brand known for motorcycles, engines, and related mobility products.",
-                            Status = "Active"
+                            Description = "Japanese motorcycle and automotive brand known for motorcycles, engines, and related mobility products."
                         },
                         new
                         {
@@ -120,8 +114,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandName = "Yamaha",
                             CountryOrigin = "Japan",
                             CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese manufacturer known for motorcycles, engines, and a wide range of mobility products.",
-                            Status = "Active"
+                            Description = "Japanese manufacturer known for motorcycles, engines, and a wide range of mobility products."
                         },
                         new
                         {
@@ -129,8 +122,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandName = "Suzuki",
                             CountryOrigin = "Japan",
                             CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese manufacturer producing motorcycles, engines, and other mobility-related products.",
-                            Status = "Active"
+                            Description = "Japanese manufacturer producing motorcycles, engines, and other mobility-related products."
                         },
                         new
                         {
@@ -138,8 +130,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandName = "Kawasaki",
                             CountryOrigin = "Japan",
                             CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Japanese manufacturer known for motorcycles, engines, and other transportation and industrial products.",
-                            Status = "Active"
+                            Description = "Japanese manufacturer known for motorcycles, engines, and other transportation and industrial products."
                         },
                         new
                         {
@@ -147,8 +138,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                             BrandName = "Kymco",
                             CountryOrigin = "Taiwan",
                             CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Taiwanese manufacturer specializing in scooters, motorcycles, and related mobility products.",
-                            Status = "Active"
+                            Description = "Taiwanese manufacturer specializing in scooters, motorcycles, and related mobility products."
                         });
                 });
 
@@ -225,6 +215,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<int>("PurchaseOrderId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ReceivedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -284,6 +281,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<DateTime?>("DateHired")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmailAddress")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("HiredBy")
+                        .HasColumnType("int");
+
                     b.Property<string>("MechanicName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -294,7 +302,22 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("WorkStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("YearsOfExperience")
+                        .HasColumnType("int");
+
                     b.HasKey("MechanicId");
+
+                    b.HasIndex("HiredBy");
 
                     b.ToTable("Mechanics");
                 });
@@ -354,6 +377,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -368,6 +394,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LastStockInDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("LeadTimeDays")
@@ -412,6 +441,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.HasKey("ProductId");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("CreatedBy");
 
                     b.HasIndex("PurchaseOrderId");
 
@@ -646,6 +677,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<int?>("CategoryId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
                     b.Property<string>("ServiceName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -654,9 +698,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<decimal>("ServicePrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("ServiceId");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("CreatedBy");
 
                     b.ToTable("Services");
                 });
@@ -794,6 +845,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -855,7 +909,25 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EmailAddress")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("SupplierId");
+
+                    b.HasIndex("CreatedBy");
 
                     b.ToTable("Suppliers");
                 });
@@ -927,6 +999,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Navigation("PurchaseOrderItem");
                 });
 
+            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Mechanic", b =>
+                {
+                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "HiredByStaff")
+                        .WithMany()
+                        .HasForeignKey("HiredBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("HiredByStaff");
+                });
+
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Notification", b =>
                 {
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Product", "Product")
@@ -944,6 +1026,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "CreatedByStaff")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.PurchaseOrder", "PurchaseOrder")
                         .WithMany()
                         .HasForeignKey("PurchaseOrderId")
@@ -956,6 +1043,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+
+                    b.Navigation("CreatedByStaff");
 
                     b.Navigation("PurchaseOrder");
 
@@ -1054,7 +1143,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "CreatedByStaff")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Category");
+
+                    b.Navigation("CreatedByStaff");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.ServiceHistory", b =>
@@ -1100,6 +1196,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Navigation("SalesTransaction");
 
                     b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Supplier", b =>
+                {
+                    b.HasOne("KaijensonIventory_SalesMotorShopWeb.Models.Staff", "CreatedByStaff")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByStaff");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Delivery", b =>

@@ -30,6 +30,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         [Display(Name = "Expected Delivery Date")]
         public DateTime? ExpectedDeliveryDate { get; set; }
 
+
+
+
         [Display(Name = "Status")]
         public string? Status { get; set; }
 

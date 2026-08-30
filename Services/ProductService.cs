@@ -111,7 +111,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 return Result.Failure(errors);
 
             bool brandExists = await _context.Brands
-                .AnyAsync(b => b.BrandName == model.Brand && b.Status == "Active");
+                .AnyAsync(b => b.BrandName == model.Brand);
             if (!brandExists)
                 return Result.Failure("Brand", "The selected brand is not valid or is inactive.");
 
@@ -122,6 +122,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             if (nameExists)
                 return Result.Failure("ProductName", "A product with this name already exists.");
 
+            var supplier = await _context.Suppliers.FindAsync(model.SupplierId);
+            if (supplier == null || supplier.Status != "Active")
+                return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be assigned to a new product.");
+
             if (model.PurchaseOrderId.HasValue)
             {
                 bool poExists = await _context.PurchaseOrders.AnyAsync(p => p.PurchaseOrderId == model.PurchaseOrderId.Value);
@@ -129,24 +133,26 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     return Result.Failure("PurchaseOrderId", "The selected purchase order is not valid.");
             }
 
-            var product = new Product
-            {
-                ProductName = model.ProductName,
-                Brand = model.Brand,
-                CategoryId = model.CategoryId,
-                SupplierId = model.SupplierId,
-                QuantityOnHand = model.QuantityOnHand,
-                Description = model.Description,
-                ModelCompatibility = model.ModelCompatibility,
-                PurchaseOrderId = model.PurchaseOrderId,
-                LeadTimeDays = 30,
-                Price = model.Price ?? 0m,
-                IsSerialized = model.IsSerialized,
-                AverageCost = 0,
-                ReorderLevel = model.ReorderLevel,
-                StockStatus = StockHelper.GetStockStatus(model.QuantityOnHand),
-                CreatedAt = DateTime.Now
-            };
+var product = new Product
+                {
+                    ProductName = model.ProductName,
+                    Brand = model.Brand,
+                    CategoryId = model.CategoryId,
+                    SupplierId = model.SupplierId,
+                    QuantityOnHand = model.QuantityOnHand,
+                    Description = model.Description,
+                    ModelCompatibility = model.ModelCompatibility,
+                    PurchaseOrderId = model.PurchaseOrderId,
+                    LeadTimeDays = 30,
+                    Price = model.Price ?? 0m,
+                    IsSerialized = model.IsSerialized,
+                    AverageCost = 0,
+                    ReorderLevel = model.ReorderLevel,
+                    StockStatus = StockHelper.GetStockStatus(model.QuantityOnHand),
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = currentStaffId,
+                    LastUpdated = DateTime.Now
+                };
 
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
@@ -165,7 +171,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 return Result.Failure(errors);
 
             bool brandExists = await _context.Brands
-                .AnyAsync(b => b.BrandName == model.Brand && b.Status == "Active");
+                .AnyAsync(b => b.BrandName == model.Brand);
             if (!brandExists)
                 return Result.Failure("Brand", "The selected brand is not valid or is inactive.");
 
@@ -191,7 +197,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             existing.ProductName = model.ProductName;
             existing.Brand = model.Brand;
             existing.CategoryId = model.CategoryId;
-            existing.SupplierId = model.SupplierId;
+            // Update supplier with validation
+            if (model.SupplierId != existing.SupplierId)
+            {
+                var newSupplier = await _context.Suppliers.FindAsync(model.SupplierId);
+                if (newSupplier == null || newSupplier.Status != "Active")
+                    return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be assigned to the product.");
+                existing.SupplierId = model.SupplierId;
+            }
+            // If supplier unchanged, keep existing (even if inactive).
             existing.QuantityOnHand = model.QuantityOnHand;
             existing.ModelCompatibility = model.ModelCompatibility;
             existing.Description = model.Description;
@@ -201,6 +215,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             existing.Price = model.Price ?? existing.Price;
                 existing.ReorderLevel = model.ReorderLevel;
             existing.StockStatus = StockHelper.GetStockStatus(existing.QuantityOnHand);
+            existing.LastUpdated = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
@@ -261,6 +276,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Supplier)
+                .Include(p => p.CreatedByStaff)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProductId == id);
         }
@@ -271,12 +287,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.CategoryName })
                 .ToListAsync();
 
-            model.Suppliers = await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName)
-                .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
-                .ToListAsync();
+            model.Suppliers = await _context.Suppliers.AsNoTracking()
+                    .Where(s => s.Status == "Active" || s.SupplierId == model.SupplierId)
+                    .OrderBy(s => s.CompanyName)
+                    .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
+                    .ToListAsync();
 
             model.Brands = await _context.Brands.AsNoTracking()
-                .OrderBy(b => b.Status == "Active" ? 0 : 1)
+                .OrderBy(b => b.BrandName)
                 .ThenBy(b => b.BrandName)
                 .Select(b => new SelectListItem { Value = b.BrandName, Text = b.BrandName })
                 .ToListAsync();
@@ -295,12 +313,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.CategoryName })
                 .ToListAsync();
 
-            model.Suppliers = await _context.Suppliers.AsNoTracking().OrderBy(s => s.CompanyName)
-                .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
-                .ToListAsync();
+            model.Suppliers = await _context.Suppliers.AsNoTracking()
+                    .Where(s => s.Status == "Active" || s.SupplierId == model.SupplierId)
+                    .OrderBy(s => s.CompanyName)
+                    .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
+                    .ToListAsync();
 
             model.Brands = await _context.Brands.AsNoTracking()
-                .OrderBy(b => b.Status == "Active" ? 0 : 1)
+                .OrderBy(b => b.BrandName)
                 .ThenBy(b => b.BrandName)
                 .Select(b => new SelectListItem { Value = b.BrandName, Text = b.BrandName })
                 .ToListAsync();

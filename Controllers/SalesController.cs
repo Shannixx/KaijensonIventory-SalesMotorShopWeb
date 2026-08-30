@@ -49,11 +49,17 @@ if (reorder && productId.HasValue)
         TempData["ErrorMessage"] = "Product stock is still above the reorder level.";
         return RedirectToAction(nameof(Index), "Products");
     }
-    if (product.SupplierId <= 0)
-    {
-        TempData["ErrorMessage"] = "Please assign a supplier to this product before creating a purchase order.";
-        return RedirectToAction(nameof(Index), "Products");
-    }
+if (product.SupplierId <= 0)
+            {
+                TempData["ErrorMessage"] = "Please assign a supplier to this product before creating a purchase order.";
+                return RedirectToAction(nameof(Index), "Products");
+            }
+            // Ensure supplier is active
+            if (product.Supplier?.Status != "Active")
+            {
+                TempData["ErrorMessage"] = "This product cannot be reordered because its supplier is inactive.";
+                return RedirectToAction(nameof(Index), "Products");
+            }
     ViewBag.IsReorder = true;
     ViewBag.ReorderProduct = product;
 

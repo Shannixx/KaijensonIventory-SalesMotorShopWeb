@@ -18,10 +18,7 @@
         <div class="print-header-info">
             <div class="print-po-number">PO #: @Model.PurchaseOrderNumber</div>
             <div class="print-po-date">Date: @Model.OrderDate.ToString("MMM dd, yyyy")</div>
-            @if (Model.ExpectedDeliveryDate.HasValue)
-            {
-                <div class="print-po-delivery">Expected Delivery: @Model.ExpectedDeliveryDate.Value.ToString("MMM dd, yyyy")</div>
-            }
+
             <div class="print-po-status">Status: <span class="badge @statusBadgeClass">@Model.Status</span></div>
         </div>
     </div>

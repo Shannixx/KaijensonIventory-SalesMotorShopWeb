@@ -17,11 +17,22 @@
             <dt class="col-sm-3">ID</dt>
             <dd class="col-sm-9">@Model.ServiceId</dd>
 
-            <dt class="col-sm-3">Service Name</dt>
-            <dd class="col-sm-9">@Model.ServiceName</dd>
+                <dt class="col-sm-3">Service Name</dt>
+                <dd class="col-sm-9">@Model.ServiceName</dd>
 
-            <dt class="col-sm-3">Price</dt>
-            <dd class="col-sm-9">@Model.ServicePrice.ToString("N2")</dd>
-        </dl>
+                <dt class="col-sm-3">Description</dt>
+                <dd class="col-sm-9">@Model.Description</dd>
+
+                <dt class="col-sm-3">Price</dt>
+                <dd class="col-sm-9">@Model.ServicePrice.ToString("N2")</dd>
+                <dt class="col-sm-3">Duration (minutes)</dt>
+                <dd class="col-sm-9">@Model.DurationMinutes</dd>
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">@Model.Status</dd>
+                <dt class="col-sm-3">Date Created</dt>
+                <dd class="col-sm-9">@Model.CreatedAt.ToString("MMM dd, yyyy")</dd>
+                <dt class="col-sm-3">Created By</dt>
+                <dd class="col-sm-9">@Model.CreatedByStaff?.StaffName ?? "Unknown"</dd>
+            </dl>
     </div>
 </div>

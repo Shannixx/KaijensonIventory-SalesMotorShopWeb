@@ -24,5 +24,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         public ICollection<Product> Products { get; set; } = new List<Product>();
         public ICollection<PurchaseOrder> PurchaseOrders { get; set; } = new List<PurchaseOrder>();
+        [Required, EmailAddress, StringLength(150)]
+        [Display(Name = "Email Address")]
+        public string? EmailAddress { get; set; }
+
+        [Required, StringLength(20)]
+        public string Status { get; set; } = "Active";
+
+        public DateTime? CreatedAt { get; set; }
+
+        public int? CreatedBy { get; set; }
+        public Staff? CreatedByStaff { get; set; }
     }
 }

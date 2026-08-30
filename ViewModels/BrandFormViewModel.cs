@@ -20,9 +20,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         [StringLength(50, ErrorMessage = "Country of origin cannot exceed 50 characters.")]
         public string CountryOrigin { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(20)]
-        public string Status { get; set; } = "Active";
+
 
         public int? SupplierId { get; set; }
 

@@ -31,7 +31,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.IdleTimeout = TimeSpan.FromMinutes(90);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
@@ -76,7 +76,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Seed categories (only if HasData hasn't populated them)
-    if (!db.Categories.Any())
+    if (!db.Categories.Any() && builder.Configuration.GetValue<bool>("SeedDemoData"))
     {
         db.Categories.AddRange(
             new Category
@@ -101,29 +101,29 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Seed suppliers
-    if (!db.Suppliers.Any())
+    if (!db.Suppliers.Any() && builder.Configuration.GetValue<bool>("SeedDemoData"))
     {
         db.Suppliers.AddRange(
-            new Supplier { CompanyName = "Honda Parts Trading", ContactPerson = "Juan Dela Cruz", ContactNumber = "09171234567", Address = "Manila" },
-            new Supplier { CompanyName = "Yamaha Genuine Parts", ContactPerson = "Maria Santos", ContactNumber = "09181234568", Address = "Quezon City" },
-            new Supplier { CompanyName = "Suzuki Auto Supply", ContactPerson = "Pedro Reyes", ContactNumber = "09191234569", Address = "Cebu" },
-            new Supplier { CompanyName = "Kawasaki Motors Parts", ContactPerson = "Ana Lopez", ContactNumber = "09201234570", Address = "Davao" },
-            new Supplier { CompanyName = "Motorcycle Parts Depot", ContactPerson = "Jose Garcia", ContactNumber = "09211234571", Address = "Bulacan" },
-            new Supplier { CompanyName = "Bearing House Inc.", ContactPerson = "Carlos Tan", ContactNumber = "09221234572", Address = "Makati" },
-            new Supplier { CompanyName = "Tire City Supply", ContactPerson = "Luis Mendoza", ContactNumber = "09231234573", Address = "Pasig" },
-            new Supplier { CompanyName = "Oil Depot Philippines", ContactPerson = "Ramon Villanueva", ContactNumber = "09241234574", Address = "Laguna" }
+            new Supplier { CompanyName = "Honda Parts Trading", ContactPerson = "Juan Dela Cruz", ContactNumber = "09171234567", Address = "Manila", EmailAddress = "honda.parts@example.local", Status = "Active" },
+            new Supplier { CompanyName = "Yamaha Genuine Parts", ContactPerson = "Maria Santos", ContactNumber = "09181234568", Address = "Quezon City", EmailAddress = "yamaha.parts@example.local", Status = "Active" },
+            new Supplier { CompanyName = "Suzuki Auto Supply", ContactPerson = "Pedro Reyes", ContactNumber = "09191234569", Address = "Cebu", EmailAddress = "suzuki.auto@example.local", Status = "Active" },
+            new Supplier { CompanyName = "Kawasaki Motors Parts", ContactPerson = "Ana Lopez", ContactNumber = "09201234570", Address = "Davao", EmailAddress = "kawasaki.parts@example.local", Status = "Active" },
+            new Supplier { CompanyName = "Motorcycle Parts Depot", ContactPerson = "Jose Garcia", ContactNumber = "09211234571", Address = "Bulacan", EmailAddress = "motorcycle.parts@example.local", Status = "Active" },
+            new Supplier { CompanyName = "Bearing House Inc.", ContactPerson = "Carlos Tan", ContactNumber = "09221234572", Address = "Makati", EmailAddress = "bearing.house@example.local", Status = "Active" },
+            new Supplier { CompanyName = "Tire City Supply", ContactPerson = "Luis Mendoza", ContactNumber = "09231234573", Address = "Pasig", EmailAddress = "tire.city@example.local", Status = "Active" },
+            new Supplier { CompanyName = "Oil Depot Philippines", ContactPerson = "Ramon Villanueva", ContactNumber = "09241234574", Address = "Laguna", EmailAddress = "oil.depot@example.local", Status = "Active" }
         );
     }
 
     // Seed mechanics
-    if (!db.Mechanics.Any())
+    if (!db.Mechanics.Any() && builder.Configuration.GetValue<bool>("SeedDemoData"))
     {
         db.Mechanics.AddRange(
-            new Mechanic { MechanicName = "Andres Bonifacio", Specialization = "Engine Overhaul", ContactNumber = "09151234501", Address = "Manila" },
-            new Mechanic { MechanicName = "Jose Rizal", Specialization = "Electrical Systems", ContactNumber = "09161234502", Address = "Calamba" },
-            new Mechanic { MechanicName = "Emilio Aguinaldo", Specialization = "Brake & Suspension", ContactNumber = "09171234503", Address = "Kawit" },
-            new Mechanic { MechanicName = "Gabriela Silang", Specialization = "General Service", ContactNumber = "09181234504", Address = "Ilocos" },
-            new Mechanic { MechanicName = "Lapu-Lapu", Specialization = "Transmission & Chain", ContactNumber = "09191234505", Address = "Cebu" }
+            new Mechanic { MechanicName = "Andres Bonifacio", Specialization = "Engine Overhaul", ContactNumber = "09151234501", Address = "Manila", EmailAddress = "andres.mechanic@example.local", Status = "Active", WorkStatus = "Available" },
+            new Mechanic { MechanicName = "Jose Rizal", Specialization = "Electrical Systems", ContactNumber = "09161234502", Address = "Calamba", EmailAddress = "jose.mechanic@example.local", Status = "Active", WorkStatus = "Available" },
+            new Mechanic { MechanicName = "Emilio Aguinaldo", Specialization = "Brake & Suspension", ContactNumber = "09171234503", Address = "Kawit", EmailAddress = "emilio.mechanic@example.local", Status = "Active", WorkStatus = "Available" },
+            new Mechanic { MechanicName = "Gabriela Silang", Specialization = "General Service", ContactNumber = "09181234504", Address = "Ilocos", EmailAddress = "gabriela.mechanic@example.local", Status = "Active", WorkStatus = "Available" },
+            new Mechanic { MechanicName = "Lapu-Lapu", Specialization = "Transmission & Chain", ContactNumber = "09191234505", Address = "Cebu", EmailAddress = "lapulapu.mechanic@example.local", Status = "Active", WorkStatus = "Available" }
         );
     }
 
