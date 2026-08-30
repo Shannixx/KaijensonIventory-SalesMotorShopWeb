@@ -193,7 +193,17 @@
     border-color: var(--primary-hover);
     color: #fff;
 }
-.kx-quick-dates .btn {
+    .kx-quick-dates .btn {
+    background: #fff;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    border-radius: 100px;
+    font-size: 12.5px;
+    font-weight: 600;
+    transition: all .2s ease;
+}
+
+    .kaijenson-reports .kx-report-outline-btn {
     background: #fff;
     border: 1.5px solid var(--primary);
     color: var(--primary);
@@ -207,6 +217,18 @@
     background: var(--primary-light);
     border-color: var(--primary);
     color: var(--primary-hover);
+}
+
+.kaijenson-reports .kx-report-outline-btn:hover,
+.kaijenson-reports .kx-report-outline-btn:focus {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary-hover);
+}
+
+.kaijenson-reports .kx-report-outline-btn i {
+    font-size: 12px;
+    line-height: 1;
 }
 .kx-quick-dates .btn.active,
 .kx-quick-dates .btn:active {
