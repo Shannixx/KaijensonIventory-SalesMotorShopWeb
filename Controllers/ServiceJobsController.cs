@@ -756,6 +756,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                 .Include(j => j.Service)
                 .Include(j => j.Mechanic)
                 .Include(j => j.Histories)
+                .Include(j => j.ProcessedByStaff)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(j => j.ServiceJobId == id);
 
@@ -808,6 +809,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                                 MetaRow("Customer", customer);
                                 MetaRow("Date", job.ServiceDate.ToString("MMM dd, yyyy"));
                                 MetaRow("Completed", job.CompletedDate?.ToString("MMM dd, yyyy") ?? "—");
+                                MetaRow("Created By", job.ProcessedByStaff?.StaffName ?? "—");
                             });
 
                             col.Item().PaddingVertical(3).LineHorizontal(1).LineColor("#999999");
