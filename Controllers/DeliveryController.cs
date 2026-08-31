@@ -75,24 +75,5 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return RedirectToAction(nameof(Details), new { id = model.DeliveryId });
         }
 
-        // Compatibility action to mark delivery as delivered in one step
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkDelivered(int id)
-        {
-            var accessCheck = CheckAccess();
-            if (accessCheck != null) return accessCheck;
-
-            var result = await _deliveryService.MarkDeliveredAsync(id, GetCurrentStaffId());
-
-            if (!result.Succeeded)
-            {
-                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message ?? "Failed to mark delivery as delivered.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            TempData["SuccessMessage"] = "Delivery marked as delivered successfully.";
-            return RedirectToAction(nameof(Index));
-        }
     }
 }

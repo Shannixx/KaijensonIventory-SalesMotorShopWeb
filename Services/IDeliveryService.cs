@@ -9,6 +9,5 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         Task<DeliveryViewModel?> GetDeliveryDetailsAsync(int id);
 
         Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId, string? remarks = null);
-        Task<Result> MarkDeliveredAsync(int id, int currentStaffId);
     }
 }

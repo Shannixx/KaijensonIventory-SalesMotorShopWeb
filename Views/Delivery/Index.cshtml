@@ -50,12 +50,6 @@
                             <td class="action-cell">
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.DeliveryId" class="btn btn-icon btn-icon-deliver" title="View Delivery" aria-label="View delivery for @item.PurchaseOrderNumber"><i class="bi bi-truck"></i></a>
-                                    @if (item.Status == "Pending") {
-                                        <form asp-action="MarkDelivered" asp-route-id="@item.DeliveryId" method="post" style="display:inline;">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-icon btn-icon-deliver" title="Mark as Delivered" aria-label="Mark as Delivered for @item.PurchaseOrderNumber"><i class="bi bi-check-lg"></i></button>
-                                        </form>
-                                    }
                                 </div>
                             </td>
                         </tr>

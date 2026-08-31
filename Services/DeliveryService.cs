@@ -283,48 +283,6 @@ public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuanti
             return Result.Success();
         }
 
-        public async Task<Result> MarkDeliveredAsync(int id, int currentStaffId)
-        {
-            var delivery = await _context.Deliveries
-                .Include(d => d.PurchaseOrder!)
-                    .ThenInclude(p => p.Items)
-                .FirstOrDefaultAsync(d => d.DeliveryId == id);
-
-            if (delivery == null)
-                return Result.Failure(null, "The delivery could not be found.");
-
-            if (delivery.Status == "Delivered")
-                return Result.Success(); // Already marked, treat as success per spec
-
-            var order = delivery.PurchaseOrder;
-            if (order == null)
-                return Result.Failure(null, "Associated purchase order not found.");
-
-            // Verify all items fully received
-            bool anyRemaining = order.Items.Any(i => i.Quantity - i.ReceivedQuantity > 0);
-            if (anyRemaining)
-                return Result.Failure(null, "Cannot mark the delivery as completed because some products are still remaining.");
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
-            // Update statuses and delivered date
-            delivery.Status = "Delivered";
-            delivery.DeliveredDate = DateTime.Now;
-            delivery.ReceivedBy = currentStaffId;
-
-            order.Status = "Delivered";
-            order.UpdatedDate = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-
-            await _activityLogService.LogAsync("Mark Delivery", "Delivery",
-                $"Delivery for PO {order.PurchaseOrderNumber} marked as delivered.", currentStaffId);
-
-            await transaction.CommitAsync();
-
-            return Result.Success();
-        }
-
         private static decimal CalculateNewAverageCost(decimal oldQty, decimal oldAvgCost, decimal newQty, decimal newUnitCost)
         {
             if (oldQty + newQty == 0) return newUnitCost;
