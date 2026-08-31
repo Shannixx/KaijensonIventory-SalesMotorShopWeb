@@ -11,6 +11,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly HashingService _hashing;
+        private const string PasswordResetStaffIdKey = "PasswordResetStaffId";
 
         public AccountController(ApplicationDbContext context, HashingService hashing)
         {
@@ -192,26 +193,88 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        // Forgot Password - offline flow
+        [HttpGet]
         public IActionResult ForgotPassword()
         {
+            HttpContext.Session.Remove(PasswordResetStaffIdKey);
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult ForgotPassword(ForgotPasswordViewModel model)
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
         {
+            HttpContext.Session.Remove(PasswordResetStaffIdKey);
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
 
+            string username = model.Username?.Trim() ?? string.Empty;
+            Staff? staff = await _context.Staff
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.UserName == username);
+
+            if (staff == null)
+            {
+                ModelState.AddModelError(nameof(ForgotPasswordViewModel.Username), "Username not found.");
+                return View(model);
+            }
+
+            HttpContext.Session.SetInt32(PasswordResetStaffIdKey, staff.StaffId);
+            return RedirectToAction(nameof(ResetPassword));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ResetPassword()
+        {
+            int? staffId = HttpContext.Session.GetInt32(PasswordResetStaffIdKey);
+            if (!staffId.HasValue || staffId.Value <= 0)
+            {
+                return RedirectToAction(nameof(ForgotPassword));
+            }
+
+            bool staffExists = await _context.Staff
+                .AsNoTracking()
+                .AnyAsync(s => s.StaffId == staffId.Value);
+
+            if (!staffExists)
+            {
+                HttpContext.Session.Remove(PasswordResetStaffIdKey);
+                return RedirectToAction(nameof(ForgotPassword));
+            }
+
+            return View(new ResetPasswordViewModel());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            int? staffId = HttpContext.Session.GetInt32(PasswordResetStaffIdKey);
+            if (!staffId.HasValue || staffId.Value <= 0)
+            {
+                return RedirectToAction(nameof(ForgotPassword));
+            }
 
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
 
-            // Do not reveal whether the username exists.
-            TempData["InfoMessage"] = "For security, please contact an Administrator to reset your password.";
-            return RedirectToAction("Login");
+            Staff? staff = await _context.Staff.FindAsync(staffId.Value);
+            if (staff == null)
+            {
+                HttpContext.Session.Remove(PasswordResetStaffIdKey);
+                return RedirectToAction(nameof(ForgotPassword));
+            }
+
+            staff.PasswordHash = _hashing.HashPassword(model.NewPassword);
+            await _context.SaveChangesAsync();
+
+            HttpContext.Session.Remove(PasswordResetStaffIdKey);
+            TempData["SuccessMessage"] = "Password reset successfully. Please log in with your new password.";
+            return RedirectToAction(nameof(Login));
         }
 
         public async Task<IActionResult> Logout()
