@@ -32,7 +32,7 @@
                 <dt class="col-sm-3">Date Created</dt>
                 <dd class="col-sm-9">@Model.CreatedAt.ToString("MMM dd, yyyy")</dd>
                 <dt class="col-sm-3">Created By</dt>
-                <dd class="col-sm-9">@Model.CreatedByStaff?.StaffName ?? "Unknown"</dd>
+                <dd class="col-sm-9">@(Model.CreatedByStaff?.StaffName ?? "Unknown")</dd>
             </dl>
     </div>
 </div>

@@ -67,6 +67,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 Service? service = await _context.Services
                     .AsNoTracking()
+                    .Include(s => s.CreatedByStaff)
                     .FirstOrDefaultAsync(s => s.ServiceId == id);
 
                 if (service == null) return NotFound();
