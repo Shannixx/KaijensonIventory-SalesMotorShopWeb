@@ -60,5 +60,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public Staff? Staff { get; set; }
 
         public ICollection<PurchaseOrderItem> Items { get; set; } = new List<PurchaseOrderItem>();
+
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public int? DeletedBy { get; set; }
     }
 }

@@ -26,6 +26,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 var categoryDist = await _context.Products
+                    .Where(p => !p.IsDeleted && p.Category != null && !p.Category.IsDeleted)
                     .GroupBy(p => p.Category!.CategoryName)
                     .Select(g => new { Category = g.Key, Count = g.Count() })
                     .AsNoTracking()
@@ -33,27 +34,29 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 var viewModel = new DashboardViewModel
                 {
-                    TotalProducts = await _context.Products.CountAsync(),
+                    TotalProducts = await _context.Products.CountAsync(p => !p.IsDeleted),
                     LowStockCount = await _context.Products
-                        .CountAsync(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5),
+                        .CountAsync(p => !p.IsDeleted && p.QuantityOnHand > 0 && p.QuantityOnHand < 5),
                     OutOfStockCount = await _context.Products
-                        .CountAsync(p => p.QuantityOnHand <= 0),
+                        .CountAsync(p => !p.IsDeleted && p.QuantityOnHand <= 0),
                     LowStockRequireReorder = await _context.Products
-                        .CountAsync(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5),
+                        .CountAsync(p => !p.IsDeleted && p.QuantityOnHand > 0 && p.QuantityOnHand < 5),
                     TotalInventoryValue = await _context.Products
+                        .Where(p => !p.IsDeleted)
                         .SumAsync(p => (decimal?)(p.Price * p.QuantityOnHand)) ?? 0,
-                    TotalCategories = await _context.Categories.CountAsync(),
-                    TotalSuppliers = await _context.Suppliers.CountAsync(),
-                    TotalMechanics = await _context.Mechanics.CountAsync(),
+                    TotalCategories = await _context.Categories.CountAsync(c => !c.IsDeleted),
+                    TotalSuppliers = await _context.Suppliers.CountAsync(s => !s.IsDeleted),
+                    TotalMechanics = await _context.Mechanics.CountAsync(m => !m.IsDeleted),
                     PendingPOCount = await _context.PurchaseOrders
-                        .CountAsync(p => p.Status == "Pending"),
+                        .CountAsync(p => !p.IsDeleted && p.Status == "Pending"),
                     RecentLowStockProducts = await _context.Products
-                        .Where(p => p.QuantityOnHand > 0 && p.QuantityOnHand < 5)
+                        .Where(p => !p.IsDeleted && p.Category != null && !p.Category.IsDeleted && p.QuantityOnHand > 0 && p.QuantityOnHand < 5)
                         .OrderBy(p => p.QuantityOnHand)
                         .Take(5)
                         .AsNoTracking()
                         .ToListAsync(),
                     RecentPurchaseOrders = await _context.PurchaseOrders
+                        .Where(p => !p.IsDeleted)
                         .Include(p => p.Supplier)
                         .OrderByDescending(p => p.CreatedDate)
                         .Take(5)

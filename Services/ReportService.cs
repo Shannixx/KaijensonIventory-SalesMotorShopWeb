@@ -20,6 +20,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         public async Task<InventoryReportViewModel> GetInventoryReportAsync(DateTime start, DateTime end)
         {
             var items = await _context.Products
+                .Where(p => !p.IsDeleted && (p.Category == null || !p.Category.IsDeleted))
                 .Include(p => p.Category)
                 .Select(p => new InventoryReportItemViewModel
                 {
@@ -81,6 +82,7 @@ var startInclusive = start.Date;
                 .Take(100)
                 .ToListAsync();
 
+            // Include archived products so historical sales remain named in reports.
             var products = await _context.Products
                 .Where(p => data.Select(d => d.ProductId).Contains(p.ProductId))
                 .ToDictionaryAsync(p => p.ProductId, p => p.ProductName);
@@ -100,7 +102,9 @@ var startInclusive = start.Date;
 var startInclusive = start.Date;
             var endExclusive = end.Date.AddDays(1);
             var purchases = await _context.DeliveryItems
+                // Receipt history remains included even when Delivery/PO rows are archived.
                 .Where(di => di.ReceivedDate >= startInclusive && di.ReceivedDate < endExclusive)
+                .Where(di => !di.PurchaseOrderItem.IsDeleted)
                 .Select(di => new StockMovementViewModel
                 {
                     Date = di.ReceivedDate,
@@ -112,7 +116,8 @@ var startInclusive = start.Date;
                 .ToListAsync();
 
 var sales = await _context.SalesItems
-                .Where(s => s.Transaction.TransactionDate >= startInclusive && s.Transaction.TransactionDate < endExclusive)
+    // Sales history remains included even when the Product is archived.
+    .Where(s => s.Transaction.TransactionDate >= startInclusive && s.Transaction.TransactionDate < endExclusive)
                 .Select(s => new StockMovementViewModel
                 {
                     Date = s.Transaction.TransactionDate,
@@ -134,8 +139,9 @@ public async Task<List<SerialNumberReportViewModel>> GetSerialNumberReportAsync(
             var data = await _context.SerialUnits
                 .Include(s => s.Product)
                 .Include(s => s.SalesTransaction)
-                .Where(s => (s.SalesTransaction != null && s.SalesTransaction.TransactionDate >= startInclusive && s.SalesTransaction.TransactionDate < endExclusive) ||
-                            (s.SalesTransaction == null && s.CreatedDate >= startInclusive && s.CreatedDate < endExclusive))
+                // Serial history is intentionally included for audit, even if the Product is archived.
+                .Where(s => ((s.SalesTransaction != null && s.SalesTransaction.TransactionDate >= startInclusive && s.SalesTransaction.TransactionDate < endExclusive) ||
+                            (s.SalesTransaction == null && s.CreatedDate >= startInclusive && s.CreatedDate < endExclusive)))
                 .Select(s => new SerialNumberReportViewModel
                 {
                     SerialNumber = s.SerialNumber,
@@ -151,7 +157,7 @@ public async Task<List<SerialNumberReportViewModel>> GetSerialNumberReportAsync(
 public async Task<decimal> GetTotalInventoryValueAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
         {
             // Calculate inventory value, applying optional product and category filters
-            var query = _context.Products.AsQueryable();
+            var query = _context.Products.Where(p => !p.IsDeleted).AsQueryable();
             if (productId.HasValue)
                 query = query.Where(p => p.ProductId == productId.Value);
             if (categoryId.HasValue)
@@ -162,7 +168,7 @@ public async Task<decimal> GetTotalInventoryValueAsync(DateTime start, DateTime 
 
         public async Task<int> GetLowStockItemCountAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
         {
-            var query = _context.Products.AsQueryable();
+            var query = _context.Products.Where(p => !p.IsDeleted).AsQueryable();
             if (productId.HasValue)
                 query = query.Where(p => p.ProductId == productId.Value);
             if (categoryId.HasValue)
@@ -173,7 +179,7 @@ public async Task<decimal> GetTotalInventoryValueAsync(DateTime start, DateTime 
 
         public async Task<List<LowStockAlertViewModel>> GetLowStockAlertsAsync(DateTime start, DateTime end, int? productId = null, int? categoryId = null)
         {
-            var query = _context.Products.AsQueryable();
+            var query = _context.Products.Where(p => !p.IsDeleted).AsQueryable();
             if (productId.HasValue)
                 query = query.Where(p => p.ProductId == productId.Value);
             if (categoryId.HasValue)
@@ -197,6 +203,7 @@ var alerts = await query
             var endExclusive = end.Date.AddDays(1);
             // Build base query for sales items within date range
             var itemsQuery = _context.SalesItems
+                // Sales history remains included even when the Product is archived.
                 .Where(si => si.Transaction.TransactionDate >= startInclusive && si.Transaction.TransactionDate < endExclusive)
                 .AsQueryable();
             if (productId.HasValue)
@@ -221,6 +228,7 @@ var alerts = await query
             var startInclusive = start.Date;
             var endExclusive = end.Date.AddDays(1);
             var itemsQuery = _context.SalesItems
+                // Sales history remains included even when the Product is archived.
                 .Where(si => si.Transaction.TransactionDate >= startInclusive && si.Transaction.TransactionDate < endExclusive)
                 .AsQueryable();
             if (productId.HasValue)

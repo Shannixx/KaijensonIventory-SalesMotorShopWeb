@@ -40,7 +40,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 int pageSize = 10;
-                IQueryable<Staff> query = _context.Staff.AsNoTracking();
+                IQueryable<Staff> query = _context.Staff.AsNoTracking()
+                    .Where(s => s.Status == Staff.ActiveStatus || s.Status == Staff.InactiveStatus);
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
@@ -124,7 +125,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         ContactNumber = model.ContactNumber,
                         Address = model.Address,
                         Role = model.Role,
-                        PasswordHash = _hashing.HashPassword(model.Password)
+                        PasswordHash = _hashing.HashPassword(model.Password),
+                        Status = Staff.ActiveStatus
                     };
 
                     _context.Staff.Add(staff);
@@ -274,39 +276,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
 
-            if (id == null || id <= 0) return NotFound();
-
-            try
-            {
-                if (GetCurrentStaffId() == id)
-                {
-                    TempData["ErrorMessage"] = "You cannot delete your own account.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
-                if (staff == null) return NotFound();
-
-                if (string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase))
-                {
-                    int adminCount = await _context.Staff.CountAsync(s =>
-                        s.Role == "Admin" || s.Role == "Admin");
-                    if (adminCount <= 1)
-                    {
-                        TempData["ErrorMessage"] = "Cannot delete the last administrator account.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                }
-
-                return View(staff);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading staff for deletion ID {StaffId}", id);
-                TempData["ErrorMessage"] = "An error occurred while loading staff for deletion. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
+            TempData["ErrorMessage"] = "Staff accounts are preserved. Use the Active/Inactive status control instead.";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost, ActionName("Delete")]
@@ -316,159 +287,72 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
 
+            TempData["ErrorMessage"] = "Staff accounts are preserved. Use the Active/Inactive status control instead.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleStatus(int id)
+        {
+            var accessCheck = CheckAdminAccess();
+            if (accessCheck != null) return accessCheck;
+
+            if (id <= 0) return NotFound();
+
             try
             {
-                if (GetCurrentStaffId() == id)
-                {
-                    TempData["ErrorMessage"] = "You cannot delete your own account.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 Staff? staff = await _context.Staff.FindAsync(id);
                 if (staff == null) return NotFound();
 
-                if (string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                if (staff.StaffId == GetCurrentStaffId())
+                {
+                    TempData["ErrorMessage"] = "You cannot deactivate your own account.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                string oldStatus = staff.Status;
+                if (!string.Equals(staff.Status, Staff.ActiveStatus, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(staff.Status, Staff.InactiveStatus, StringComparison.OrdinalIgnoreCase))
+                {
+                    TempData["ErrorMessage"] = "This account has an invalid legacy status. Resolve it before changing the account state.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                string newStatus = string.Equals(staff.Status, Staff.ActiveStatus, StringComparison.OrdinalIgnoreCase)
+                    ? Staff.InactiveStatus
+                    : Staff.ActiveStatus;
+
+                if (newStatus == Staff.InactiveStatus &&
                     string.Equals(staff.Role, "Admin", StringComparison.OrdinalIgnoreCase))
                 {
-                    int adminCount = await _context.Staff.CountAsync(s =>
-                        s.Role == "Admin" || s.Role == "Admin");
-                    if (adminCount <= 1)
+                    int activeAdmins = await _context.Staff.CountAsync(s =>
+                        s.Role == "Admin" && s.Status == Staff.ActiveStatus);
+                    if (activeAdmins <= 1)
                     {
-                        TempData["ErrorMessage"] = "Cannot delete the last administrator account.";
+                        TempData["ErrorMessage"] = "Cannot deactivate the last active administrator account.";
                         return RedirectToAction(nameof(Index));
                     }
                 }
 
-                bool hasActivity = await _context.ActivityLogs.AnyAsync(al => al.StaffId == id);
-
-                if (hasActivity)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete staff member. This staff has existing activity records.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                string name = staff.StaffName;
-
-                _context.Staff.Remove(staff);
-                await _context.SaveChangesAsync();
-
+                staff.Status = newStatus;
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Delete Staff",
+                    Action = newStatus == Staff.ActiveStatus ? "Activate Staff" : "Deactivate Staff",
                     Module = "Staff",
-                    Description = $"Staff {name} - deleted",
+                    Description = $"Staff {staff.StaffName} ({staff.StaffId}) status changed from {oldStatus} to {newStatus}.",
                     StaffId = GetCurrentStaffId(),
                     Timestamp = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Staff deleted successfully.";
+                TempData["SuccessMessage"] = $"Staff account {newStatus.ToLowerInvariant()} successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting staff ID {StaffId}", id);
-                TempData["ErrorMessage"] = "An error occurred while deleting staff. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Approve(int id)
-        {
-            var accessCheck = CheckAdminAccess();
-            if (accessCheck != null) return accessCheck;
-
-            if (id <= 0) return NotFound();
-
-            try
-            {
-                Staff? staff = await _context.Staff.FindAsync(id);
-                if (staff == null) return NotFound();
-
-                if (staff.Status != "Pending")
-                {
-                    TempData["ErrorMessage"] = "This account is not pending approval.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                if (staff.Role != "Manager")
-                {
-                    TempData["ErrorMessage"] = "Only Manager registrations can be approved.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                staff.Status = "Approved";
-                await _context.SaveChangesAsync();
-
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    Action = "Approve Manager Registration",
-                    Module = "Staff",
-                    Description = $"Manager {staff.StaffName} approved.",
-                    StaffId = GetCurrentStaffId(),
-                    Timestamp = DateTime.Now
-                });
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Manager account approved successfully.";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error approving staff ID {StaffId}", id);
-                TempData["ErrorMessage"] = "An error occurred while approving the account. Please try again.";
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Disapprove(int id)
-        {
-            var accessCheck = CheckAdminAccess();
-            if (accessCheck != null) return accessCheck;
-
-            if (id <= 0) return NotFound();
-
-            try
-            {
-                Staff? staff = await _context.Staff.FindAsync(id);
-                if (staff == null) return NotFound();
-
-                if (staff.Status != "Pending")
-                {
-                    TempData["ErrorMessage"] = "This account is not pending approval.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                if (staff.Role != "Manager")
-                {
-                    TempData["ErrorMessage"] = "Only Manager registrations can be disapproved.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                staff.Status = "Rejected";
-                await _context.SaveChangesAsync();
-
-                _context.ActivityLogs.Add(new ActivityLog
-                {
-                    Action = "Disapprove Manager Registration",
-                    Module = "Staff",
-                    Description = $"Manager {staff.StaffName} registration rejected.",
-                    StaffId = GetCurrentStaffId(),
-                    Timestamp = DateTime.Now
-                });
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Manager account rejected.";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error disapproving staff ID {StaffId}", id);
-                TempData["ErrorMessage"] = "An error occurred while rejecting the account. Please try again.";
+                _logger.LogError(ex, "Error toggling status for staff ID {StaffId}", id);
+                TempData["ErrorMessage"] = "An error occurred while updating the staff status. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
         }

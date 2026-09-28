@@ -18,16 +18,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (archived && !IsAdmin()) return Forbid();
 
             try
             {
                 int pageSize = 10;
-                IQueryable<Supplier> query = _context.Suppliers.AsNoTracking();
+                IQueryable<Supplier> query = _context.Suppliers.AsNoTracking()
+                    .Where(s => archived ? s.IsDeleted : !s.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
@@ -56,6 +58,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["StatusFilter"] = statusFilter;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewBag.ShowArchived = archived;
                 return View(suppliers);
             }
             catch (Exception ex)
@@ -66,24 +69,26 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int? id, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (archived && !IsAdmin()) return Forbid();
 
             if (id == null) return NotFound();
 
             try
             {
                 var supplier = await _context.Suppliers
-                    .Include(s => s.Products)
+                    .Include(s => s.Products.Where(p => !p.IsDeleted))
                     .Include(s => s.CreatedByStaff)
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.SupplierId == id);
+                    .FirstOrDefaultAsync(s => s.SupplierId == id && (archived ? s.IsDeleted : !s.IsDeleted));
 
                 if (supplier == null) return NotFound();
 
+                ViewBag.ShowArchived = archived;
                 ViewBag.TotalProducts = supplier.Products.Count;
 
                 return View(supplier);
@@ -136,7 +141,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (ModelState.IsValid)
                 {
                     // Check duplicate company name
-                    bool exists = await _context.Suppliers.AnyAsync(s => s.CompanyName == supplier.CompanyName);
+                    bool exists = await _context.Suppliers.AnyAsync(s => !s.IsDeleted && s.CompanyName == supplier.CompanyName);
                     if (exists)
                     {
                         ModelState.AddModelError("CompanyName", "A supplier with this company name already exists.");
@@ -182,7 +187,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var supplier = await _context.Suppliers.FindAsync(id);
+                var supplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == id && !s.IsDeleted);
                 if (supplier == null) return NotFound();
 
                 return View(supplier);
@@ -214,7 +219,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (ModelState.IsValid)
                 {
                     // Check duplicate company name (exclude self)
-                    bool exists = await _context.Suppliers.AnyAsync(s => s.CompanyName == supplier.CompanyName && s.SupplierId != id);
+                    bool exists = await _context.Suppliers.AnyAsync(s => !s.IsDeleted && s.CompanyName == supplier.CompanyName && s.SupplierId != id);
                     if (exists)
                     {
                         ModelState.AddModelError("CompanyName", "A supplier with this company name already exists.");
@@ -223,7 +228,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                     try
                     {
-                        var existing = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == id);
+                        var existing = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == id && !s.IsDeleted);
                         if (existing == null) return NotFound();
 
                         // Update editable fields only
@@ -269,34 +274,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public async Task<IActionResult> Delete(int? id)
         {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
 
             if (id == null) return NotFound();
 
             try
             {
-                // Check if supplier has associated products
-                bool hasProducts = await _context.Products.AnyAsync(p => p.SupplierId == id);
-
-                if (hasProducts)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete supplier. This supplier has associated products.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                // Additional check for purchase orders
-                bool hasPurchaseOrders = await _context.PurchaseOrders.AnyAsync(po => po.SupplierId == id);
-                if (hasPurchaseOrders)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete supplier. This supplier has associated purchase orders.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 var supplier = await _context.Suppliers
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.SupplierId == id);
+                    .FirstOrDefaultAsync(s => s.SupplierId == id && !s.IsDeleted);
 
                 if (supplier == null) return NotFound();
 
@@ -304,8 +291,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while loading supplier for deletion. SupplierId: {SupplierId}", id);
-                TempData["ErrorMessage"] = "An error occurred while loading the supplier for deletion. Please try again.";
+                _logger.LogError(ex, "Error occurred while loading supplier for archive. SupplierId: {SupplierId}", id);
+                TempData["ErrorMessage"] = "An error occurred while loading the supplier for archive. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -314,46 +301,29 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
 
             try
             {
-                var supplier = await _context.Suppliers.FindAsync(id);
+                var supplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == id && !s.IsDeleted);
                 if (supplier == null) return NotFound();
-
-                // Check if supplier has associated products
-                bool hasProducts = await _context.Products.AnyAsync(p => p.SupplierId == id);
-
-                if (hasProducts)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete supplier. This supplier has associated products.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                // Check if supplier has associated purchase orders
-                if (await _context.PurchaseOrders.AnyAsync(po => po.SupplierId == id))
-                {
-                    TempData["ErrorMessage"] = "Cannot delete supplier. This supplier has associated purchase orders.";
-                    return RedirectToAction(nameof(Index));
-                }
 
                 string name = supplier.CompanyName;
 
-                _context.Suppliers.Remove(supplier);
-                await _context.SaveChangesAsync();
-
+                supplier.IsDeleted = true;
+                supplier.DeletedAt = DateTime.UtcNow;
+                supplier.DeletedBy = GetCurrentStaffId();
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     StaffId = GetCurrentStaffId(),
-                    Action = "Delete Supplier",
+                    Action = "Archive Supplier",
                     Module = "Supplier",
-                    Description = $"Deleted supplier '{name}'."
+                    Description = $"Archived supplier '{name}' ({supplier.SupplierId})."
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"Supplier '{name}' deleted successfully.";
+                TempData["SuccessMessage"] = $"Supplier '{name}' archived successfully.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -366,7 +336,32 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-[HttpPost]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var supplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == id && s.IsDeleted);
+            if (supplier == null) return NotFound();
+
+            supplier.IsDeleted = false;
+            supplier.DeletedAt = null;
+            supplier.DeletedBy = null;
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                StaffId = GetCurrentStaffId(),
+                Action = "Restore Supplier",
+                Module = "Supplier",
+                Description = $"Restored supplier '{supplier.CompanyName}' ({supplier.SupplierId})."
+            });
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Supplier '{supplier.CompanyName}' restored successfully.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleStatus(int id)
         {
@@ -375,7 +370,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var authRedirect = RedirectIfNotOwnerOrManager();
             if (authRedirect != null) return authRedirect;
 
-            var supplier = await _context.Suppliers.FindAsync(id);
+            var supplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == id && !s.IsDeleted);
             if (supplier == null) return NotFound();
 
             // Toggle status

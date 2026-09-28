@@ -1,9 +1,9 @@
 @model Mechanic
-@{ ViewData["Title"] = "Delete Mechanic"; }
+@{ ViewData["Title"] = "Archive Mechanic"; }
 <div class="page-header">
     <div>
-        <h1>Delete Mechanic</h1>
-        <p>Are you sure you want to delete this mechanic?</p>
+        <h1>Archive Mechanic</h1>
+        <p>This record will be hidden from active lists and can be restored by an Admin.</p>
     </div>
     <a asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> Back to List</a>
 </div>
@@ -34,7 +34,8 @@
 
         <form asp-action="Delete" method="post">
             <input type="hidden" asp-for="MechanicId" />
-            <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</button>
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger"><i class="bi bi-archive"></i> Archive</button>
             <a asp-action="Index" class="btn btn-outline-primary">Cancel</a>
         </form>
     </div>

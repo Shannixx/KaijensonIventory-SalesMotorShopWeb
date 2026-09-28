@@ -19,12 +19,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _hashing = hashing;
         }
 
-        public IActionResult Login()
+        public IActionResult Login(bool inactive = false)
         {
-            // Do not clear session here; logout handles it.
-            // If already authenticated, redirect to dashboard.
+            // Middleware clears inactive sessions before this action executes.
             if (HttpContext.Session.GetInt32("StaffId") != null)
                 return RedirectToAction("Index", "Dashboard");
+
+            if (inactive)
+                TempData["ErrorMessage"] = "Your account is inactive. Please contact an administrator.";
 
             return View();
         }
@@ -60,39 +62,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     return View(model);
                 }
 
-                // Status gate: Pending and Rejected accounts must not receive a session.
-                if (!string.Equals(staff.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+                // Only explicitly Active accounts may receive an authenticated session.
+                if (!string.Equals(staff.Status, Staff.ActiveStatus, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.Equals(staff.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                    HttpContext.Session.Clear();
+                    _context.ActivityLogs.Add(new ActivityLog
                     {
-                        _context.ActivityLogs.Add(new ActivityLog
-                        {
-                            Action = "Login Blocked",
-                            Module = "Auth",
-                            Description = $"Login blocked for pending Manager account {staff.UserName}."
-                        });
-                        await _context.SaveChangesAsync();
+                        Action = "Login Blocked",
+                        Module = "Auth",
+                        Description = $"Login blocked for inactive staff account {staff.UserName}."
+                    });
+                    await _context.SaveChangesAsync();
 
-                        ModelState.AddModelError("", "Your Manager account is pending Admin approval.");
-                        return View(model);
-                    }
-
-                    if (string.Equals(staff.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _context.ActivityLogs.Add(new ActivityLog
-                        {
-                            Action = "Login Blocked",
-                            Module = "Auth",
-                            Description = $"Login blocked for rejected Manager account {staff.UserName}."
-                        });
-                        await _context.SaveChangesAsync();
-
-                        ModelState.AddModelError("", "Your Manager account has been rejected and cannot log in.");
-                        return View(model);
-                    }
-
-                    // Any other non-Approved status is treated as not yet authorized.
-                    ModelState.AddModelError("", "Your account is not authorized to log in.");
+                    ModelState.AddModelError("", "Your account is inactive and cannot log in.");
                     return View(model);
                 }
 
@@ -169,7 +151,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     UserName = model.Username.Trim(),
                     PasswordHash = _hashing.HashPassword(model.Password),
                     Role = "Manager",
-                    Status = "Pending"
+                    Status = Staff.InactiveStatus
                 };
 
                 _context.Staff.Add(staff);
@@ -183,7 +165,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Registration submitted successfully. Your Manager account is pending Admin approval.";
+                TempData["SuccessMessage"] = "Registration submitted successfully. An Admin must activate your account before you can log in.";
                 return RedirectToAction("Login");
             }
             catch

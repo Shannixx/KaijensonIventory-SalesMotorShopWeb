@@ -36,15 +36,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return null;
         }
 
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, int page = 1, bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
+            if (archived && !IsAdmin()) return Forbid();
 
             try
             {
                 int pageSize = 10;
-                IQueryable<Category> query = _context.Categories.AsNoTracking();
+                IQueryable<Category> query = _context.Categories.AsNoTracking()
+                    .Where(c => archived ? c.IsDeleted : !c.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
@@ -63,6 +65,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 ViewBag.CanDelete = IsAdmin();
+                ViewBag.ShowArchived = archived;
                 return View(categories);
             }
             catch (Exception ex)
@@ -73,10 +76,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int? id, bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
+            if (archived && !IsAdmin()) return Forbid();
 
             if (id == null) return NotFound();
 
@@ -85,8 +89,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 var category = await _context.Categories
                     .AsNoTracking()
                     .Include(c => c.CreatedByStaff)
-                    .FirstOrDefaultAsync(c => c.CategoryId == id);
+                    .FirstOrDefaultAsync(c => c.CategoryId == id && (archived ? c.IsDeleted : !c.IsDeleted));
                 if (category == null) return NotFound();
+                ViewBag.ShowArchived = archived;
                 return View(category);
             }
             catch (Exception ex)
@@ -130,7 +135,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 if (ModelState.IsValid)
                 {
-                    bool exists = await _context.Categories.AnyAsync(c => c.CategoryName == category.CategoryName);
+                    bool exists = await _context.Categories.AnyAsync(c => !c.IsDeleted && c.CategoryName == category.CategoryName);
                     if (exists)
                     {
                         ModelState.AddModelError("CategoryName", "A category with this name already exists.");
@@ -178,7 +183,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 var category = await _context.Categories
                     .AsNoTracking()
                     .Include(c => c.CreatedByStaff)
-                    .FirstOrDefaultAsync(c => c.CategoryId == id);
+                    .FirstOrDefaultAsync(c => c.CategoryId == id && !c.IsDeleted);
                 if (category == null) return NotFound();
                 return View(category);
             }
@@ -217,20 +222,18 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
-                    bool exists = await _context.Categories.AnyAsync(c => c.CategoryName == category.CategoryName && c.CategoryId != id);
+                    bool exists = await _context.Categories.AnyAsync(c => !c.IsDeleted && c.CategoryName == category.CategoryName && c.CategoryId != id);
                     if (exists)
                     {
                         ModelState.AddModelError("CategoryName", "A category with this name already exists.");
                         return View(category);
                     }
 
-                    var existing = await _context.Categories.FindAsync(id);
+                    var existing = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryId == id && !c.IsDeleted);
                     if (existing == null) return NotFound();
 
                     existing.CategoryName = category.CategoryName;
                     existing.Description = category.Description;
-
-                    await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
@@ -279,43 +282,29 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var category = await _context.Categories.FindAsync(id);
+                var category = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryId == id && !c.IsDeleted);
                 if (category == null)
                 {
                     TempData["ErrorMessage"] = "The category could not be found.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                int productCount = await _context.Products.CountAsync(p => p.CategoryId == id);
-                if (productCount > 0)
-                {
-                    TempData["ErrorMessage"] = $"\"{category.CategoryName}\" is currently being used by one or more products. Please reassign those records before deleting this category.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                int serviceCount = await _context.Services.CountAsync(s => s.CategoryId == id);
-                if (serviceCount > 0)
-                {
-                    TempData["ErrorMessage"] = $"\"{category.CategoryName}\" is currently being used by one or more services. Please reassign those records before deleting this category.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 string name = category.CategoryName;
 
-                _context.Categories.Remove(category);
-                await _context.SaveChangesAsync();
-
+                category.IsDeleted = true;
+                category.DeletedAt = DateTime.UtcNow;
+                category.DeletedBy = GetStaffId();
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     StaffId = GetStaffId(),
-                    Action = "Delete",
+                    Action = "Archive",
                     Module = "Category",
-                    Description = $"Deleted category: {name}",
+                    Description = $"Archived category: {name} ({category.CategoryId})",
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"Category '{name}' deleted successfully.";
+                TempData["SuccessMessage"] = $"Category '{name}' archived successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -324,6 +313,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "The category could not be deleted because it is still referenced by other records.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var accessCheck = CheckAccess();
+            if (accessCheck != null) return accessCheck;
+            if (!IsAdmin()) return Forbid();
+
+            var category = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryId == id && c.IsDeleted);
+            if (category == null) return NotFound();
+
+            category.IsDeleted = false;
+            category.DeletedAt = null;
+            category.DeletedBy = null;
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                StaffId = GetStaffId(), Action = "Restore", Module = "Category",
+                Description = $"Restored category: {category.CategoryName} ({category.CategoryId})",
+                Timestamp = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Category '{category.CategoryName}' restored successfully.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

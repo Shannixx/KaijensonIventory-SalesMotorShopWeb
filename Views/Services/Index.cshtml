@@ -15,6 +15,10 @@
             Add Service
         </button>
         <a asp-controller="ServiceJobs" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-wrench-adjustable"></i> Service Jobs</a>
+        @if (Context.Session.GetString("StaffRole") == "Admin")
+        {
+            <a asp-action="Index" asp-route-archived="@(ViewBag.ShowArchived == true ? "false" : "true")" class="btn btn-outline-secondary">@(ViewBag.ShowArchived == true ? "Active Services" : "Archived")</a>
+        }
     </div>
 </div>
 
@@ -53,12 +57,25 @@
                             <td>@item.ServicePrice.ToString("C", ph)</td>
                             <td class="action-cell">
                                 <div class="action-buttons">
-                                    <a asp-action="Details" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-view" title="View Service Details" aria-label="View @item.ServiceName"><i class="bi bi-eye"></i></a>
-                                    <a asp-action="Edit" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-edit" title="Edit Service" aria-label="Edit @item.ServiceName"><i class="bi bi-pencil"></i></a>
-                                    <form asp-action="Delete" asp-route-id="@item.ServiceId" method="post" id="delete-service-@item.ServiceId" class="action-form">
-                                        @Html.AntiForgeryToken()
-                                        <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-service-@item.ServiceId" data-delete-record-name="@item.ServiceName" data-delete-entity-name="service" title="Delete service" aria-label="Delete service @item.ServiceName"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    <a asp-action="Details" asp-route-id="@item.ServiceId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-view" title="View Service Details" aria-label="View @item.ServiceName"><i class="bi bi-eye"></i></a>
+                                    @if (ViewBag.ShowArchived != true)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.ServiceId" class="btn btn-icon btn-icon-edit" title="Edit Service" aria-label="Edit @item.ServiceName"><i class="bi bi-pencil"></i></a>
+                                    }
+                                    @if (ViewBag.ShowArchived == true)
+                                    {
+                                        <form asp-action="Restore" asp-route-id="@item.ServiceId" method="post" class="action-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-icon" title="Restore service" aria-label="Restore @item.ServiceName"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@item.ServiceId" method="post" id="delete-service-@item.ServiceId" class="action-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-service-@item.ServiceId" data-delete-record-name="@item.ServiceName" data-delete-entity-name="service" title="Archive service" aria-label="Archive service @item.ServiceName"><i class="bi bi-archive"></i></button>
+                                        </form>
+                                    }
                                     <a asp-controller="ServiceJobs" asp-action="Index" asp-route-serviceId="@item.ServiceId" class="btn btn-icon btn-outline-secondary" title="Service Jobs for this service" aria-label="Service jobs for @item.ServiceName"><i class="bi bi-wrench-adjustable"></i></a>
                                 </div>
                             </td>

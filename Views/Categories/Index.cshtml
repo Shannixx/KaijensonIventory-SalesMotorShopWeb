@@ -6,7 +6,13 @@
         <h1>Categories</h1>
         <p>Manage product categories.</p>
     </div>
-    <a asp-action="Create" class="btn btn-primary">Add Category</a>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">Add Category</a>
+        @if (ViewBag.CanDelete == true)
+        {
+            <a asp-action="Index" asp-route-archived="@(ViewBag.ShowArchived == true ? "false" : "true")" class="btn btn-outline-secondary">@(ViewBag.ShowArchived == true ? "Active Categories" : "Archived")</a>
+        }
+    </div>
 </div>
 
 @{
@@ -42,14 +48,27 @@
                             <td>@item.CategoryName</td>
                             <td class="action-cell">
                                 <div class="action-buttons">
-                                    <a asp-action="Details" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-view" title="View category" aria-label="View category @item.CategoryName"><i class="bi bi-eye"></i></a>
-                                    <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-edit" title="Edit category" aria-label="Edit category @item.CategoryName"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="Details" asp-route-id="@item.CategoryId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-view" title="View category" aria-label="View category @item.CategoryName"><i class="bi bi-eye"></i></a>
+                                    @if (ViewBag.ShowArchived != true)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-icon btn-icon-edit" title="Edit category" aria-label="Edit category @item.CategoryName"><i class="bi bi-pencil"></i></a>
+                                    }
                                     @if (ViewBag.CanDelete == true)
                                     {
-                                        <form asp-action="Delete" asp-route-id="@item.CategoryId" method="post" id="delete-category-@item.CategoryId" class="action-form">
-                                            @Html.AntiForgeryToken()
-                                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-category-@item.CategoryId" data-delete-record-name="@item.CategoryName" data-delete-entity-name="category" title="Delete category" aria-label="Delete category @item.CategoryName"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        @if (ViewBag.ShowArchived == true)
+                                        {
+                                            <form asp-action="Restore" asp-route-id="@item.CategoryId" method="post" class="action-form">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-icon" title="Restore category" aria-label="Restore @item.CategoryName"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Delete" asp-route-id="@item.CategoryId" method="post" id="delete-category-@item.CategoryId" class="action-form">
+                                                @Html.AntiForgeryToken()
+                                                <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-category-@item.CategoryId" data-delete-record-name="@item.CategoryName" data-delete-entity-name="category" title="Archive category" aria-label="Archive category @item.CategoryName"><i class="bi bi-archive"></i></button>
+                                            </form>
+                                        }
                                     }
                                 </div>
                             </td>

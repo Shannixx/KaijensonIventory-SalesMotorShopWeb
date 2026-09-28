@@ -73,7 +73,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (serviceId.HasValue && serviceId.Value > 0)
                 {
                     Service? service = await _context.Services.AsNoTracking()
-                        .FirstOrDefaultAsync(s => s.ServiceId == serviceId.Value);
+                        .FirstOrDefaultAsync(s => s.ServiceId == serviceId.Value && !s.IsDeleted);
                     ViewBag.FilteredServiceName = service?.ServiceName;
                 }
 
@@ -199,7 +199,7 @@ await using var tx = await _context.Database.BeginTransactionAsync(System.Data.I
                              if (string.IsNullOrWhiteSpace(job.SubmissionToken))
                                  job.SubmissionToken = Guid.NewGuid().ToString();
 // Reload mechanic and verify availability inside transaction.
-                              var mechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId);
+                              var mechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted);
                               if (mechanic == null)
                               {
                                   ModelState.AddModelError("MechanicId", "The selected mechanic is no longer available. Please choose another mechanic.");
@@ -258,7 +258,7 @@ mechanic.WorkStatus = "Working";
                 ServiceJob? job = await _context.ServiceJobs
                     .Include(j => j.Service)
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(j => j.ServiceJobId == id);
+                    .FirstOrDefaultAsync(j => j.ServiceJobId == id && !j.Service!.IsDeleted);
                 if (job == null) return NotFound();
 
                 await PopulateCreateListsAsync(job);
@@ -364,8 +364,8 @@ existingJob.PaymentStatus = ComputePaymentStatus(existingJob.AmountReceived, exi
 // ---------- Reassignment handling for active jobs ----------
 if (mechanicChanged && existingJob.Status == ServiceJob.StatusStillWorking)
 {
-    var oldMech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == oldMechanicId);
-    var newMech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId);
+    var oldMech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == oldMechanicId && !m.IsDeleted);
+        var newMech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted);
 
     if (newMech == null || newMech.Status != "Active" || newMech.WorkStatus != "Available")
     {
@@ -630,7 +630,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                 }
                 else if (job.MechanicId != 0)
                 {
-                    var mech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId);
+                    var mech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted);
                     if (mech != null)
                         mech.WorkStatus = mech.Status == "Active" ? "Available" : "Unavailable";
                 }
@@ -958,7 +958,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
             }
             else
             {
-                service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.ServiceId == job.ServiceId);
+                service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.ServiceId == job.ServiceId && !s.IsDeleted);
                 if (service == null)
                     ModelState.AddModelError("ServiceId", "Selected service does not exist.");
             }
@@ -967,7 +967,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
             {
                 ModelState.AddModelError("MechanicId", "Please select a mechanic.");
             }
-else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId && m.Status == "Active" && m.WorkStatus == "Available"))
+else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted && m.Status == "Active" && m.WorkStatus == "Available"))
                      {
                          ModelState.AddModelError("MechanicId", "Selected mechanic is not available for a new service job.");
                      }
@@ -994,15 +994,14 @@ else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId 
                 ModelState.AddModelError("ServiceId", "Please select a service.");
             else
             {
-                service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.ServiceId == job.ServiceId);
+                service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.ServiceId == job.ServiceId && !s.IsDeleted);
                 if (service == null)
                     ModelState.AddModelError("ServiceId", "Selected service does not exist.");
             }
 
-            // Mechanic existence (no availability check)
             if (job.MechanicId <= 0)
                 ModelState.AddModelError("MechanicId", "Please select a mechanic.");
-            else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId))
+            else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted))
                 ModelState.AddModelError("MechanicId", "Selected mechanic does not exist.");
 
             return service;
@@ -1027,7 +1026,7 @@ else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId 
         private async Task PopulateMechanicListAsync(int? selectedId)
         {
 List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
-                 .Where(m => m.Status == "Active" && m.WorkStatus == "Available")
+                 .Where(m => !m.IsDeleted && m.Status == "Active" && m.WorkStatus == "Available")
                  .OrderBy(m => m.MechanicName).ToListAsync();
             ViewBag.MechanicList = mechanics;
             ViewBag.MechanicId = new SelectList(mechanics, "MechanicId", "MechanicName", selectedId);
@@ -1036,6 +1035,7 @@ List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
         private async Task PopulateCreateListsAsync(ServiceJob? job = null)
         {
             List<Service> services = await _context.Services.AsNoTracking()
+                .Where(s => !s.IsDeleted)
                 .OrderBy(s => s.ServiceId).ToListAsync();
 
             ViewBag.ServicesList = services;
@@ -1045,7 +1045,7 @@ List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
                 "ServiceId", "Label", job?.ServiceId);
 
 List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
-                 .Where(m => m.Status == "Active" && m.WorkStatus == "Available")
+                 .Where(m => !m.IsDeleted && m.Status == "Active" && m.WorkStatus == "Available")
                  .OrderBy(m => m.MechanicName).ToListAsync();
             ViewBag.MechanicId = new SelectList(mechanics, "MechanicId", "MechanicName", job?.MechanicId);
         }

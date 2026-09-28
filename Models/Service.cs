@@ -47,6 +47,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
     // Audit fields
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedBy { get; set; }
+
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public int? DeletedBy { get; set; }
 }
 }
 

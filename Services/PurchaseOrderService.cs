@@ -18,12 +18,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             _activityLogService = activityLogService;
         }
 
-        public async Task<PurchaseOrderListResult> GetPagedAsync(string? searchString, string? statusFilter, int page, int pageSize = 10)
+        public async Task<PurchaseOrderListResult> GetPagedAsync(string? searchString, string? statusFilter, int page, int pageSize = 10, bool includeDeleted = false)
         {
             IQueryable<PurchaseOrder> query = _context.PurchaseOrders
                 .Include(p => p.Supplier)
                 .Include(p => p.Staff)
-                .AsNoTracking();
+                .AsNoTracking()
+                .Where(p => includeDeleted ? p.IsDeleted : !p.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(searchString))
             {
@@ -66,8 +67,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         public async Task<PurchaseOrderViewModel?> PrepareEditViewModelAsync(int id)
         {
             PurchaseOrder? order = await _context.PurchaseOrders
+                .Where(p => !p.IsDeleted)
                 .Include(p => p.Supplier)
-                .Include(p => p.Items).ThenInclude(i => i.Product)
+                .Include(p => p.Items.Where(i => !i.IsDeleted)).ThenInclude(i => i.Product)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
 
@@ -84,7 +86,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                  Status = order.Status,
                 TotalAmount = order.TotalAmount,
                 Remarks = order.Remarks,
-                Items = order.Items.Select(i => new PurchaseOrderItemViewModel
+                Items = order.Items.Where(i => !i.IsDeleted).Select(i => new PurchaseOrderItemViewModel
                 {
                     PurchaseOrderItemId = i.PurchaseOrderItemId,
                     ProductId = i.ProductId,
@@ -97,9 +99,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 }).ToList()
             };
 
-            // Populate supplier dropdown: include all active suppliers and, if the current supplier is inactive, include it for display
+            // Populate active suppliers only for operational edits.
             viewModel.Suppliers = await _context.Suppliers.AsNoTracking()
-                .Where(s => s.Status == "Active" || s.SupplierId == viewModel.SupplierId)
+                .Where(s => !s.IsDeleted && s.Status == "Active")
                 .OrderBy(s => s.CompanyName)
                 .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
                 .ToListAsync();
@@ -111,12 +113,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return await PopulateListsAsync(model);
         }
 
-        public async Task<PurchaseOrderViewModel?> GetDetailsViewModelAsync(int id)
+        public async Task<PurchaseOrderViewModel?> GetDetailsViewModelAsync(int id, bool includeDeleted = false)
         {
             PurchaseOrder? order = await _context.PurchaseOrders
+                .Where(p => includeDeleted || !p.IsDeleted)
                 .Include(p => p.Supplier)
                 .Include(p => p.Staff)
-                .Include(p => p.Items).ThenInclude(i => i.Product)
+                .Include(p => p.Items.Where(i => !i.IsDeleted)).ThenInclude(i => i.Product)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
 
@@ -140,7 +143,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 CreatedByName = order.Staff?.StaffName,
                 CreatedDate = order.CreatedDate,
                 UpdatedDate = order.UpdatedDate,
-                Items = order.Items.Select(i => new PurchaseOrderItemViewModel
+                Items = order.Items.Where(i => !i.IsDeleted).Select(i => new PurchaseOrderItemViewModel
                 {
                     PurchaseOrderItemId = i.PurchaseOrderItemId,
                     ProductId = i.ProductId,
@@ -218,8 +221,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 .Include(p => p.Items)
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == model.PurchaseOrderId);
 
-            if (order == null)
-                return Result.Failure(null, "The purchase order could not be found.");
+            if (order == null || order.IsDeleted)
+                return Result.Failure(null, "The purchase order could not be found or is archived.");
 
             if (order.Status == "Delivered" || order.Status == "Cancelled")
                 return Result.Failure(null, "Cannot edit a purchase order that has been delivered or cancelled.");
@@ -228,15 +231,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             if (model.SupplierId <= 0)
                 return Result.Failure("SupplierId", "Please select a supplier.");
 
-            bool supplierChanged = model.SupplierId != order.SupplierId;
-            if (supplierChanged)
-            {
-                var newSupplier = await _context.Suppliers.FindAsync(model.SupplierId);
-                if (newSupplier == null || newSupplier.Status != "Active")
-                    return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be used for a purchase order.");
-            }
+            var selectedSupplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == model.SupplierId && !s.IsDeleted);
+            if (selectedSupplier == null || selectedSupplier.Status != "Active")
+                return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be used for a purchase order.");
 
-            // Validate items (product existence, no duplicates, quantity >0).
+            // Validate items (active product existence, selected-supplier ownership, no duplicates, quantity >0).
             if (model.Items == null || model.Items.Count == 0 || model.Items.All(i => i.ProductId <= 0))
                 return Result.Failure("Items", "Please add at least one product.");
 
@@ -252,9 +251,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 return Result.Failure("Items", "Duplicate products are not allowed.");
 
             var productIds = validItems.Select(i => i.ProductId).Distinct().ToList();
-            int existingCount = await _context.Products.CountAsync(p => productIds.Contains(p.ProductId));
-            if (existingCount != productIds.Count)
+            var selectedProducts = await _context.Products
+                .Where(p => productIds.Contains(p.ProductId) && !p.IsDeleted)
+                .Select(p => new { p.ProductId, p.SupplierId })
+                .ToListAsync();
+            if (selectedProducts.Count != productIds.Count)
                 return Result.Failure("Items", "One or more selected products are not valid.");
+            if (selectedProducts.Any(p => p.SupplierId != model.SupplierId))
+                return Result.Failure("Items", "All products must belong to the selected supplier.");
 
             // Apply updates.
              order.SupplierId = model.SupplierId;
@@ -263,8 +267,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
              order.Remarks = model.Remarks;
             order.UpdatedDate = DateTime.Now;
 
-            _context.PurchaseOrderItems.RemoveRange(order.Items);
-            order.Items.Clear();
+            bool hasReceivedItems = order.Items.Any(i => i.ReceivedQuantity > 0);
+            if (hasReceivedItems)
+                return Result.Failure(null, "Purchase orders with received quantities cannot have their items replaced.");
+
+            foreach (var existingItem in order.Items)
+            {
+                existingItem.IsDeleted = true;
+                existingItem.DeletedAt = DateTime.UtcNow;
+                existingItem.DeletedBy = currentStaffId;
+            }
 
             foreach (var item in validItems)
             {
@@ -277,8 +289,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     Subtotal = subtotal
                 });
             }
-            // Recalculate total amount
-            order.TotalAmount = order.Items.Sum(i => i.Subtotal);
+            // Recalculate total amount from active submitted lines only.
+            order.TotalAmount = validItems.Sum(i => i.Quantity * i.Price);
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
             await _context.SaveChangesAsync();
@@ -298,37 +310,74 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         {
             PurchaseOrder? order = await _context.PurchaseOrders
                 .Include(p => p.Items)
-                .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
+                .FirstOrDefaultAsync(p => p.PurchaseOrderId == id && !p.IsDeleted);
 
             if (order == null)
-                return Result.Failure(null, "The purchase order could not be found.");
+                return Result.Failure(null, "The purchase order could not be found or is already archived.");
 
             string poNumber = order.PurchaseOrderNumber;
+            order.IsDeleted = true;
+            order.DeletedAt = DateTime.UtcNow;
+            order.DeletedBy = currentStaffId;
 
-            _context.PurchaseOrderItems.RemoveRange(order.Items);
-            _context.PurchaseOrders.Remove(order);
-
-            try
+            var delivery = await _context.Deliveries
+                .FirstOrDefaultAsync(d => d.PurchaseOrderId == id && !d.IsDeleted);
+            if (delivery != null)
             {
-                await _context.SaveChangesAsync();
+                delivery.IsDeleted = true;
+                delivery.DeletedAt = DateTime.UtcNow;
+                delivery.DeletedBy = currentStaffId;
             }
-            catch (DbUpdateException)
+
+            await _activityLogService.LogAsync("Archive Purchase Order", "PurchaseOrder",
+                $"Archived PO {poNumber} ({order.PurchaseOrderId})", currentStaffId);
+            await _context.SaveChangesAsync();
+            return Result.Success();
+        }
+
+        public async Task<Result> RestoreAsync(int id, int currentStaffId)
+        {
+            PurchaseOrder? order = await _context.PurchaseOrders
+                .Include(p => p.Items)
+                .Include(p => p.Supplier)
+                .FirstOrDefaultAsync(p => p.PurchaseOrderId == id && p.IsDeleted);
+            if (order == null)
+                return Result.Failure(null, "The archived purchase order could not be found.");
+            if (order.Supplier == null || order.Supplier.IsDeleted || order.Supplier.Status != "Active")
+                return Result.Failure(null, "The purchase order cannot be restored until its supplier is active.");
+
+            var archivedProducts = await _context.PurchaseOrderItems
+                .Where(i => i.PurchaseOrderId == id && !i.IsDeleted)
+                .Join(_context.Products, i => i.ProductId, p => p.ProductId, (i, p) => p)
+                .Where(p => p.IsDeleted)
+                .Select(p => p.ProductName)
+                .ToListAsync();
+            if (archivedProducts.Count > 0)
+                return Result.Failure(null, "The purchase order cannot be restored while one or more products are archived.");
+
+            order.IsDeleted = false;
+            order.DeletedAt = null;
+            order.DeletedBy = null;
+            var delivery = await _context.Deliveries.FirstOrDefaultAsync(d => d.PurchaseOrderId == id && d.IsDeleted);
+            if (delivery != null)
             {
-                return Result.Failure(null, "Cannot delete this purchase order because it is referenced by existing records.");
+                delivery.IsDeleted = false;
+                delivery.DeletedAt = null;
+                delivery.DeletedBy = null;
             }
-
-            await _activityLogService.LogAsync("Delete Purchase Order", "PurchaseOrder",
-                $"Deleted PO {poNumber}", currentStaffId);
-
+            await _activityLogService.LogAsync("Restore Purchase Order", "PurchaseOrder",
+                $"Restored PO {order.PurchaseOrderNumber} ({order.PurchaseOrderId})", currentStaffId);
+            await _context.SaveChangesAsync();
             return Result.Success();
         }
 
         public async Task<PurchaseOrder?> GetByIdAsync(int id)
         {
             return await _context.PurchaseOrders
+                .Where(p => !p.IsDeleted)
                 .Include(p => p.Supplier)
                 .Include(p => p.Staff)
-                .Include(p => p.Items).ThenInclude(i => i.Product)
+                .Include(p => p.Items.Where(i => !i.IsDeleted)).ThenInclude(i => i.Product)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
         }
@@ -363,7 +412,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         {
             return await _context.Products
                 .AsNoTracking()
-                .Where(p => p.SupplierId == id && p.Supplier != null && p.Supplier.Status == "Active")
+                .Where(p => p.SupplierId == id && !p.IsDeleted && p.Supplier != null && !p.Supplier.IsDeleted && p.Supplier.Status == "Active")
                 .OrderBy(p => p.ProductName)
                 .Select(p => new ProductLookupDto
                 {
@@ -385,7 +434,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
             var validItems = model.Items.Where(i => i.ProductId > 0).ToList();
             // Ensure supplier is active
-            var supplier = await _context.Suppliers.FindAsync(model.SupplierId);
+            var supplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == model.SupplierId && !s.IsDeleted);
             if (supplier == null || supplier.Status != "Active")
                 return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be used for a new purchase order.");
 
@@ -406,9 +455,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 return Result.Failure("Items", "Duplicate products are not allowed.");
 
             var productIds = validItems.Select(i => i.ProductId).Distinct().ToList();
-            int existingCount = await _context.Products.CountAsync(p => productIds.Contains(p.ProductId));
-            if (existingCount != productIds.Count)
+            var selectedProducts = await _context.Products
+                .Where(p => productIds.Contains(p.ProductId) && !p.IsDeleted)
+                .Select(p => new { p.ProductId, p.SupplierId })
+                .ToListAsync();
+            if (selectedProducts.Count != productIds.Count)
                 return Result.Failure("Items", "One or more selected products are not valid.");
+            if (selectedProducts.Any(p => p.SupplierId != model.SupplierId))
+                return Result.Failure("Items", "All products must belong to the selected supplier.");
 
             return Result.Success();
         }
@@ -416,7 +470,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         private async Task<PurchaseOrderViewModel> PopulateListsAsync(PurchaseOrderViewModel model)
         {
 model.Suppliers = await _context.Suppliers.AsNoTracking()
-                 .Where(s => s.Status == "Active")
+                 .Where(s => !s.IsDeleted && s.Status == "Active")
                  .OrderBy(s => s.CompanyName)
                  .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
                  .ToListAsync();

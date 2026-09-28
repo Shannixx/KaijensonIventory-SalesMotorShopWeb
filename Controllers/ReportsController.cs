@@ -43,14 +43,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             if (filter.StartDate > filter.EndDate)
             {
                 ModelState.AddModelError(string.Empty, "Start Date must be before End Date.");
-                ViewBag.Products = await _context.Products.OrderBy(p => p.ProductName).ToListAsync();
-                ViewBag.Categories = await _context.Categories.OrderBy(c => c.CategoryName).ToListAsync();
+                ViewBag.Products = await _context.Products.Where(p => !p.IsDeleted).OrderBy(p => p.ProductName).ToListAsync();
+                ViewBag.Categories = await _context.Categories.Where(c => !c.IsDeleted).OrderBy(c => c.CategoryName).ToListAsync();
                 var errorVm = new ReportsPageViewModel { Filter = filter };
                 return View(errorVm);
             }
             // Populate filter selections
-            ViewBag.Products = await _context.Products.OrderBy(p => p.ProductName).ToListAsync();
-            ViewBag.Categories = await _context.Categories.OrderBy(c => c.CategoryName).ToListAsync();
+            ViewBag.Products = await _context.Products.Where(p => !p.IsDeleted).OrderBy(p => p.ProductName).ToListAsync();
+            ViewBag.Categories = await _context.Categories.Where(c => !c.IsDeleted).OrderBy(c => c.CategoryName).ToListAsync();
             var viewModel = await BuildReportViewModelAsync(filter);
             return View(viewModel);
         }
@@ -162,7 +162,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             try
             {
-                var products = await _context.Products.Include(p => p.Category).ToListAsync();
+                var products = await _context.Products.Where(p => !p.IsDeleted && (p.Category == null || !p.Category.IsDeleted)).Include(p => p.Category).ToListAsync();
                 var currentUser = GetCurrentStaffName();
                 var generatedOn = DateTime.Now.ToString("MMMM dd, yyyy h:mm tt");
                 var doc = Document.Create(container =>
@@ -236,7 +236,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ws.Cell(1,5).Value = "Price";
                 ws.Cell(1,6).Value = "Quantity";
                 int row = 2;
-                var products = await _context.Products.Include(p => p.Category).ToListAsync();
+                var products = await _context.Products.Where(p => !p.IsDeleted && (p.Category == null || !p.Category.IsDeleted)).Include(p => p.Category).ToListAsync();
                 foreach (var p in products)
                 {
                     ws.Cell(row,1).Value = p.ProductId;
@@ -1131,7 +1131,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
                 .Where(t => t.TransactionDate >= startInclusive && t.TransactionDate < endExclusive);
             if (filter.ProductId.HasValue || filter.CategoryId.HasValue)
             {
-                var productIdsQuery = _context.Products.AsQueryable();
+                var productIdsQuery = _context.Products.Where(p => !p.IsDeleted && (p.Category == null || !p.Category.IsDeleted)).AsQueryable();
                 if (filter.ProductId.HasValue)
                     productIdsQuery = productIdsQuery.Where(p => p.ProductId == filter.ProductId.Value);
                 if (filter.CategoryId.HasValue)
@@ -1154,7 +1154,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
             }
             if (filter.ProductId.HasValue)
             {
-                var product = await _context.Products.FindAsync(filter.ProductId.Value);
+                var product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == filter.ProductId.Value && !p.IsDeleted);
                 if (product != null)
                 {
                     var productName = product.ProductName;
@@ -1166,7 +1166,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
             }
             if (filter.CategoryId.HasValue)
             {
-                var category = await _context.Categories.FindAsync(filter.CategoryId.Value);
+                var category = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryId == filter.CategoryId.Value && !c.IsDeleted);
                 if (category != null)
                 {
                     var categoryName = category.CategoryName;

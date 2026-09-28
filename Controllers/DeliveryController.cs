@@ -28,25 +28,64 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return null;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
+            if (archived && !IsAdmin()) return Forbid();
 
-            var deliveries = await _deliveryService.GetAwaitingDeliveryAsync();
-
+            var deliveries = await _deliveryService.GetAwaitingDeliveryAsync(archived);
+            ViewBag.ShowArchived = archived;
             return View(deliveries);
         }
 
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
+            if (archived && !IsAdmin()) return Forbid();
 
-            var viewModel = await _deliveryService.GetDeliveryDetailsAsync(id);
+            var viewModel = await _deliveryService.GetDeliveryDetailsAsync(id, archived);
             if (viewModel == null) return NotFound();
 
+            ViewBag.ShowArchived = archived;
             return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Archive(int id)
+        {
+            var accessCheck = RedirectIfNotAdmin();
+            if (accessCheck != null) return accessCheck;
+
+            var result = await _deliveryService.ArchiveAsync(id, GetCurrentStaffId());
+            if (!result.Succeeded)
+            {
+                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message ?? "Unable to archive delivery.";
+                return RedirectToAction(nameof(Details), new { id, archived = true });
+            }
+
+            TempData["SuccessMessage"] = "Delivery archived without changing inventory.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var accessCheck = RedirectIfNotAdmin();
+            if (accessCheck != null) return accessCheck;
+
+            var result = await _deliveryService.RestoreAsync(id, GetCurrentStaffId());
+            if (!result.Succeeded)
+            {
+                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message ?? "Unable to restore delivery.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            TempData["SuccessMessage"] = "Delivery restored without replaying inventory.";
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         [HttpPost]

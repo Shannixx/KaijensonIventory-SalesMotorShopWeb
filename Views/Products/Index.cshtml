@@ -7,7 +7,20 @@
         <h1>Products</h1>
         <p>Manage inventory.</p>
     </div>
-    <a asp-action="Create" class="btn btn-primary">Add Product</a>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">Add Product</a>
+        @if (Context.Session.GetString("StaffRole") == "Admin")
+        {
+            if (ViewBag.ShowArchived == true)
+            {
+                <a asp-action="Index" class="btn btn-outline-secondary">Active Products</a>
+            }
+            else
+            {
+                <a asp-action="Index" asp-route-archived="true" class="btn btn-outline-secondary">Archived</a>
+            }
+        }
+    </div>
 </div>
 
 <div class="search-toolbar-card">
@@ -64,16 +77,29 @@
                             </td>
                             <td class="action-cell">
 <div class="action-buttons">
-                                     <a asp-action="Details" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-view" title="View Product Details" aria-label="View @item.ProductName"><i class="bi bi-eye"></i></a>
-                                     <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product" aria-label="Edit @item.ProductName"><i class="bi bi-pencil"></i></a>
+                                     <a asp-action="Details" asp-route-id="@item.ProductId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-view" title="View Product Details" aria-label="View @item.ProductName"><i class="bi bi-eye"></i></a>
+                                     @if (ViewBag.ShowArchived != true)
+                                     {
+                                         <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product" aria-label="Edit @item.ProductName"><i class="bi bi-pencil"></i></a>
+                                     }
                                      @if (item.QuantityOnHand <= item.ReorderLevel && item.Supplier?.Status == "Active")
                                      {
                                          <a asp-controller="Sales" asp-action="Search" asp-route-reorder="true" asp-route-productId="@item.ProductId" class="btn btn-icon btn-icon-primary" title="Create Purchase Order" aria-label="Create PO for @item.ProductName"><i class="bi bi-cart-plus"></i></a>
                                      }
-                                     <form asp-action="Delete" asp-route-id="@item.ProductId" method="post" id="delete-product-@item.ProductId" class="action-form">
-                                         @Html.AntiForgeryToken()
-                                         <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-product-@item.ProductId" data-delete-record-name="@item.ProductName" data-delete-entity-name="product" title="Delete product" aria-label="Delete product @item.ProductName"><i class="bi bi-trash"></i></button>
-                                     </form>
+                                     @if (ViewBag.ShowArchived == true)
+                                     {
+                                         <form asp-action="Restore" asp-route-id="@item.ProductId" method="post" class="action-form">
+                                             @Html.AntiForgeryToken()
+                                             <button type="submit" class="btn btn-icon" title="Restore product" aria-label="Restore @item.ProductName"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                         </form>
+                                     }
+                                     else
+                                     {
+                                         <form asp-action="Delete" asp-route-id="@item.ProductId" method="post" id="delete-product-@item.ProductId" class="action-form">
+                                             @Html.AntiForgeryToken()
+                                             <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-product-@item.ProductId" data-delete-record-name="@item.ProductName" data-delete-entity-name="product" title="Archive product" aria-label="Archive product @item.ProductName"><i class="bi bi-archive"></i></button>
+                                         </form>
+                                     }
                                  </div>
                             </td>
                         </tr>

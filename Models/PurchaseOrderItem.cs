@@ -29,5 +29,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         public PurchaseOrder? PurchaseOrder { get; set; }
         public Product? Product { get; set; }
+
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public int? DeletedBy { get; set; }
     }
 }

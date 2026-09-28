@@ -4,6 +4,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 {
     public class Staff
     {
+        public const string ActiveStatus = "Active";
+        public const string InactiveStatus = "Inactive";
+
         [Key]
         public int StaffId { get; set; }
 
@@ -30,7 +33,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         [Required, StringLength(20)]
         [Display(Name = "Status")]
-        public string Status { get; set; } = "Approved";
-    public bool MustChangePassword { get; set; } = false;
-}
+        public string Status { get; set; } = ActiveStatus;
+
+        public bool MustChangePassword { get; set; } = false;
+    }
 }

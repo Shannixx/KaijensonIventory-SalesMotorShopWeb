@@ -16,17 +16,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, int page = 1, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (archived && !IsAdmin()) return Forbid();
 
             try
             {
                 int pageSize = 10;
                 IQueryable<Service> query = _context.Services
-                    .AsNoTracking();
+                    .AsNoTracking()
+                    .Where(s => archived ? s.IsDeleted : !s.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
@@ -44,6 +46,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["CurrentFilter"] = searchString;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewBag.ShowArchived = archived;
 
                 return View(services);
             }
@@ -55,11 +58,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int? id, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (archived && !IsAdmin()) return Forbid();
 
             if (id == null) return NotFound();
 
@@ -68,10 +72,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Service? service = await _context.Services
                     .AsNoTracking()
                     .Include(s => s.CreatedByStaff)
-                    .FirstOrDefaultAsync(s => s.ServiceId == id);
+                    .FirstOrDefaultAsync(s => s.ServiceId == id && (archived ? s.IsDeleted : !s.IsDeleted));
 
                 if (service == null) return NotFound();
-
+                ViewBag.ShowArchived = archived;
                 return View(service);
             }
             catch (Exception ex)
@@ -162,7 +166,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                Service? service = await _context.Services.FindAsync(id);
+                Service? service = await _context.Services.FirstOrDefaultAsync(s => s.ServiceId == id && !s.IsDeleted);
                 if (service == null) return NotFound();
 
                 return View(service);
@@ -199,7 +203,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
-                    Service? existing = await _context.Services.FindAsync(id);
+                    Service? existing = await _context.Services.FirstOrDefaultAsync(s => s.ServiceId == id && !s.IsDeleted);
                     if (existing == null) return NotFound();
 existing.ServiceName = service.ServiceName;
                      existing.ServicePrice = service.ServicePrice;
@@ -207,7 +211,6 @@ existing.ServiceName = service.ServiceName;
                      existing.Status = service.Status;
                      // Persist description changes
                      existing.Description = service.Description;
-                     await _context.SaveChangesAsync();
 
                     _context.ActivityLogs.Add(new ActivityLog
                     {
@@ -243,21 +246,16 @@ existing.ServiceName = service.ServiceName;
 
         public async Task<IActionResult> Delete(int? id)
         {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
 
             if (id == null) return NotFound();
 
             try
             {
-                // Note: Service and ServiceTransaction are separate entities with no direct relationship
-                // Service is a catalog item, ServiceTransaction is an actual service performed
-                // So we don't check for related ServiceTransactions when deleting a Service
-
                 Service? service = await _context.Services
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.ServiceId == id);
+                    .FirstOrDefaultAsync(s => s.ServiceId == id && !s.IsDeleted && (s.Status == "Active" || IsAdmin()));
 
                 if (service == null) return NotFound();
 
@@ -275,43 +273,30 @@ existing.ServiceName = service.ServiceName;
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
 
             try
             {
-                // Note: Service and ServiceTransaction are separate entities with no direct relationship
-                // Service is a catalog item, ServiceTransaction is an actual service performed
-                // So we don't check for related ServiceTransactions when deleting a Service
-
-                Service? service = await _context.Services.FindAsync(id);
+                Service? service = await _context.Services.FirstOrDefaultAsync(s => s.ServiceId == id && !s.IsDeleted);
                 if (service == null) return NotFound();
-
-                // Prevent deletion if there are existing ServiceJobs referencing this service
-                bool hasJobs = await _context.ServiceJobs.AnyAsync(j => j.ServiceId == id);
-                if (hasJobs)
-                {
-                    TempData["ErrorMessage"] = "This service cannot be deleted because it has existing service records.";
-                    return RedirectToAction(nameof(Index));
-                }
 
                 string name = service.ServiceName;
 
-                _context.Services.Remove(service);
-                await _context.SaveChangesAsync();
-
+                service.IsDeleted = true;
+                service.DeletedAt = DateTime.UtcNow;
+                service.DeletedBy = GetCurrentStaffId();
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Delete Service",
+                    Action = "Archive Service",
                     Module = "Service",
-                    Description = $"Deleted service: {name}",
+                    Description = $"Archived service: {name} ({service.ServiceId})",
                     StaffId = GetCurrentStaffId(),
                     Timestamp = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Service deleted successfully.";
+                TempData["SuccessMessage"] = "Service archived successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -320,6 +305,32 @@ existing.ServiceName = service.ServiceName;
                 TempData["ErrorMessage"] = "An error occurred while deleting the service. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var service = await _context.Services.FirstOrDefaultAsync(s => s.ServiceId == id && s.IsDeleted);
+            if (service == null) return NotFound();
+
+            service.IsDeleted = false;
+            service.DeletedAt = null;
+            service.DeletedBy = null;
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Action = "Restore Service",
+                Module = "Service",
+                Description = $"Restored service: {service.ServiceName} ({service.ServiceId})",
+                StaffId = GetCurrentStaffId(),
+                Timestamp = DateTime.Now
+            });
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Service restored successfully.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

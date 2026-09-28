@@ -76,6 +76,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<Staff>()
                 .HasIndex(s => s.UserName).IsUnique();
 
+            modelBuilder.Entity<Staff>()
+                .Property(s => s.Status)
+                .HasDefaultValue(KaijensonIventory_SalesMotorShopWeb.Models.Staff.ActiveStatus);
+
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.Category).WithMany().HasForeignKey(p => p.CategoryId).OnDelete(DeleteBehavior.Restrict);
 

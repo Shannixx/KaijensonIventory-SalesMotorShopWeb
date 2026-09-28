@@ -20,6 +20,13 @@ string badgeClass = Model.Status switch
         @{
             var showForm = (Model.Status == "Pending" || Model.Status == "Partially Delivered") && Model.Items.Any(i => i.Quantity - i.ReceivedQuantity > 0);
         }
+        @if (Context.Session.GetString("StaffRole") == "Admin" && ViewBag.ShowArchived != true)
+        {
+            <form asp-action="Archive" asp-route-id="@Model.DeliveryId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-secondary">Archive Delivery</button>
+            </form>
+        }
         @if (showForm)
         {
             <form asp-action="Receive" method="post">
@@ -60,7 +67,18 @@ string badgeClass = Model.Status switch
                 </button>
             </form>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to Delivery</a>
+        @if (ViewBag.ShowArchived == true)
+        {
+            <form asp-action="Restore" asp-route-id="@Model.DeliveryId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary">Restore Delivery</button>
+            </form>
+            <a asp-action="Index" asp-route-archived="true" class="btn btn-outline-secondary">Back to Archived Deliveries</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to Delivery</a>
+        }
     </div>
 </div>
 

@@ -71,7 +71,7 @@ using (var scope = app.Services.CreateScope())
             UserName = "admin",
             PasswordHash = hasher.HashPassword("admin123"),
             Role = "Admin",
-            Status = "Approved"
+            Status = Staff.ActiveStatus
         });
     }
 
@@ -136,6 +136,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();
+app.UseMiddleware<KaijensonIventory_SalesMotorShopWeb.Middleware.ActiveStaffSessionMiddleware>();
 
 app.UseAuthorization();
 

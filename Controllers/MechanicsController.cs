@@ -21,15 +21,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? searchString, string? statusFilter, string? workStatusFilter, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, string? statusFilter, string? workStatusFilter, int page = 1, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
+            if (archived && !IsAdmin()) return Forbid();
 
             try
             {
                 int pageSize = 10;
-                var query = _context.Mechanics.AsNoTracking();
+                var query = _context.Mechanics.AsNoTracking()
+                    .Where(m => archived ? m.IsDeleted : !m.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
@@ -66,6 +68,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["WorkStatusFilter"] = workStatusFilter;
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
+                ViewBag.ShowArchived = archived;
 
                 return View(mechanics);
             }
@@ -77,18 +80,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int? id, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
+            if (archived && !IsAdmin()) return Forbid();
             if (id == null) return NotFound();
 
             try
             {
                 var mechanic = await _context.Mechanics.AsNoTracking()
                     .Include(m => m.HiredByStaff)
-                    .FirstOrDefaultAsync(m => m.MechanicId == id);
+                    .FirstOrDefaultAsync(m => m.MechanicId == id && (archived ? m.IsDeleted : !m.IsDeleted));
                 if (mechanic == null) return NotFound();
+                ViewBag.ShowArchived = archived;
                 return View(mechanic);
             }
             catch (Exception ex)
@@ -158,7 +163,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                var mechanic = await _context.Mechanics.FindAsync(id);
+                var mechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == id && !m.IsDeleted);
                 if (mechanic == null) return NotFound();
                 return View(mechanic);
             }
@@ -183,7 +188,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 try
                 {
-                    var existing = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == id);
+                    var existing = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == id && !m.IsDeleted);
                     if (existing == null) return NotFound();
 
                     existing.MechanicName = mechanic.MechanicName;
@@ -220,8 +225,6 @@ else // Active
     }
 }
 
-                    await _context.SaveChangesAsync();
-
                     _context.ActivityLogs.Add(new ActivityLog
                     {
                         Action = "Edit Mechanic",
@@ -255,7 +258,7 @@ else // Active
 
         public async Task<IActionResult> Delete(int? id)
         {
-            var redirect = RedirectIfNotAuthenticated();
+            var redirect = RedirectIfNotAdmin();
             if (redirect != null) return redirect;
             if (id == null) return NotFound();
 
@@ -263,15 +266,8 @@ else // Active
             {
                 var mechanic = await _context.Mechanics.AsNoTracking()
                     .Include(m => m.HiredByStaff)
-                    .FirstOrDefaultAsync(m => m.MechanicId == id);
+                    .FirstOrDefaultAsync(m => m.MechanicId == id && !m.IsDeleted);
                 if (mechanic == null) return NotFound();
-
-                bool hasJobs = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
-                if (hasJobs)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service job records.";
-                    return RedirectToAction(nameof(Index));
-                }
 
                 return View(mechanic);
             }
@@ -287,36 +283,29 @@ else // Active
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var redirect = RedirectIfNotAuthenticated();
+            var redirect = RedirectIfNotAdmin();
             if (redirect != null) return redirect;
 
             try
             {
-                var mechanic = await _context.Mechanics.FindAsync(id);
+                var mechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == id && !m.IsDeleted);
                 if (mechanic == null) return NotFound();
 
-                bool hasJobs = await _context.ServiceJobs.AnyAsync(j => j.MechanicId == id);
-                if (hasJobs)
-                {
-                    TempData["ErrorMessage"] = "Cannot delete mechanic. This mechanic has associated service job records.";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 string name = mechanic.MechanicName;
-                _context.Mechanics.Remove(mechanic);
-                await _context.SaveChangesAsync();
-
+                mechanic.IsDeleted = true;
+                mechanic.DeletedAt = DateTime.UtcNow;
+                mechanic.DeletedBy = GetCurrentStaffId();
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Delete Mechanic",
+                    Action = "Archive Mechanic",
                     Module = "Mechanic",
-                    Description = $"Deleted mechanic: {name}",
+                    Description = $"Archived mechanic: {name} ({mechanic.MechanicId})",
                     StaffId = GetCurrentStaffId(),
                     Timestamp = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Mechanic deleted successfully.";
+                TempData["SuccessMessage"] = "Mechanic archived successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -325,6 +314,32 @@ else // Active
                 TempData["ErrorMessage"] = "An error occurred while deleting the mechanic. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var mechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == id && m.IsDeleted);
+            if (mechanic == null) return NotFound();
+
+            mechanic.IsDeleted = false;
+            mechanic.DeletedAt = null;
+            mechanic.DeletedBy = null;
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Action = "Restore Mechanic",
+                Module = "Mechanic",
+                Description = $"Restored mechanic: {mechanic.MechanicName} ({mechanic.MechanicId})",
+                StaffId = GetCurrentStaffId(),
+                Timestamp = DateTime.Now
+            });
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Mechanic restored successfully.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }

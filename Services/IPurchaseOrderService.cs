@@ -5,7 +5,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 {
     public interface IPurchaseOrderService
     {
-        Task<PurchaseOrderListResult> GetPagedAsync(string? searchString, string? statusFilter, int page, int pageSize = 10);
+        Task<PurchaseOrderListResult> GetPagedAsync(string? searchString, string? statusFilter, int page, int pageSize = 10, bool includeDeleted = false);
 
         Task<PurchaseOrderViewModel> PrepareCreateViewModelAsync(PurchaseOrderViewModel? model = null);
 
@@ -13,7 +13,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         Task<PurchaseOrderViewModel> PrepareEditViewModelAsync(PurchaseOrderViewModel model);
 
-        Task<PurchaseOrderViewModel?> GetDetailsViewModelAsync(int id);
+        Task<PurchaseOrderViewModel?> GetDetailsViewModelAsync(int id, bool includeDeleted = false);
 
         Task<Result> CreateAsync(PurchaseOrderViewModel model, int currentStaffId);
 
@@ -22,6 +22,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
 
         Task<Result> DeleteAsync(int id, int currentStaffId);
+
+        Task<Result> RestoreAsync(int id, int currentStaffId);
 
         Task<PurchaseOrder?> GetByIdAsync(int id);
 

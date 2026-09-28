@@ -52,7 +52,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                     throw new InvalidOperationException($"Quantity must be greater than zero for product ID {cartItem.ProductId}.");
 
                 var product = await _context.Products
-                    .Where(p => p.ProductId == cartItem.ProductId)
+                    .Where(p => p.ProductId == cartItem.ProductId && !p.IsDeleted)
                     .FirstOrDefaultAsync();
 
                 if (product == null)

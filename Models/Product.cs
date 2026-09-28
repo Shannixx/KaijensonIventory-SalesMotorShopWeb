@@ -86,5 +86,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         public Category? Category { get; set; }
         public Supplier? Supplier { get; set; }
         public PurchaseOrder? PurchaseOrder { get; set; }
+
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public int? DeletedBy { get; set; }
     }
 }

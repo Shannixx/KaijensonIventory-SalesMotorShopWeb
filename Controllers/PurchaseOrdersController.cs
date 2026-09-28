@@ -39,18 +39,20 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return null;
         }
 
-        public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, string? statusFilter, int page = 1, bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            var result = await _purchaseOrderService.GetPagedAsync(searchString, statusFilter, page);
+            if (archived && !IsAdmin()) return Forbid();
+            var result = await _purchaseOrderService.GetPagedAsync(searchString, statusFilter, page, 10, archived);
 
             ViewData["CurrentFilter"] = searchString;
             ViewData["StatusFilter"] = statusFilter;
             ViewData["Page"] = page;
             ViewData["TotalPages"] = result.TotalPages;
             ViewBag.CanDelete = IsAdmin();
+            ViewBag.ShowArchived = archived;
 
             return View(result.Items);
         }
@@ -119,14 +121,16 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
+            if (archived && !IsAdmin()) return Forbid();
 
-            var viewModel = await _purchaseOrderService.GetDetailsViewModelAsync(id);
+            var viewModel = await _purchaseOrderService.GetDetailsViewModelAsync(id, archived);
             if (viewModel == null) return NotFound();
 
+            ViewBag.ShowArchived = archived;
             return View(viewModel);
         }
 
@@ -191,7 +195,26 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            TempData["SuccessMessage"] = "Purchase order deleted successfully.";
+            TempData["SuccessMessage"] = "Purchase order archived successfully.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var accessCheck = CheckAccess();
+            if (accessCheck != null) return accessCheck;
+            if (!IsAdmin()) return Forbid();
+
+            var result = await _purchaseOrderService.RestoreAsync(id, GetCurrentStaffId());
+            if (!result.Succeeded)
+            {
+                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message ?? "Unable to restore purchase order.";
+                return RedirectToAction(nameof(Index), new { archived = true });
+            }
+
+            TempData["SuccessMessage"] = "Purchase order restored successfully.";
             return RedirectToAction(nameof(Index));
         }
 

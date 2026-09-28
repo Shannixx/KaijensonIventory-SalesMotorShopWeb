@@ -22,12 +22,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             _notificationService = notificationService;
         }
 
-        public async Task<ProductListResult> GetPagedAsync(string? searchString, int? categoryId, int page, int pageSize = 10)
+        public async Task<ProductListResult> GetPagedAsync(string? searchString, int? categoryId, int page, int pageSize = 10, bool includeDeleted = false)
         {
             IQueryable<Product> query = _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Supplier)
                 .AsNoTracking();
+
+            query = includeDeleted ? query.Where(p => p.IsDeleted) : query.Where(p => !p.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(searchString))
             {
@@ -53,6 +55,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
             List<SelectListItem> categories = await _context.Categories
                 .AsNoTracking()
+                .Where(c => !c.IsDeleted)
                 .OrderBy(c => c.CategoryName)
                 .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.CategoryName })
                 .ToListAsync();
@@ -76,7 +79,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         {
             Product? product = await _context.Products
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ProductId == id);
+                .FirstOrDefaultAsync(p => p.ProductId == id && !p.IsDeleted);
 
             if (product == null) return null;
 
@@ -111,24 +114,29 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 return Result.Failure(errors);
 
             bool brandExists = await _context.Brands
-                .AnyAsync(b => b.BrandName == model.Brand);
+                .AnyAsync(b => b.BrandName == model.Brand && !b.IsDeleted);
             if (!brandExists)
                 return Result.Failure("Brand", "The selected brand is not valid or is inactive.");
 
             bool nameExists = await _context.Products.AnyAsync(p =>
+                !p.IsDeleted &&
                 p.ProductName == model.ProductName &&
                 (p.Brand ?? "") == (model.Brand ?? "") &&
                 p.SupplierId == model.SupplierId);
             if (nameExists)
                 return Result.Failure("ProductName", "A product with this name already exists.");
 
-            var supplier = await _context.Suppliers.FindAsync(model.SupplierId);
+            var supplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == model.SupplierId && !s.IsDeleted);
             if (supplier == null || supplier.Status != "Active")
                 return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be assigned to a new product.");
 
+            bool activeCategory = await _context.Categories.AnyAsync(c => c.CategoryId == model.CategoryId && !c.IsDeleted);
+            if (!activeCategory)
+                return Result.Failure("CategoryId", "The selected category is not active.");
+
             if (model.PurchaseOrderId.HasValue)
             {
-                bool poExists = await _context.PurchaseOrders.AnyAsync(p => p.PurchaseOrderId == model.PurchaseOrderId.Value);
+                bool poExists = await _context.PurchaseOrders.AnyAsync(p => p.PurchaseOrderId == model.PurchaseOrderId.Value && !p.IsDeleted);
                 if (!poExists)
                     return Result.Failure("PurchaseOrderId", "The selected purchase order is not valid.");
             }
@@ -171,11 +179,12 @@ var product = new Product
                 return Result.Failure(errors);
 
             bool brandExists = await _context.Brands
-                .AnyAsync(b => b.BrandName == model.Brand);
+                .AnyAsync(b => b.BrandName == model.Brand && !b.IsDeleted);
             if (!brandExists)
                 return Result.Failure("Brand", "The selected brand is not valid or is inactive.");
 
             bool nameExists = await _context.Products.AnyAsync(p =>
+                !p.IsDeleted &&
                 p.ProductName == model.ProductName &&
                 (p.Brand ?? "") == (model.Brand ?? "") &&
                 p.SupplierId == model.SupplierId &&
@@ -185,12 +194,16 @@ var product = new Product
 
             if (model.PurchaseOrderId.HasValue)
             {
-                bool poExists = await _context.PurchaseOrders.AnyAsync(p => p.PurchaseOrderId == model.PurchaseOrderId.Value);
+                bool poExists = await _context.PurchaseOrders.AnyAsync(p => p.PurchaseOrderId == model.PurchaseOrderId.Value && !p.IsDeleted);
                 if (!poExists)
                     return Result.Failure("PurchaseOrderId", "The selected purchase order is not valid.");
             }
 
-            Product? existing = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == model.ProductId);
+            bool activeCategory = await _context.Categories.AnyAsync(c => c.CategoryId == model.CategoryId && !c.IsDeleted);
+            if (!activeCategory)
+                return Result.Failure("CategoryId", "The selected category is not active.");
+
+            Product? existing = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == model.ProductId && !p.IsDeleted);
             if (existing == null)
                 return Result.Failure(null, "The product could not be found.");
 
@@ -198,14 +211,10 @@ var product = new Product
             existing.Brand = model.Brand;
             existing.CategoryId = model.CategoryId;
             // Update supplier with validation
-            if (model.SupplierId != existing.SupplierId)
-            {
-                var newSupplier = await _context.Suppliers.FindAsync(model.SupplierId);
-                if (newSupplier == null || newSupplier.Status != "Active")
-                    return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be assigned to the product.");
-                existing.SupplierId = model.SupplierId;
-            }
-            // If supplier unchanged, keep existing (even if inactive).
+            var newSupplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.SupplierId == model.SupplierId && !s.IsDeleted);
+            if (newSupplier == null || newSupplier.Status != "Active")
+                return Result.Failure("SupplierId", "The selected supplier is inactive and cannot be assigned to the product.");
+            existing.SupplierId = model.SupplierId;
             existing.QuantityOnHand = model.QuantityOnHand;
             existing.ModelCompatibility = model.ModelCompatibility;
             existing.Description = model.Description;
@@ -249,57 +258,82 @@ var product = new Product
 
         public async Task<Result> DeleteAsync(int id, int currentStaffId)
         {
-            Product? product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == id);
+            Product? product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == id && !p.IsDeleted);
             if (product == null)
-                return Result.Failure(null, "The product could not be found.");
+                return Result.Failure(null, "The product could not be found or is already archived.");
 
-            _context.Products.Remove(product);
+            if (product.QuantityOnHand > 0)
+                return Result.Failure(null, "A product with stock on hand cannot be archived. Reduce stock through an audited inventory operation first.");
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                return Result.Failure(null, "Cannot delete this product because it is referenced by existing records.");
-            }
+            bool hasAvailableSerial = await _context.SerialUnits.AnyAsync(s =>
+                s.ProductId == id && s.Status == "Available");
+            if (hasAvailableSerial)
+                return Result.Failure(null, "A product with available serialized units cannot be archived.");
 
-            await _activityLogService.LogAsync("Delete Product", "Product",
-                $"Product {product.ProductName} deleted",
+            product.IsDeleted = true;
+            product.DeletedAt = DateTime.UtcNow;
+            product.DeletedBy = currentStaffId;
+            await _activityLogService.LogAsync("Archive Product", "Product",
+                $"Product {product.ProductName} ({product.ProductId}) archived",
                 currentStaffId);
+            await _context.SaveChangesAsync();
 
             return Result.Success();
         }
 
-        public async Task<Product?> GetByIdAsync(int id)
+        public async Task<Result> RestoreAsync(int id, int currentStaffId)
+        {
+            Product? product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == id && p.IsDeleted);
+            if (product == null)
+                return Result.Failure(null, "The archived product could not be found.");
+
+            bool activeCategory = await _context.Categories.AnyAsync(c => c.CategoryId == product.CategoryId && !c.IsDeleted);
+            bool activeSupplier = await _context.Suppliers.AnyAsync(s => s.SupplierId == product.SupplierId && !s.IsDeleted && s.Status == "Active");
+            bool activeBrand = string.IsNullOrWhiteSpace(product.Brand) || await _context.Brands.AnyAsync(b => b.BrandName == product.Brand && !b.IsDeleted);
+            if (!activeCategory || !activeSupplier || !activeBrand)
+                return Result.Failure(null, "The product cannot be restored until its category, brand, and supplier are active.");
+
+            product.IsDeleted = false;
+            product.DeletedAt = null;
+            product.DeletedBy = null;
+            await _activityLogService.LogAsync("Restore Product", "Product",
+                $"Product {product.ProductName} ({product.ProductId}) restored",
+                currentStaffId);
+            await _context.SaveChangesAsync();
+            return Result.Success();
+        }
+
+        public async Task<Product?> GetByIdAsync(int id, bool includeDeleted = false)
         {
             return await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Supplier)
                 .Include(p => p.CreatedByStaff)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ProductId == id);
+                .FirstOrDefaultAsync(p => p.ProductId == id && (includeDeleted || !p.IsDeleted));
         }
 
         private async Task<T> PopulateListsAsync<T>(T model) where T : ProductCreateViewModel
         {
-            model.Categories = await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName)
+            model.Categories = await _context.Categories.AsNoTracking().Where(c => !c.IsDeleted).OrderBy(c => c.CategoryName)
                 .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.CategoryName })
                 .ToListAsync();
 
             model.Suppliers = await _context.Suppliers.AsNoTracking()
-                    .Where(s => s.Status == "Active" || s.SupplierId == model.SupplierId)
+                    .Where(s => !s.IsDeleted && (s.Status == "Active" || s.SupplierId == model.SupplierId))
                     .OrderBy(s => s.CompanyName)
                     .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
                     .ToListAsync();
 
             model.Brands = await _context.Brands.AsNoTracking()
+                .Where(b => !b.IsDeleted)
                 .OrderBy(b => b.BrandName)
                 .ThenBy(b => b.BrandName)
                 .Select(b => new SelectListItem { Value = b.BrandName, Text = b.BrandName })
                 .ToListAsync();
 
             model.PurchaseOrders = await _context.PurchaseOrders.AsNoTracking()
+                .Where(p => !p.IsDeleted)
                 .OrderByDescending(p => p.CreatedDate)
                 .Select(p => new SelectListItem { Value = p.PurchaseOrderId.ToString(), Text = p.PurchaseOrderNumber })
                 .ToListAsync();
@@ -309,23 +343,25 @@ var product = new Product
 
         private async Task<ProductEditViewModel> PopulateEditListsAsync(ProductEditViewModel model)
         {
-            model.Categories = await _context.Categories.AsNoTracking().OrderBy(c => c.CategoryName)
+            model.Categories = await _context.Categories.AsNoTracking().Where(c => !c.IsDeleted).OrderBy(c => c.CategoryName)
                 .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.CategoryName })
                 .ToListAsync();
 
             model.Suppliers = await _context.Suppliers.AsNoTracking()
-                    .Where(s => s.Status == "Active" || s.SupplierId == model.SupplierId)
+                    .Where(s => !s.IsDeleted && (s.Status == "Active" || s.SupplierId == model.SupplierId))
                     .OrderBy(s => s.CompanyName)
                     .Select(s => new SelectListItem { Value = s.SupplierId.ToString(), Text = s.CompanyName })
                     .ToListAsync();
 
             model.Brands = await _context.Brands.AsNoTracking()
+                .Where(b => !b.IsDeleted)
                 .OrderBy(b => b.BrandName)
                 .ThenBy(b => b.BrandName)
                 .Select(b => new SelectListItem { Value = b.BrandName, Text = b.BrandName })
                 .ToListAsync();
 
             model.PurchaseOrders = await _context.PurchaseOrders.AsNoTracking()
+                .Where(p => !p.IsDeleted)
                 .OrderByDescending(p => p.CreatedDate)
                 .Select(p => new SelectListItem { Value = p.PurchaseOrderId.ToString(), Text = p.PurchaseOrderNumber })
                 .ToListAsync();

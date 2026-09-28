@@ -26,5 +26,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         // Navigation property (optional)
         public PurchaseOrder? PurchaseOrder { get; set; }
         public ICollection<DeliveryItem> Items { get; set; } = new List<DeliveryItem>();
+
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public int? DeletedBy { get; set; }
     }
 }

@@ -16,6 +16,16 @@
             <input type="text" name="searchString" class="form-control" placeholder="PO number or supplier..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
         </div>
         <div>
+            @if (ViewBag.ShowArchived == true)
+            {
+                <a asp-action="Index" class="btn btn-outline-secondary">Active Purchase Orders</a>
+            }
+            else if (ViewBag.CanDelete == true)
+            {
+                <a asp-action="Index" asp-route-archived="true" class="btn btn-outline-secondary">Archived</a>
+            }
+        </div>
+        <div>
             <label class="form-label small">Status</label>
             <select name="statusFilter" class="form-select" style="min-width:150px;">
                 <option value="">All Status</option>
@@ -62,7 +72,7 @@
 </td>
                             <td class="action-cell action-cell-wide">
                 <div class="action-buttons">
-                    <a asp-action="Details" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-view" title="View Purchase Order" aria-label="View @item.PurchaseOrderNumber"><i class="bi bi-eye"></i></a>
+                    <a asp-action="Details" asp-route-id="@item.PurchaseOrderId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-view" title="View Purchase Order" aria-label="View @item.PurchaseOrderNumber"><i class="bi bi-eye"></i></a>
                     @if (item.Status == "Pending" || item.Status == "Approved")
                     {
                         <a asp-action="Edit" asp-route-id="@item.PurchaseOrderId" class="btn btn-icon btn-icon-edit" title="Edit Purchase Order" aria-label="Edit @item.PurchaseOrderNumber"><i class="bi bi-pencil"></i></a>
@@ -71,10 +81,20 @@
                     
                     @if (ViewBag.CanDelete == true)
                     {
-                        <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form" style="display:inline;">
-                            @Html.AntiForgeryToken()
-                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-po-@item.PurchaseOrderId" data-delete-record-name="@item.PurchaseOrderNumber" data-delete-entity-name="purchase order" title="Delete purchase order" aria-label="Delete purchase order @item.PurchaseOrderNumber"><i class="bi bi-trash"></i></button>
-                        </form>
+                        @if (ViewBag.ShowArchived == true)
+                        {
+                            <form asp-action="Restore" asp-route-id="@item.PurchaseOrderId" method="post" class="action-form" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-icon" title="Restore purchase order" aria-label="Restore @item.PurchaseOrderNumber"><i class="bi bi-arrow-counterclockwise"></i></button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="Delete" asp-route-id="@item.PurchaseOrderId" method="post" id="delete-po-@item.PurchaseOrderId" class="action-form" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-po-@item.PurchaseOrderId" data-delete-record-name="@item.PurchaseOrderNumber" data-delete-entity-name="purchase order" title="Archive purchase order" aria-label="Archive purchase order @item.PurchaseOrderNumber"><i class="bi bi-archive"></i></button>
+                            </form>
+                        }
                     }
                 </div>
                             </td>

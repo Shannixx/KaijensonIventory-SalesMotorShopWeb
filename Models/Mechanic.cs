@@ -39,5 +39,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
 
         public int? HiredBy { get; set; }
         public Staff? HiredByStaff { get; set; }
+
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public int? DeletedBy { get; set; }
     }
 }

@@ -12,7 +12,13 @@
         <h1>Mechanics</h1>
         <p>Manage mechanics.</p>
     </div>
-    <a asp-action="Create" class="btn btn-primary">Add Mechanic</a>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">Add Mechanic</a>
+        @if (Context.Session.GetString("StaffRole") == "Admin")
+        {
+            <a asp-action="Index" asp-route-archived="@(ViewBag.ShowArchived == true ? "false" : "true")" class="btn btn-outline-secondary">@(ViewBag.ShowArchived == true ? "Active Mechanics" : "Archived")</a>
+        }
+    </div>
 </div>
 
 @{
@@ -100,13 +106,26 @@
 </td>
                             <td class="action-cell">
                                 <div class="action-buttons">
-                                    <a asp-action="Details" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-view" title="View Mechanic Details" aria-label="View @item.MechanicName"><i class="bi bi-eye"></i></a>
-                                    <a asp-action="Edit" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-edit" title="Edit Mechanic" aria-label="Edit @item.MechanicName"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="Details" asp-route-id="@item.MechanicId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-view" title="View Mechanic Details" aria-label="View @item.MechanicName"><i class="bi bi-eye"></i></a>
+                                    @if (ViewBag.ShowArchived != true)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.MechanicId" class="btn btn-icon btn-icon-edit" title="Edit Mechanic" aria-label="Edit @item.MechanicName"><i class="bi bi-pencil"></i></a>
+                                    }
 
-                                    <form asp-action="Delete" asp-route-id="@item.MechanicId" method="post" id="delete-mechanic-@item.MechanicId" class="action-form">
-                                        @Html.AntiForgeryToken()
-                                        <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-mechanic-@item.MechanicId" data-delete-record-name="@item.MechanicName" data-delete-entity-name="mechanic" title="Delete mechanic" aria-label="Delete mechanic @item.MechanicName"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    @if (ViewBag.ShowArchived == true)
+                                    {
+                                        <form asp-action="Restore" asp-route-id="@item.MechanicId" method="post" class="action-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-icon" title="Restore mechanic" aria-label="Restore @item.MechanicName"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@item.MechanicId" method="post" id="delete-mechanic-@item.MechanicId" class="action-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-mechanic-@item.MechanicId" data-delete-record-name="@item.MechanicName" data-delete-entity-name="mechanic" title="Archive mechanic" aria-label="Archive mechanic @item.MechanicName"><i class="bi bi-archive"></i></button>
+                                        </form>
+                                    }
                                 </div>
                             </td>
                         </tr>

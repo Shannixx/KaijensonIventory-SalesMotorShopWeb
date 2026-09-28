@@ -87,8 +87,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             return await _context.Notifications
                 .Include(n => n.Product)
                 .AsNoTracking()
-                .Where(n => !n.IsRead)
-                .OrderByDescending(n => n.CreatedAt)
+                .Where(n => !n.IsRead && (n.Product == null || !n.Product.IsDeleted))
+                                .OrderByDescending(n => n.CreatedAt)
                 .Take(take)
                 .ToListAsync();
         }
@@ -97,7 +97,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         {
             return await _context.Notifications
                 .AsNoTracking()
-                .CountAsync(n => !n.IsRead);
+                .CountAsync(n => !n.IsRead && (n.Product == null || !n.Product.IsDeleted));
         }
 
         public async Task MarkAsReadAsync(int notificationId, int? staffId = null)

@@ -16,19 +16,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             _purchaseOrderService = purchaseOrderService;
         }
 
-        public async Task<IActionResult> Index(string? searchString, int? categoryId, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, int? categoryId, int page = 1, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
 
-            var result = await _productService.GetPagedAsync(searchString, categoryId, page);
+            if (archived && !IsAdmin()) return Forbid();
+            var result = await _productService.GetPagedAsync(searchString, categoryId, page, 10, archived);
 
             ViewData["Page"] = page;
             ViewData["TotalPages"] = result.TotalPages;
             ViewData["CurrentFilter"] = searchString;
             ViewData["CategoryId"] = categoryId;
             ViewBag.Categories = result.Categories;
+            ViewBag.ShowArchived = archived;
 
             return View(result.Items);
         }
@@ -104,23 +106,23 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, bool archived = false)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            if (redirect != null) return redirect;
+            if (archived && !IsAdmin()) return Forbid();
 
-            var product = await _productService.GetByIdAsync(id);
+            var product = await _productService.GetByIdAsync(id, archived);
             if (product == null) return NotFound();
 
+            ViewBag.ShowArchived = archived;
             return View(product);
         }
 
         public async Task<IActionResult> Delete(int id)
         {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
 
             var product = await _productService.GetByIdAsync(id);
             if (product == null) return NotFound();
@@ -132,9 +134,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
 
             var result = await _productService.DeleteAsync(id, GetCurrentStaffId());
 
@@ -145,7 +146,25 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            TempData["SuccessMessage"] = "Product deleted successfully.";
+            TempData["SuccessMessage"] = "Product archived successfully.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var redirect = RedirectIfNotAdmin();
+            if (redirect != null) return redirect;
+
+            var result = await _productService.RestoreAsync(id, GetCurrentStaffId());
+            if (!result.Succeeded)
+            {
+                TempData["ErrorMessage"] = result.Errors.FirstOrDefault()?.Message ?? "Unable to restore product.";
+                return RedirectToAction(nameof(Index), new { archived = true });
+            }
+
+            TempData["SuccessMessage"] = "Product restored successfully.";
             return RedirectToAction(nameof(Index));
         }
 

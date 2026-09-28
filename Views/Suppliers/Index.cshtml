@@ -6,7 +6,13 @@
         <h1>Suppliers</h1>
         <p>Manage suppliers.</p>
     </div>
-    <a asp-action="Create" class="btn btn-primary">Add Supplier</a>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">Add Supplier</a>
+        @if (Context.Session.GetString("StaffRole") == "Admin")
+        {
+            <a asp-action="Index" asp-route-archived="@(ViewBag.ShowArchived == true ? "false" : "true")" class="btn btn-outline-secondary">@(ViewBag.ShowArchived == true ? "Active Suppliers" : "Archived")</a>
+        }
+    </div>
 </div>
 
 @{
@@ -80,16 +86,29 @@
 </td>
                             <td class="action-cell text-center">
 <div class="action-buttons">
-                                      <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-view" title="View Supplier Details" aria-label="View @item.CompanyName"><i class="bi bi-eye"></i></a>
+                                      <a asp-action="Details" asp-route-id="@item.SupplierId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-view" title="View Supplier Details" aria-label="View @item.CompanyName"><i class="bi bi-eye"></i></a>
                                       <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-edit" title="Edit Supplier" aria-label="Edit @item.CompanyName"><i class="bi bi-pencil"></i></a>
-                                      <form asp-action="ToggleStatus" asp-route-id="@item.SupplierId" method="post" class="d-inline">
-                                          @Html.AntiForgeryToken()
-                                          <button type="submit" class="btn btn-icon btn-icon-toggle" title="Toggle Supplier Status" aria-label="Toggle status for @item.CompanyName"><i class="bi bi-arrow-repeat"></i></button>
-                                      </form>
-                                      <form asp-action="Delete" asp-route-id="@item.SupplierId" method="post" id="delete-supplier-@item.SupplierId" class="action-form">
-                                          @Html.AntiForgeryToken()
-                                          <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-supplier-@item.SupplierId" data-delete-record-name="@item.CompanyName" data-delete-entity-name="supplier" title="Delete supplier" aria-label="Delete supplier @item.CompanyName"><i class="bi bi-trash"></i></button>
-                                      </form>
+                                      @if (ViewBag.ShowArchived != true)
+                                      {
+                                          <form asp-action="ToggleStatus" asp-route-id="@item.SupplierId" method="post" class="d-inline">
+                                              @Html.AntiForgeryToken()
+                                              <button type="submit" class="btn btn-icon btn-icon-toggle" title="Toggle Supplier Status" aria-label="Toggle status for @item.CompanyName"><i class="bi bi-arrow-repeat"></i></button>
+                                          </form>
+                                      }
+                                      @if (ViewBag.ShowArchived == true)
+                                      {
+                                          <form asp-action="Restore" asp-route-id="@item.SupplierId" method="post" class="action-form">
+                                              @Html.AntiForgeryToken()
+                                              <button type="submit" class="btn btn-icon" title="Restore supplier" aria-label="Restore @item.CompanyName"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                          </form>
+                                      }
+                                      else
+                                      {
+                                          <form asp-action="Delete" asp-route-id="@item.SupplierId" method="post" id="delete-supplier-@item.SupplierId" class="action-form">
+                                              @Html.AntiForgeryToken()
+                                              <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="delete-supplier-@item.SupplierId" data-delete-record-name="@item.CompanyName" data-delete-entity-name="supplier" title="Archive supplier" aria-label="Archive supplier @item.CompanyName"><i class="bi bi-archive"></i></button>
+                                          </form>
+                                      }
                                   </div>
                             </td>
                         </tr>

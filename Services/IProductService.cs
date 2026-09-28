@@ -6,7 +6,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 {
     public interface IProductService
     {
-        Task<ProductListResult> GetPagedAsync(string? searchString, int? categoryId, int page, int pageSize = 10);
+        Task<ProductListResult> GetPagedAsync(string? searchString, int? categoryId, int page, int pageSize = 10, bool includeDeleted = false);
 
         Task<ProductCreateViewModel> PrepareCreateViewModelAsync(ProductCreateViewModel? model = null);
 
@@ -20,7 +20,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         Task<Result> DeleteAsync(int id, int currentStaffId);
 
-        Task<Product?> GetByIdAsync(int id);
+        Task<Result> RestoreAsync(int id, int currentStaffId);
+
+        Task<Product?> GetByIdAsync(int id, bool includeDeleted = false);
     }
 
     public class ProductListResult

@@ -2,7 +2,9 @@
     int page = (int)(ViewData["Page"] ?? 1);
     int totalPages = (int)(ViewData["TotalPages"] ?? 1);
     string? filter = ViewData["CurrentFilter"] as string;
+    bool archived = ViewBag.ShowArchived == true;
     string query = !string.IsNullOrEmpty(filter) ? "&searchString=" + Uri.EscapeDataString(filter) : "";
+    if (archived) query += "&archived=true";
 }
 
 @if (totalPages > 1)

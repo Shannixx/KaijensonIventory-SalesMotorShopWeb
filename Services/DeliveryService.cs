@@ -20,15 +20,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             _notificationService = notificationService;
         }
 
-public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync()
+        public async Task<List<DeliveryViewModel>> GetAwaitingDeliveryAsync(bool archived = false)
         {
             var deliveries = await _context.Deliveries
+                .Where(d => archived ? d.IsDeleted : !d.IsDeleted)
+                .Where(d => d.PurchaseOrder != null && (archived || !d.PurchaseOrder.IsDeleted) && (archived || d.Status == "Pending" || d.Status == "Partially Delivered"))
                 .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Supplier)
                 .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Staff)
                 .Include(d => d.PurchaseOrder!)
-                    .ThenInclude(p => p.Items)
+                    .ThenInclude(p => p.Items.Where(i => !i.IsDeleted))
                         .ThenInclude(i => i.Product!)
                             .ThenInclude(p => p.Category)
                 .AsNoTracking()
@@ -60,7 +62,7 @@ Items = d.PurchaseOrder != null
             return deliveries;
         }
 
-        public async Task<DeliveryViewModel?> GetDeliveryDetailsAsync(int id)
+        public async Task<DeliveryViewModel?> GetDeliveryDetailsAsync(int id, bool archived = false)
         {
             var delivery = await _context.Deliveries
                 .Include(d => d.PurchaseOrder!)
@@ -68,11 +70,11 @@ Items = d.PurchaseOrder != null
                 .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Staff)
                 .Include(d => d.PurchaseOrder!)
-                    .ThenInclude(p => p.Items)
+                    .ThenInclude(p => p.Items.Where(i => !i.IsDeleted))
                         .ThenInclude(i => i.Product!)
                             .ThenInclude(p => p.Category)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.DeliveryId == id);
+                .FirstOrDefaultAsync(d => d.DeliveryId == id && (archived ? d.IsDeleted : !d.IsDeleted));
 
             if (delivery == null) return null;
 
@@ -134,17 +136,20 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
             };
         }
 
-public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId, string? remarks = null)
+        public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId, string? remarks = null)
         {
             var delivery = await _context.Deliveries
                 .Include(d => d.PurchaseOrder!)
-                    .ThenInclude(p => p.Items)
+                    .ThenInclude(p => p.Items.Where(i => !i.IsDeleted))
                         .ThenInclude(i => i.Product!)
                             .ThenInclude(p => p.Category)
-                .FirstOrDefaultAsync(d => d.DeliveryId == id);
+                .FirstOrDefaultAsync(d => d.DeliveryId == id && !d.IsDeleted && !d.PurchaseOrder!.IsDeleted);
 
             if (delivery == null)
                 return Result.Failure(null, "The delivery could not be found.");
+
+            if (delivery.PurchaseOrder?.IsDeleted == true)
+                return Result.Failure(null, "The associated purchase order is archived.");
 
             if (delivery.Status != "Pending" && delivery.Status != "Partially Delivered")
                 return Result.Failure(null, $"Cannot mark delivery as delivered with status '{delivery.Status}'.");
@@ -152,6 +157,9 @@ public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuanti
             var order = delivery.PurchaseOrder;
             if (order == null)
                 return Result.Failure(null, "Associated purchase order not found.");
+
+            if (order.Items.Any(i => i.Product == null || i.Product.IsDeleted))
+                return Result.Failure(null, "The purchase order contains an archived or missing product.");
 
             if (order.Items.All(i => i.Product == null))
                 return Result.Failure(null, "The purchase order has no deliverable items.");
@@ -287,6 +295,61 @@ public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuanti
         {
             if (oldQty + newQty == 0) return newUnitCost;
             return ((oldQty * oldAvgCost) + (newQty * newUnitCost)) / (oldQty + newQty);
+        }
+
+        public async Task<Result> ArchiveAsync(int id, int currentStaffId)
+        {
+            var delivery = await _context.Deliveries.FirstOrDefaultAsync(d => d.DeliveryId == id && !d.IsDeleted);
+            if (delivery == null) return Result.Failure(null, "The delivery could not be found or is already archived.");
+
+            // Archiving is visibility-only; posted receipt events and their inventory effects remain unchanged.
+            bool hasHistory = await _context.DeliveryItems.AnyAsync(di => di.DeliveryId == id);
+            if (hasHistory && delivery.Status != "Delivered" && delivery.Status != "Partially Delivered")
+                return Result.Failure(null, "The delivery cannot be archived in its current state.");
+
+            delivery.IsDeleted = true;
+            delivery.DeletedAt = DateTime.UtcNow;
+            delivery.DeletedBy = currentStaffId;
+
+            if (delivery.PurchaseOrderId > 0)
+            {
+                var order = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.PurchaseOrderId == delivery.PurchaseOrderId && !p.IsDeleted);
+                if (order != null)
+                {
+                    order.IsDeleted = true;
+                    order.DeletedAt = delivery.DeletedAt;
+                    order.DeletedBy = currentStaffId;
+                }
+            }
+
+            await _activityLogService.LogAsync("Archive Delivery", "Delivery", $"Archived delivery {id} without changing inventory.", currentStaffId);
+            await _context.SaveChangesAsync();
+            return Result.Success();
+        }
+
+        public async Task<Result> RestoreAsync(int id, int currentStaffId)
+        {
+            var delivery = await _context.Deliveries
+                .Include(d => d.PurchaseOrder)
+                .FirstOrDefaultAsync(d => d.DeliveryId == id && d.IsDeleted);
+            if (delivery == null) return Result.Failure(null, "The archived delivery could not be found.");
+            if (delivery.PurchaseOrder?.IsDeleted == true)
+                return Result.Failure(null, "Restore the archived purchase order before restoring this delivery.");
+
+            var activeProducts = await _context.PurchaseOrderItems
+                .Where(i => i.PurchaseOrderId == delivery.PurchaseOrderId && !i.IsDeleted)
+                .Join(_context.Products, i => i.ProductId, p => p.ProductId, (i, p) => p)
+                .Where(p => p.IsDeleted)
+                .AnyAsync();
+            if (activeProducts)
+                return Result.Failure(null, "The delivery cannot be restored while a linked product is archived.");
+
+            delivery.IsDeleted = false;
+            delivery.DeletedAt = null;
+            delivery.DeletedBy = null;
+            await _activityLogService.LogAsync("Restore Delivery", "Delivery", $"Restored delivery {id} without replaying inventory.", currentStaffId);
+            await _context.SaveChangesAsync();
+            return Result.Success();
         }
 
         private static string CalculateStockStatus(int qty)

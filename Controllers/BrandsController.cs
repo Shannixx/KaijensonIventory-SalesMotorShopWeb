@@ -53,15 +53,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> Index(string? searchString, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, int page = 1, bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
+            if (archived && !IsAdmin()) return Forbid();
 
             try
             {
                 int pageSize = 10;
-                IQueryable<Brand> query = _context.Brands.AsNoTracking();
+                IQueryable<Brand> query = _context.Brands.AsNoTracking()
+                    .Where(b => archived ? b.IsDeleted : !b.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
@@ -83,7 +85,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 var brandNames = brands.Select(b => b.BrandName).ToList();
 
                 var productCounts = await _context.Products
-                    .Where(p => p.Brand != null && brandNames.Contains(p.Brand))
+                    .Where(p => !p.IsDeleted && p.Brand != null && brandNames.Contains(p.Brand))
                     .GroupBy(p => p.Brand!)
                     .Select(g => new { Brand = g.Key, Count = g.Count() })
                     .ToListAsync();
@@ -95,6 +97,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 ViewData["Page"] = page;
                 ViewData["TotalPages"] = (int)Math.Ceiling(total / (double)pageSize);
                 ViewBag.CanDelete = IsAdmin();
+                ViewBag.ShowArchived = archived;
                 return View(brands);
             }
             catch (Exception ex)
@@ -105,10 +108,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
         }
 
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int? id, bool archived = false)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
+            if (archived && !IsAdmin()) return Forbid();
 
             if (id == null) return NotFound();
 
@@ -118,10 +122,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Include(b => b.Supplier)
                     .Include(b => b.CreatedByStaff)
                     .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.BrandId == id);
+                .FirstOrDefaultAsync(b => b.BrandId == id && (archived ? b.IsDeleted : !b.IsDeleted));
                  if (brand == null) return NotFound();
+                 ViewBag.ShowArchived = archived;
 
-                var productCount = await _context.Products.CountAsync(p => p.Brand != null && p.Brand == brand.BrandName);
+                var productCount = await _context.Products.CountAsync(p => !p.IsDeleted && p.Brand != null && p.Brand == brand.BrandName);
                 ViewBag.ProductCount = productCount;
 
                 return View(brand);
@@ -164,7 +169,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 }
 
                 // Duplicate name check
-                bool exists = await _context.Brands.AnyAsync(b => b.BrandName == model.BrandName.Trim());
+                bool exists = await _context.Brands.AnyAsync(b => !b.IsDeleted && b.BrandName == model.BrandName.Trim());
                 if (exists)
                 {
                     ModelState.AddModelError(nameof(model.BrandName), "A brand with this name already exists.");
@@ -220,7 +225,7 @@ public async Task<IActionResult> Edit(int? id)
                 var brand = await _context.Brands
                     .Include(b => b.Supplier)
                     .Include(b => b.CreatedByStaff)
-                    .FirstOrDefaultAsync(b => b.BrandId == id);
+                    .FirstOrDefaultAsync(b => b.BrandId == id && !b.IsDeleted);
                 if (brand == null) return NotFound();
 
                 var model = new BrandFormViewModel
@@ -271,7 +276,7 @@ public async Task<IActionResult> Edit(int? id)
             try
             {
                 // Duplicate name check excluding current
-                bool exists = await _context.Brands.AnyAsync(b => b.BrandName == model.BrandName.Trim() && b.BrandId != id);
+                bool exists = await _context.Brands.AnyAsync(b => !b.IsDeleted && b.BrandName == model.BrandName.Trim() && b.BrandId != id);
                 if (exists)
                 {
                     ModelState.AddModelError(nameof(model.BrandName), "A brand with this name already exists.");
@@ -279,13 +284,13 @@ public async Task<IActionResult> Edit(int? id)
                     return View(model);
                 }
 
-                var existing = await _context.Brands.FindAsync(id);
+                var existing = await _context.Brands.FirstOrDefaultAsync(b => b.BrandId == id && !b.IsDeleted);
                 if (existing == null) return NotFound();
 
                 // Check if BrandName change is allowed
                 if (!string.Equals(existing.BrandName, model.BrandName.Trim(), StringComparison.Ordinal))
                 {
-                    int prodCount = await _context.Products.CountAsync(p => p.Brand != null && p.Brand == existing.BrandName);
+                    int prodCount = await _context.Products.CountAsync(p => !p.IsDeleted && p.Brand != null && p.Brand == existing.BrandName);
                     if (prodCount > 0)
                     {
                         ModelState.AddModelError(nameof(model.BrandName), "This brand name cannot be changed because products are assigned to it.");
@@ -300,8 +305,6 @@ public async Task<IActionResult> Edit(int? id)
                 existing.CountryOrigin = model.CountryOrigin.Trim();
 
                 existing.SupplierId = model.SupplierId;
-
-                await _context.SaveChangesAsync();
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
@@ -350,36 +353,30 @@ public async Task<IActionResult> Edit(int? id)
 
             try
             {
-                var brand = await _context.Brands.FindAsync(id);
+                var brand = await _context.Brands.FirstOrDefaultAsync(b => b.BrandId == id && !b.IsDeleted);
                 if (brand == null)
                 {
                     TempData["ErrorMessage"] = "The brand could not be found.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                int productCount = await _context.Products.CountAsync(p => p.Brand == brand.BrandName);
-                if (productCount > 0)
-                {
-                    TempData["ErrorMessage"] = "This brand cannot be deleted because products are assigned to it.";
-                    return RedirectToAction(nameof(Index));
-                }
 
                 string name = brand.BrandName;
 
-                _context.Brands.Remove(brand);
-                await _context.SaveChangesAsync();
-
+                brand.IsDeleted = true;
+                brand.DeletedAt = DateTime.UtcNow;
+                brand.DeletedBy = GetStaffId();
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     StaffId = GetStaffId(),
-                    Action = "Delete",
+                    Action = "Archive",
                     Module = "Brand",
-                    Description = $"Deleted brand: {name}",
+                    Description = $"Archived brand: {name} ({brand.BrandId})",
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"Brand '{name}' deleted successfully.";
+                TempData["SuccessMessage"] = $"Brand '{name}' archived successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -388,6 +385,33 @@ public async Task<IActionResult> Edit(int? id)
                 TempData["ErrorMessage"] = "The brand could not be deleted because it is still referenced by other records.";
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var accessCheck = CheckAccess();
+            if (accessCheck != null) return accessCheck;
+            if (!IsAdmin()) return Forbid();
+
+            var brand = await _context.Brands.FirstOrDefaultAsync(b => b.BrandId == id && b.IsDeleted);
+            if (brand == null) return NotFound();
+
+            brand.IsDeleted = false;
+            brand.DeletedAt = null;
+            brand.DeletedBy = null;
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                StaffId = GetStaffId(),
+                Action = "Restore",
+                Module = "Brand",
+                Description = $"Restored brand: {brand.BrandName} ({brand.BrandId})",
+                Timestamp = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Brand '{brand.BrandName}' restored successfully.";
+            return RedirectToAction(nameof(Index));
         }
     }
 }
