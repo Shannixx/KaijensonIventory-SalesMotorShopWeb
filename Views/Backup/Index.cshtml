@@ -1,0 +1,141 @@
+@using KaijensonIventory_SalesMotorShopWeb.Models
+@model List<DatabaseBackup>
+
+@{
+    ViewData["Title"] = "Data Backup";
+    var latestBackup = ViewBag.LatestBackup as DatabaseBackup;
+    var databaseStatus = ViewBag.DatabaseStatus as string ?? "Unknown";
+    var backupHistoryAvailable = ViewBag.BackupHistoryAvailable is bool available && available;
+    var restorableBackups = Model.Where(backup => backup.Status == DatabaseBackup.SuccessfulStatus).ToList();
+}
+
+<div class="container-fluid px-0">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Data Backup and Recovery</h1>
+        <p class="text-muted mb-0">Create, review, restore, and remove database backups.</p>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small mb-1">Latest Backup</div>
+                    @if (latestBackup == null && !backupHistoryAvailable)
+                    {
+                        <div class="fw-semibold">Unavailable</div>
+                        <div class="small text-muted">Backup history could not be loaded.</div>
+                    }
+                    else if (latestBackup == null)
+                    {
+                        <div class="fw-semibold">No backups yet</div>
+                    }
+                    else
+                    {
+                        <div class="fw-semibold">@latestBackup.Status</div>
+                        <div class="small text-muted">@latestBackup.FileName</div>
+                        <div class="small text-muted">@latestBackup.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small mb-1">Database Status</div>
+                    <div class="fw-semibold">@databaseStatus</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h2 class="h5 mb-0">Backup and Restore</h2>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-end gap-3">
+                <form asp-action="BackupNow" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-database-add me-1"></i>Backup Now
+                    </button>
+                </form>
+
+                <form asp-action="Restore" method="post" onsubmit="return confirm('Restore the selected backup over the current database? This will replace current data and may disconnect users.');">
+                    @Html.AntiForgeryToken()
+                    <div class="d-flex flex-wrap align-items-end gap-2">
+                        <div>
+                            <label for="backupId" class="form-label mb-1">Successful backup</label>
+                            <select id="backupId" name="backupId" class="form-select" required disabled="@(restorableBackups.Count == 0 ? "disabled" : null)">
+                                <option value="">Select a backup</option>
+                                @foreach (var backup in restorableBackups)
+                                {
+                                    <option value="@backup.BackupId">@backup.FileName — @backup.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-danger" disabled="@(restorableBackups.Count == 0 ? "disabled" : null)">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="form-text mt-3">Restore replaces the configured database. Only a successful, validated backup of this database can be restored.</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-white">
+            <h2 class="h5 mb-0">Backup History</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Filename</th>
+                        <th scope="col">Date / Time</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Type</th>
+                        <th scope="col" class="text-end">Size</th>
+                        <th scope="col" class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">@(backupHistoryAvailable ? "No backup history available." : "Backup history could not be loaded; review the error message above.")</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var backup in Model)
+                        {
+                            <tr>
+                                <td class="text-break">@backup.FileName</td>
+                                <td>@backup.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td>
+                                <td><span class="badge text-bg-secondary">@backup.Status</span></td>
+                                <td>@backup.BackupType</td>
+                                <td class="text-end">@(backup.FileSize > 0 ? $"{backup.FileSize:N0} bytes" : "—")</td>
+                                <td class="text-end">
+                                    @if (backup.Status != DatabaseBackup.DeletedStatus)
+                                    {
+                                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Delete this backup file? Its history record will remain.');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="backupId" value="@backup.BackupId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

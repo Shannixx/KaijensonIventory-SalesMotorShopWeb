@@ -25,6 +25,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         public DbSet<SalesTransaction> SalesTransactions => Set<SalesTransaction>();
         public DbSet<SalesItem> SalesItems => Set<SalesItem>();
         public DbSet<Notification> Notifications => Set<Notification>();
+        public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
 
         // Service job / work order entities (Service remains the catalog definition)
         public DbSet<ServiceJob> ServiceJobs => Set<ServiceJob>();
@@ -136,6 +137,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
 
             modelBuilder.Entity<ActivityLog>()
                 .HasOne(l => l.Staff).WithMany().HasForeignKey(l => l.StaffId).OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<DatabaseBackup>()
+                .HasOne(b => b.CreatedByStaff).WithMany().HasForeignKey(b => b.CreatedBy).OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Category>()
                 .HasOne(c => c.CreatedByStaff)

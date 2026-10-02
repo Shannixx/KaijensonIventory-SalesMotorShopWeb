@@ -114,7 +114,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         public IActionResult Register()
         {
-            // Public: a new Manager applicant must be able to register before logging in.
+            // Public: a new Staff member can register before logging in.
             return View();
         }
 
@@ -150,8 +150,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     StaffName = model.StaffName.Trim(),
                     UserName = model.Username.Trim(),
                     PasswordHash = _hashing.HashPassword(model.Password),
-                    Role = "Manager",
-                    Status = Staff.InactiveStatus
+                    Role = "Staff",
+                    Status = Staff.ActiveStatus
                 };
 
                 _context.Staff.Add(staff);
@@ -159,13 +159,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Action = "Manager Registration",
+                    Action = "Staff Registration",
                     Module = "Auth",
-                    Description = $"Manager registration submitted for {staff.StaffName}."
+                    Description = $"Staff registration completed for {staff.StaffName}."
                 });
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Registration submitted successfully. An Admin must activate your account before you can log in.";
+                TempData["SuccessMessage"] = "Registration successful. You can log in now.";
                 return RedirectToAction("Login");
             }
             catch

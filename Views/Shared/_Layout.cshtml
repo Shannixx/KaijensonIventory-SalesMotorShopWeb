@@ -24,6 +24,7 @@
         "LowStock" => ("Low Stock", "bi-exclamation-triangle-fill", "kx-notif-warning"),
         "OutOfStock" => ("Out of Stock", "bi-x-octagon-fill", "kx-notif-danger"),
         "Reorder" => ("Reorder", "bi-arrow-repeat", "kx-notif-reorder"),
+        "NewStock" => ("New Stock", "bi-box-seam-fill", "kx-notif-info"),
         _ => ("Notification", "bi-bell", "kx-notif-info")
     };
     string TimeAgo(DateTime created)
@@ -147,6 +148,11 @@
                         <li class="nav-item">
                             <a asp-controller="ActivityLog" asp-action="Index" class="nav-link @(IsActive("ActivityLog") ? "active" : "")" data-title="Activity Log" aria-current="@ActiveAttr("ActivityLog")">
                                 <i class="bi bi-clock-history"></i><span>Activity Log</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a asp-controller="Backup" asp-action="Index" class="nav-link @(IsActive("Backup") ? "active" : "")" data-title="Backup" aria-current="@ActiveAttr("Backup")">
+                                <i class="bi bi-database"></i><span>Backup</span>
                             </a>
                         </li>
                     }

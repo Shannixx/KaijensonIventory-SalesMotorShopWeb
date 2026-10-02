@@ -28,7 +28,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 TempData["ErrorMessage"] = "Session expired. Please log in again.";
                 return RedirectToAction("Login", "Account");
             }
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");

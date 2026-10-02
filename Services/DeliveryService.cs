@@ -167,6 +167,7 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
             var restockedProducts = new List<Product>();
+            var receivedStockByProduct = new Dictionary<int, (Product Product, int QuantityReceived)>();
             
             bool anyReceived = false;
             foreach (var item in order.Items.Where(i => i.Product != null))
@@ -217,8 +218,15 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
                 item.Product!.StockStatus = StockHelper.GetStockStatus(item.Product!.QuantityOnHand);
                 item.Product!.LastUpdated = DateTime.Now;
 
-                // Track restocked products for post-save notification evaluation
-                if (item.Product != null) restockedProducts.Add(item.Product);
+                // Track stock-in quantities per product for one event notification per receipt.
+                if (item.Product is { } product)
+                {
+                    restockedProducts.Add(product);
+                    if (receivedStockByProduct.TryGetValue(product.ProductId, out var existingStock))
+                        receivedStockByProduct[product.ProductId] = (product, existingStock.QuantityReceived + receiveNow);
+                    else
+                        receivedStockByProduct[product.ProductId] = (product, receiveNow);
+                }
 
                 // Update PO item received quantity
                 item.ReceivedQuantity += receiveNow;
@@ -255,6 +263,17 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
 
             await _activityLogService.LogAsync("Mark Delivery", "Delivery",
                 $"Delivery for PO {order.PurchaseOrderNumber} processed. Status: {delivery.Status}", currentStaffId);
+
+            // Emit an event notification for each product actually received in this operation.
+            foreach (var stockIn in receivedStockByProduct.Values)
+            {
+                string unitLabel = stockIn.QuantityReceived == 1 ? "unit" : "units";
+                await _notificationService.CreateAsync(
+                    stockIn.Product.ProductId,
+                    "NewStock",
+                    $"{stockIn.QuantityReceived} {unitLabel} received for {stockIn.Product.ProductName}. Current stock: {stockIn.Product.QuantityOnHand}.",
+                    currentStaffId);
+            }
 
             // Notification evaluation after stock increased (recovery + reorder check)
             foreach (var product in restockedProducts)

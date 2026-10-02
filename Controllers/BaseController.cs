@@ -29,13 +29,21 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                            string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase);
                 }
 
+        protected bool IsAdminManagerOrStaff()
+        {
+            string? role = HttpContext.Session.GetString("StaffRole");
+            return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(role, "Staff", StringComparison.OrdinalIgnoreCase);
+        }
+
         protected IActionResult? RedirectIfNotOwnerOrManager()
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
             if (!IsOwnerOrManager())
                             {
-                                TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
+                                TempData["ErrorMessage"] = "Access denied. Admin privileges required.";
                                 return RedirectToAction("Index", "Dashboard");
                             }
             return null;

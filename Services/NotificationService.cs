@@ -146,6 +146,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             "LowStock" => "Low Stock",
             "OutOfStock" => "Out of Stock",
             "Reorder" => "Reorder",
+            "NewStock" => "New Stock",
             _ => "Notification"
         };
 

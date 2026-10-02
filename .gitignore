@@ -257,6 +257,9 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# Keep the MVC backup module view under source control.
+!Views/Backup/
+!Views/Backup/Index.cshtml
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

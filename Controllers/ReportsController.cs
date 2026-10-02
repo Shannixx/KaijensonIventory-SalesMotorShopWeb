@@ -29,7 +29,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -155,7 +155,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -219,7 +219,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -266,7 +266,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -328,7 +328,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -372,7 +372,7 @@ public async Task<IActionResult> ExportPurchaseOrdersPdf([FromQuery] ReportFilte
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -441,7 +441,7 @@ public async Task<IActionResult> ExportPurchaseOrdersPdf([FromQuery] ReportFilte
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -494,7 +494,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -571,7 +571,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -629,7 +629,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -711,7 +711,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -760,7 +760,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -815,7 +815,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -946,7 +946,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
@@ -987,7 +987,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            if (!IsOwnerOrManager())
+            if (!IsAdminManagerOrStaff())
             {
                 TempData["ErrorMessage"] = "Access denied. Admin or Manager privileges required.";
                 return RedirectToAction("Index", "Dashboard");
