@@ -93,6 +93,8 @@ foreach (var item in cart.Items)
         item.Subtotal = 0m;
     }
 }
+var serialError = await RefreshCartSerialsAsync(cart);
+if (serialError != null) TempData["ErrorMessage"] = serialError;
 HttpContext.Session.SetObject("Cart", cart);
 
             var viewModel = new CustomerPurchaseOrderViewModel
@@ -148,6 +150,23 @@ HttpContext.Session.SetObject("Cart", cart);
                 cart.Items.Add(new SaleItemViewModel { ProductId = productId, Quantity = quantity, IsSerialized = product.IsSerialized });
             }
 
+            if (product.IsSerialized)
+            {
+                var available = await _context.SerialUnits.AsNoTracking()
+                    .Where(s => s.ProductId == productId && s.Status == "Available" && s.SalesTransactionId == null)
+                    .OrderBy(s => s.SerialUnitId).Take(quantity)
+                    .Select(s => s.SerialNumber).ToListAsync();
+                if (available.Count != quantity)
+                {
+                    TempData["ErrorMessage"] = "Not enough serialized units are available for this product.";
+                    return RedirectToAction(nameof(Search), new { query });
+                }
+                cart.SerialNumbers[productId] = available;
+            }
+            else
+            {
+                cart.SerialNumbers.Remove(productId);
+            }
             HttpContext.Session.SetObject("Cart", cart);
             return RedirectToAction(nameof(Search), new { query });
         }
@@ -178,6 +197,9 @@ HttpContext.Session.SetObject("Cart", cart);
                     item.Subtotal = 0m;
                 }
             }
+
+            var serialError = await RefreshCartSerialsAsync(cart);
+            if (serialError != null) TempData["ErrorMessage"] = serialError;
 
             // Persist any updates back to session
             HttpContext.Session.SetObject("Cart", cart);
@@ -210,6 +232,13 @@ HttpContext.Session.SetObject("Cart", cart);
                     item.Subtotal = 0m;
                 }
             }
+            var serialError = await RefreshCartSerialsAsync(cart);
+            if (serialError != null)
+            {
+                TempData["ErrorMessage"] = serialError;
+                return RedirectToAction(nameof(Search));
+            }
+            HttpContext.Session.SetObject("Cart", cart);
             // Generate a checkout key and store it in TempData for the payment view
             var checkoutKey = Guid.NewGuid().ToString("N");
             TempData["CheckoutKey"] = checkoutKey;
@@ -274,76 +303,51 @@ HttpContext.Session.SetObject("Cart", cart);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveSerialNumbers([FromForm] Dictionary<int, List<string>> SerialNumbers, string? query = null)
+        public async Task<IActionResult> SaveSerialNumbers(string? query = null)
         {
             var accessRedirect = RedirectIfNotAuthenticated();
             if (accessRedirect != null) return accessRedirect;
 
             var cart = HttpContext.Session.GetObject<CartViewModel>("Cart") ?? new CartViewModel();
-
-            if (SerialNumbers == null)
+            // Serial identities come only from existing inventory, never from posted values.
+            var error = await RefreshCartSerialsAsync(cart);
+            if (error != null)
             {
-                TempData["ErrorMessage"] = "Serial numbers were not provided.";
+                TempData["ErrorMessage"] = error;
                 return RedirectToAction(nameof(Search), new { query });
             }
-
-            var cleaned = new Dictionary<int, List<string>>();
-            var errors = new List<string>();
-
-foreach (var kvp in SerialNumbers)
-                {
-                    var productId = kvp.Key;
-                    var serialList = kvp.Value.Select(s => s?.Trim() ?? string.Empty).ToList();
-
-                    var cartItem = cart.Items.FirstOrDefault(i => i.ProductId == productId);
-                    if (cartItem == null)
-                    {
-                        errors.Add($"Product {productId} is not in the cart.");
-                        continue;
-                    }
-
-                    // Verify product serialization from database
-                    var product = await _productService.GetByIdAsync(productId);
-                    bool isSerialized = product?.IsSerialized ?? false;
-                    // Update cart item flag to stay in sync
-                    cartItem.IsSerialized = isSerialized;
-
-                    if (!isSerialized)
-                    {
-                        // Ensure any stale serial numbers are cleared
-                        cart.SerialNumbers.Remove(productId);
-                        // Non-serialized product: no serial numbers required
-                        continue;
-                    }
-
-                    if (serialList.Count != cartItem.Quantity)
-                    {
-                        errors.Add($"Serial count ({serialList.Count}) does not match quantity ({cartItem.Quantity}) for product {cartItem.ProductName}.");
-                    }
-
-                    if (serialList.Any(s => string.IsNullOrWhiteSpace(s)))
-                    {
-                        errors.Add($"Serial numbers cannot be empty for product {cartItem.ProductName}.");
-                    }
-
-                    if (serialList.Distinct().Count() != serialList.Count)
-                    {
-                        errors.Add($"Duplicate serial numbers provided for product {cartItem.ProductName}.");
-                    }
-
-                    cleaned[productId] = serialList;
-                }
-
-            if (errors.Any())
-            {
-                TempData["ErrorMessage"] = string.Join(" ", errors);
-                // Do not overwrite existing valid serial data
-                return RedirectToAction(nameof(Search), new { query });
-            }
-
-            cart.SerialNumbers = cleaned;
             HttpContext.Session.SetObject("Cart", cart);
             return RedirectToAction(nameof(Confirm));
+        }
+
+        private async Task<string?> RefreshCartSerialsAsync(CartViewModel cart)
+        {
+            foreach (var item in cart.Items)
+            {
+                var product = await _productService.GetByIdAsync(item.ProductId);
+                if (product == null)
+                    return $"Product {item.ProductName} is no longer available.";
+                item.IsSerialized = product.IsSerialized;
+                if (!item.IsSerialized)
+                {
+                    cart.SerialNumbers.Remove(item.ProductId);
+                    continue;
+                }
+
+                var available = await _context.SerialUnits.AsNoTracking()
+                    .Where(s => s.ProductId == item.ProductId && s.Status == "Available" && s.SalesTransactionId == null)
+                    .OrderBy(s => s.SerialUnitId).Take(item.Quantity)
+                    .Select(s => s.SerialNumber).ToListAsync();
+                if (available.Count != item.Quantity)
+                {
+                    cart.SerialNumbers.Remove(item.ProductId);
+                    return $"Insufficient available serial numbers for {item.ProductName}.";
+                }
+                cart.SerialNumbers[item.ProductId] = available;
+            }
+            foreach (var productId in cart.SerialNumbers.Keys.Except(cart.Items.Select(i => i.ProductId)).ToList())
+                cart.SerialNumbers.Remove(productId);
+            return null;
         }
 
         [HttpPost]

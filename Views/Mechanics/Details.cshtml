@@ -26,17 +26,6 @@
             <dt class="col-sm-3">Contact Number</dt>
             <dd class="col-sm-9">@Model.ContactNumber</dd>
 
-            <dt class="col-sm-3">Email Address</dt>
-            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.EmailAddress) ? "Not Provided" : Model.EmailAddress)</dd>
-
-            <dt class="col-sm-3">Address</dt>
-            <dd class="col-sm-9">@Model.Address</dd>
-
-            <dt class="col-sm-3">Years of Experience</dt>
-            <dd class="col-sm-9">
-                @(Model.YearsOfExperience.HasValue ? (Model.YearsOfExperience == 0 ? "Less than 1 year" : Model.YearsOfExperience + " year" + (Model.YearsOfExperience == 1 ? "" : "s")) : "Not Provided")
-            </dd>
-
             <dt class="col-sm-3">Status</dt>
             <dd class="col-sm-9">
     @if (Model.Status == "Active")

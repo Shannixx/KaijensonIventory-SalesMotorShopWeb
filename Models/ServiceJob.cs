@@ -9,13 +9,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
     /// </summary>
     public class ServiceJob
     {
+        public const string StatusPending = "Pending";
         public const string StatusStillWorking = "Still Working";
         public const string StatusFinished = "Finished";
         public const string PaymentUnpaid = "Unpaid";
         public const string PaymentPaid = "Paid";
 
         public static readonly string[] AllStatuses =
-            { StatusStillWorking, StatusFinished };
+            { StatusPending, StatusStillWorking, StatusFinished };
 
         public static readonly string[] AllPaymentStatuses =
             { PaymentUnpaid, PaymentPaid };
@@ -30,6 +31,17 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Service")]
         public int ServiceId { get; set; }
         public Service? Service { get; set; }
+
+        [Required, StringLength(150)]
+        public string ServiceNameSnapshot { get; set; } = string.Empty;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal BasePriceSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TotalPrice { get; set; }
+
+        public ICollection<ServiceJobAddOn> AddOns { get; set; } = new List<ServiceJobAddOn>();
 
         [Display(Name = "Mechanic")]
         public int MechanicId { get; set; }

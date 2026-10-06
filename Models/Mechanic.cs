@@ -18,11 +18,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Contact Number")]
         public string ContactNumber { get; set; } = string.Empty;
 
-        [Required, EmailAddress, StringLength(150)]
+        [EmailAddress, StringLength(150)]
         [Display(Name = "Email Address")]
         public string EmailAddress { get; set; } = string.Empty;
 
-        [Required, StringLength(250)]
+        [StringLength(250)]
         public string Address { get; set; } = string.Empty;
 
         [Range(0, 60)]

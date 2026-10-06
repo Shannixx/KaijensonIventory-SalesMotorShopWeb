@@ -30,6 +30,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
         // Service job / work order entities (Service remains the catalog definition)
         public DbSet<ServiceJob> ServiceJobs => Set<ServiceJob>();
         public DbSet<ServiceHistory> ServiceHistories => Set<ServiceHistory>();
+        public DbSet<ServiceJobAddOn> ServiceJobAddOns => Set<ServiceJobAddOn>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -90,6 +91,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.PurchaseOrder).WithMany().HasForeignKey(p => p.PurchaseOrderId).OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<SalesTransaction>()
+                .HasIndex(t => t.CheckoutKey).IsUnique();
+
             // Audit relationship for CreatedByStaff (Product)
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.CreatedByStaff)
@@ -108,6 +112,22 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
                 .WithMany()
                 .HasForeignKey(s => s.CreatedBy)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Service>()
+                .Property(s => s.IsAddOn).HasDefaultValue(false);
+
+            modelBuilder.Entity<ServiceJobAddOn>()
+                .HasKey(a => new { a.ServiceJobId, a.AddOnServiceId });
+
+            modelBuilder.Entity<ServiceJobAddOn>()
+                .HasOne(a => a.ServiceJob).WithMany(j => j.AddOns)
+                .HasForeignKey(a => a.ServiceJobId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ServiceJobAddOn>()
+                .HasOne(a => a.AddOnService).WithMany()
+                .HasForeignKey(a => a.AddOnServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // ServiceJob relationships
             modelBuilder.Entity<ServiceJob>()
@@ -162,6 +182,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
             modelBuilder.Entity<PurchaseOrderItem>()
                 .HasOne(i => i.Product).WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
 
+            // SQL Server trigger protects serial identity; EF must not use OUTPUT without INTO.
+            modelBuilder.Entity<SerialUnit>()
+                .ToTable(table => table.HasTrigger("TR_SerialUnits_ImmutableSerialNumber"));
+
             // Serial unit unique constraint
             modelBuilder.Entity<SerialUnit>()
                 .HasIndex(s => s.SerialNumber).IsUnique();
@@ -199,6 +223,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Data
                 .WithMany()
                 .HasForeignKey(di => di.PurchaseOrderItemId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DeliveryItem>()
+                .HasIndex(di => new { di.DeliveryId, di.PurchaseOrderItemId, di.ReceiptKey })
+                .IsUnique()
+                .HasFilter("[ReceiptKey] IS NOT NULL");
 
             modelBuilder.Entity<Category>().HasData(
                 new Category

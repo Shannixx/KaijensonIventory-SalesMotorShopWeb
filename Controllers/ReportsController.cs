@@ -666,7 +666,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
                                     table.Cell().Element(Container => Container.Padding(2)).Text("Status");
                                     table.Cell().Element(Container => Container.Padding(2)).Text("Amount Received");
                                     table.Cell().Element(Container => Container.Padding(2)).Text("Payment Status");
-                                    table.Cell().Element(Container => Container.Padding(2)).Text(job.Service?.ServiceName ?? "");
+                                    table.Cell().Element(Container => Container.Padding(2)).Text(job.ServiceNameSnapshot ?? "");
                                     table.Cell().Element(Container => Container.Padding(2)).Text(job.Mechanic?.MechanicName ?? "");
                                     table.Cell().Element(Container => Container.Padding(2)).Text(job.Status);
                                     table.Cell().Element(Container => Container.Padding(2)).Text(job.AmountReceived.ToString("F2"));
@@ -735,7 +735,7 @@ public async Task<IActionResult> ExportDeliveriesPdf([FromQuery] ReportFilterVie
                     ws.Cell(row,1).Value = job.ServiceJobNumber;
                     ws.Cell(row,2).Value = job.ServiceDate;
                     ws.Cell(row,3).Value = job.CustomerName;
-                    ws.Cell(row,4).Value = job.Service?.ServiceName;
+                    ws.Cell(row,4).Value = job.ServiceNameSnapshot;
                     ws.Cell(row,5).Value = job.Mechanic?.MechanicName;
                     ws.Cell(row,6).Value = job.Status;
                     ws.Cell(row,7).Value = job.AmountReceived;

@@ -4,19 +4,8 @@
 <div class="page-header">
     <div>
         <h1>Delivery</h1>
-        <p>Purchase orders awaiting delivery.</p>
+        <p>Purchase order deliveries.</p>
     </div>
-    @if (Context.Session.GetString("StaffRole") == "Admin")
-    {
-        @if (ViewBag.ShowArchived == true)
-        {
-            <a asp-action="Index" class="btn btn-outline-secondary">Active Deliveries</a>
-        }
-        else
-        {
-            <a asp-action="Index" asp-route-archived="true" class="btn btn-outline-secondary">Archived Deliveries</a>
-        }
-    }
 </div>
 
 <div class="card">
@@ -60,13 +49,20 @@
                             <td class="action-cell">
                                 <div class="action-buttons">
                                     <a asp-action="Details" asp-route-id="@item.DeliveryId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-deliver" title="View Delivery" aria-label="View delivery for @item.PurchaseOrderNumber"><i class="bi bi-truck"></i></a>
+                                    @if (Context.Session.GetString("StaffRole") == "Admin" && ViewBag.ShowArchived != true)
+                                    {
+                                        <form asp-action="Archive" asp-route-id="@item.DeliveryId" method="post" id="archive-delivery-@item.DeliveryId" class="action-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="button" class="btn btn-icon btn-icon-delete" data-delete-trigger data-delete-form-id="archive-delivery-@item.DeliveryId" data-delete-record-name="@item.PurchaseOrderNumber" data-delete-entity-name="delivery" title="Archive delivery" aria-label="Archive delivery for @item.PurchaseOrderNumber"><i class="bi bi-archive"></i></button>
+                                        </form>
+                                    }
                                 </div>
                             </td>
                         </tr>
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="6" class="text-center py-4 text-muted">No purchase orders awaiting delivery.</td></tr>
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No deliveries found.</td></tr>
                     }
                 </tbody>
             </table>

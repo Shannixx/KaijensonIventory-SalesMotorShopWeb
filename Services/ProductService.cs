@@ -91,6 +91,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 CategoryId = product.CategoryId,
                 SupplierId = product.SupplierId,
                 QuantityOnHand = product.QuantityOnHand,
+                OriginalVersion = Convert.ToBase64String(product.RowVersion),
                 Description = product.Description,
                 ModelCompatibility = product.ModelCompatibility,
                 PurchaseOrderId = product.PurchaseOrderId,
@@ -162,8 +163,18 @@ var product = new Product
                     LastUpdated = DateTime.Now
                 };
 
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            await using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
+                if (product.IsSerialized && product.QuantityOnHand > 0)
+                {
+                    _context.SerialUnits.AddRange(Enumerable.Range(0, product.QuantityOnHand)
+                        .Select(_ => SerialUnit.CreateAvailable(product.ProductId)));
+                    await _context.SaveChangesAsync();
+                }
+                await transaction.CommitAsync();
+            }
 
             await _activityLogService.LogAsync("Create Product", "Product",
                 $"Product {product.ProductName} - Qty: {product.QuantityOnHand}, Price: {product.Price}",
@@ -203,9 +214,22 @@ var product = new Product
             if (!activeCategory)
                 return Result.Failure("CategoryId", "The selected category is not active.");
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await InventoryWriteLock.AcquireProductAsync(_context, model.ProductId);
             Product? existing = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == model.ProductId && !p.IsDeleted);
             if (existing == null)
                 return Result.Failure(null, "The product could not be found.");
+            await _context.Entry(existing).ReloadAsync();
+            if (existing.IsDeleted)
+                return Result.Failure(null, "The product has been archived.");
+            byte[] originalVersion;
+            try { originalVersion = Convert.FromBase64String(model.OriginalVersion); }
+            catch (FormatException) { return Result.Failure(null, "Invalid product edit form. Reload the page before saving."); }
+            if (originalVersion.Length != 8 || !existing.RowVersion.SequenceEqual(originalVersion))
+                return Result.Failure(null, "The product changed while you were editing. Reload the page before saving.");
+            if (existing.IsSerialized && !model.IsSerialized &&
+                await _context.SerialUnits.AnyAsync(s => s.ProductId == existing.ProductId))
+                return Result.Failure("IsSerialized", "Serialization cannot be disabled after serial numbers have been assigned.");
 
             existing.ProductName = model.ProductName;
             existing.Brand = model.Brand;
@@ -226,7 +250,21 @@ var product = new Product
             existing.StockStatus = StockHelper.GetStockStatus(existing.QuantityOnHand);
             existing.LastUpdated = DateTime.Now;
 
+            if (existing.IsSerialized)
+            {
+                var available = await _context.SerialUnits
+                    .Where(s => s.ProductId == existing.ProductId && s.Status == "Available" && s.SalesTransactionId == null)
+                    .OrderByDescending(s => s.SerialUnitId).ToListAsync();
+                int difference = existing.QuantityOnHand - available.Count;
+                if (difference > 0)
+                    _context.SerialUnits.AddRange(Enumerable.Range(0, difference)
+                        .Select(_ => SerialUnit.CreateAvailable(existing.ProductId)));
+                else if (difference < 0)
+                    foreach (var unit in available.Take(-difference))
+                        unit.Status = "AdjustedOut"; // Preserve serial identity and stock history.
+            }
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             // Notification evaluation after a valid stock edit
             int newQty = existing.QuantityOnHand;
@@ -258,9 +296,14 @@ var product = new Product
 
         public async Task<Result> DeleteAsync(int id, int currentStaffId)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await InventoryWriteLock.AcquireProductAsync(_context, id);
             Product? product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == id && !p.IsDeleted);
             if (product == null)
                 return Result.Failure(null, "The product could not be found or is already archived.");
+            await _context.Entry(product).ReloadAsync();
+            if (product.IsDeleted)
+                return Result.Failure(null, "The product is already archived.");
 
             if (product.QuantityOnHand > 0)
                 return Result.Failure(null, "A product with stock on hand cannot be archived. Reduce stock through an audited inventory operation first.");
@@ -277,6 +320,7 @@ var product = new Product
                 $"Product {product.ProductName} ({product.ProductId}) archived",
                 currentStaffId);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             return Result.Success();
         }
@@ -394,6 +438,9 @@ var product = new Product
         private static List<ResultError> ValidateEdit(ProductEditViewModel model)
         {
             var errors = new List<ResultError>();
+
+            if (string.IsNullOrWhiteSpace(model.OriginalVersion))
+                errors.Add(new ResultError(null, "Reload the product edit page before saving."));
 
             if (string.IsNullOrWhiteSpace(model.ProductName))
                 errors.Add(new ResultError("ProductName", "Product name is required."));

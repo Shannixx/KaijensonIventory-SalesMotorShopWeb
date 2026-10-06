@@ -4,6 +4,7 @@ using KaijensonIventory_SalesMotorShopWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003140533_AddServiceJobAddOnsAndPriceSnapshots")]
+    partial class AddServiceJobAddOnsAndPriceSnapshots
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -337,19 +340,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.Property<int>("ReceivedQuantity")
                         .HasColumnType("int");
 
-                    b.Property<string>("ReceiptKey")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
                     b.HasKey("DeliveryItemId");
 
                     b.HasIndex("DeliveryId");
 
                     b.HasIndex("PurchaseOrderItemId");
-
-                    b.HasIndex("DeliveryId", "PurchaseOrderItemId", "ReceiptKey")
-                        .IsUnique()
-                        .HasFilter("[ReceiptKey] IS NOT NULL");
 
                     b.ToTable("DeliveryItems");
                 });
@@ -535,12 +530,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 
                     b.Property<int>("ReorderLevel")
                         .HasColumnType("int");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<string>("StockStatus")
                         .IsRequired()
@@ -752,9 +741,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
 
                     b.HasKey("TransactionId");
 
-                    b.HasIndex("CheckoutKey")
-                        .IsUnique();
-
                     b.HasIndex("StaffId");
 
                     b.ToTable("SalesTransactions");
@@ -799,7 +785,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Migrations
                     b.HasIndex("SerialNumber")
                         .IsUnique();
 
-                    b.ToTable("SerialUnits", t => t.HasTrigger("TR_SerialUnits_ImmutableSerialNumber"));
+                    b.ToTable("SerialUnits");
                 });
 
             modelBuilder.Entity("KaijensonIventory_SalesMotorShopWeb.Models.Service", b =>

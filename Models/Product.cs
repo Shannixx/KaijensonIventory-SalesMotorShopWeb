@@ -41,6 +41,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Display(Name = "Quantity On Hand")]
         public int QuantityOnHand { get; set; }
 
+        // SQL Server advances this for every update, independent of clock resolution.
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
         [Range(0, int.MaxValue)]
         [Display(Name = "Reorder Level")]
         public int ReorderLevel { get; set; }

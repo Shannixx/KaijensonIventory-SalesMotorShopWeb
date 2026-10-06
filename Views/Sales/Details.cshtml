@@ -18,9 +18,9 @@
 {
     <p><strong>Service Job:</strong>
         <a asp-controller="ServiceJobs" asp-action="Details" asp-route-id="@Model.ServiceJob.ServiceJobId" class="fw-medium">@Model.ServiceJob.ServiceJobNumber</a>
-        @if (!string.IsNullOrEmpty(Model.ServiceJob.Service?.ServiceName))
+        @if (!string.IsNullOrEmpty(Model.ServiceJob.ServiceNameSnapshot))
         {
-            <span class="text-muted">— @Model.ServiceJob.Service.ServiceName</span>
+            <span class="text-muted">— @Model.ServiceJob.ServiceNameSnapshot</span>
         }
     </p>
 }

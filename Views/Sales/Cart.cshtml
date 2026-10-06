@@ -5,7 +5,7 @@
 <div class="page-header mb-3">
     <div>
         <h1>Cart</h1>
-        <p>Review items in the purchase order.</p>
+        <p>Review items in the sale.</p>
     </div>
     
 </div>
@@ -59,12 +59,13 @@ else
             @for (int i = 0; i < item.Quantity; i++)
             {
                 var existing = Model.SerialNumbers != null && Model.SerialNumbers.TryGetValue(item.ProductId, out var list) && list.Count > i ? list[i] : "";
-                <input type="text" name="SerialNumbers[@item.ProductId][@i]" value="@existing" class="form-control mb-1" />
+                <label class="form-label" for="cart-serial-@(item.ProductId)-@i">Serial Number @(i + 1)</label>
+                <input type="text" id="cart-serial-@(item.ProductId)-@i" value="@existing" class="form-control mb-1" readonly />
             }
         </div>
     }
     <button type="submit" class="btn btn-primary me-2 mt-2">Proceed to Confirm</button>
 </form>
-<a asp-action="Search" class="btn btn-app-secondary">Back to Purchase Order</a>
+<a asp-action="Search" class="btn btn-app-secondary">Back to Sales</a>
 </div>
 }

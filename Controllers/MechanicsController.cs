@@ -1,5 +1,6 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,9 +41,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                         m.MechanicId.ToString().Contains(s) ||
                         m.MechanicName.Contains(s) ||
                         (m.Specialization != null && m.Specialization.Contains(s)) ||
-                        (m.ContactNumber != null && m.ContactNumber.Contains(s)) ||
-                        (m.EmailAddress != null && m.EmailAddress.Contains(s)) ||
-                        (m.Address != null && m.Address.Contains(s)));
+                        (m.ContactNumber != null && m.ContactNumber.Contains(s)));
                 }
 
                 if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All")
@@ -108,26 +107,31 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
-            return View();
+            return View(new MechanicCreateViewModel());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("MechanicName,Specialization,ContactNumber,EmailAddress,Address,YearsOfExperience")] Mechanic mechanic)
+        public async Task<IActionResult> Create(MechanicCreateViewModel model)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
 
-            // Server-side validation (basic required fields handled by data annotations)
+            // Validate only fields accepted from the form; employment/audit data is server-owned.
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Set automatic fields
-                    mechanic.Status = "Active";
-                    mechanic.WorkStatus = "Available";
-                    mechanic.DateHired = DateTime.UtcNow;
-                    mechanic.HiredBy = GetCurrentStaffId();
+                    var mechanic = new Mechanic
+                    {
+                        MechanicName = model.MechanicName,
+                        Specialization = model.Specialization,
+                        ContactNumber = model.ContactNumber,
+                        Status = "Active",
+                        WorkStatus = "Available",
+                        DateHired = DateTime.UtcNow,
+                        HiredBy = GetCurrentStaffId()
+                    };
 
                     _context.Mechanics.Add(mechanic);
                     await _context.SaveChangesAsync();
@@ -149,10 +153,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 {
                     _logger.LogError(ex, "Error creating mechanic.");
                     TempData["ErrorMessage"] = "An error occurred while creating the mechanic. Please try again.";
-                    return View(mechanic);
+                    return View(model);
                 }
             }
-            return View(mechanic);
+            return View(model);
         }
 
         public async Task<IActionResult> Edit(int? id)
@@ -177,7 +181,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("MechanicId,MechanicName,Specialization,ContactNumber,EmailAddress,Address,YearsOfExperience,Status")] Mechanic mechanic)
+        public async Task<IActionResult> Edit(int id, [Bind("MechanicId,MechanicName,Specialization,ContactNumber,Status")] Mechanic mechanic)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
@@ -194,9 +198,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     existing.MechanicName = mechanic.MechanicName;
                     existing.Specialization = mechanic.Specialization;
                     existing.ContactNumber = mechanic.ContactNumber;
-                    existing.EmailAddress = mechanic.EmailAddress;
-                    existing.Address = mechanic.Address;
-                    existing.YearsOfExperience = mechanic.YearsOfExperience;
 // Capture previous employment status before change
 var previousStatus = existing.Status;
 

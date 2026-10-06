@@ -5,15 +5,15 @@
 @using KaijensonIventory_SalesMotorShopWeb.Models
 @{
     var cart = Model.Cart;
-    ViewData["Title"] = "Customer Purchase Order";
     var isReorder = ViewBag.IsReorder == true && ViewBag.ReorderProduct != null;
+    ViewData["Title"] = isReorder ? "Create Purchase Order" : "Sales";
 }
 @if (!isReorder)
 {
     <div class="page-header">
         <div>
-            <h1>Customer Purchase Order</h1>
-            <p>Search and add products to the purchase order.</p>
+            <h1>Sales</h1>
+            <p>Search and add products to a sale.</p>
         </div>
     </div>
 }
@@ -165,7 +165,7 @@ else
                     <div class="cpo-cart-empty">
                         <i class="bi bi-cart-x" aria-hidden="true"></i>
                         <p class="cpo-cart-empty-title">Your cart is empty.</p>
-                        <p class="cpo-cart-empty-sub">Add products from the list to start a purchase order.</p>
+                        <p class="cpo-cart-empty-sub">Add products from the list to start a sale.</p>
                     </div>
                 }
                 else
@@ -237,7 +237,7 @@ else
                                     {
                                         var existing = cart.SerialNumbers != null && cart.SerialNumbers.TryGetValue(item.ProductId, out var list) && list.Count > i ? list[i] : "";
                                         <label class="cpo-serial-input-label" for="serial-@(item.ProductId)-@i">Serial Number @(i + 1)</label>
-                                        <input type="text" id="serial-@(item.ProductId)-@i" name="SerialNumbers[@item.ProductId][@i]" value="@existing" aria-label="Serial number @(i + 1) of @item.Quantity for @item.ProductName" class="form-control cpo-serial-input" />
+                                        <input type="text" id="serial-@(item.ProductId)-@i" value="@existing" aria-label="Automatically generated serial number @(i + 1) of @item.Quantity for @item.ProductName" class="form-control cpo-serial-input" readonly />
                                     }
                                 </div>
                             }
@@ -245,7 +245,7 @@ else
                                 <i class="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>Proceed to Confirm
                             </button>
                         </form>
-                        <a asp-action="Search" class="btn btn-app-secondary w-100 cpo-back-btn">Back to Purchase Order</a>
+                        <a asp-action="Search" class="btn btn-app-secondary w-100 cpo-back-btn">Back to Sales</a>
                     </div>
                 }
             </div>

@@ -30,20 +30,39 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             string checkoutKey,
             int staffId)
         {
-            // Idempotency check
-            var existing = await _context.SalesTransactions
-                .Include(t => t.Items)
-                .FirstOrDefaultAsync(t => t.CheckoutKey == checkoutKey);
-            if (existing != null)
-                return existing;
+            if (string.IsNullOrWhiteSpace(checkoutKey) || checkoutKey.Length > 100)
+                throw new InvalidOperationException("Invalid checkout key.");
 
-            // Begin serializable transaction
+            // Take the month reservation before checkout-key and product locks.
+            // A competing sale must not hold an index-gap lock while waiting
+            // for this month's number to become available.
+            var transactionDate = DateTime.Now;
+            var monthStart = new DateTime(transactionDate.Year, transactionDate.Month, 1);
             await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            await InventoryWriteLock.AcquireSalesMonthAsync(_context, monthStart);
+            await InventoryWriteLock.AcquireCheckoutAsync(_context, checkoutKey);
+            // A SERIALIZABLE read of a missing key otherwise holds a shared index-gap lock:
+            // competing checkouts can each read the gap, then block one another on insert.
+            var existing = await _context.SalesTransactions
+                .FromSqlInterpolated($@"SELECT * FROM dbo.SalesTransactions WITH (UPDLOCK, HOLDLOCK, INDEX(IX_SalesTransactions_CheckoutKey))
+                    WHERE CheckoutKey = {checkoutKey}")
+                .Include(t => t.Items)
+                .FirstOrDefaultAsync();
+            if (existing != null)
+            {
+                await tx.CommitAsync();
+                return existing;
+            }
 
-            // Re‑read products and calculate totals
+            // Reserve all products in a stable order.
+            foreach (var productId in cart.Items.Select(i => i.ProductId).Distinct().OrderBy(id => id))
+                await InventoryWriteLock.AcquireProductAsync(_context, productId);
+
+            // Re-read products and calculate totals
             decimal serverTotal = 0m;
             var itemsToCreate = new List<SalesItem>();
             var affectedProducts = new List<Product>();
+            var serialsToSell = new List<SerialUnit>();
 
             foreach (var cartItem in cart.Items)
             {
@@ -57,6 +76,11 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
                 if (product == null)
                     throw new InvalidOperationException($"Product with ID {cartItem.ProductId} not found.");
+                // Tracking queries can return an older in-memory entity from this context.
+                // Refresh under the inventory lock before checking stock or pricing.
+                await _context.Entry(product).ReloadAsync();
+                if (product.IsDeleted)
+                    throw new InvalidOperationException($"Product with ID {cartItem.ProductId} is archived.");
 
                 // Ensure product is enabled/available (StockStatus not OutOfStock)
                 if (product.StockStatus == "Out of Stock")
@@ -71,24 +95,24 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
                 var subtotal = unitPrice * cartItem.Quantity;
                 serverTotal += subtotal;
 
-                // Serialized product validation
-if (product.IsSerialized)
-                 {
-                     if (cart.SerialNumbers == null || !cart.SerialNumbers.TryGetValue(product.ProductId, out var serialList))
-                         throw new InvalidOperationException($"Serial numbers are required for serialized product {product.ProductName}.");
-                     // Normalize serial numbers: trim whitespace
-                     var normalizedSerials = serialList.Select(s => s.Trim()).ToList();
-                     // Reject empty or whitespace‑only serials after trimming
-                     if (normalizedSerials.Any(s => string.IsNullOrWhiteSpace(s)))
-                         throw new InvalidOperationException($"Serial numbers cannot be empty or whitespace for product {product.ProductName}.");
-                     if (normalizedSerials.Count != cartItem.Quantity)
-                         throw new InvalidOperationException($"Number of serials ({normalizedSerials.Count}) does not match quantity ({cartItem.Quantity}) for product {product.ProductName}.");
-                     // Ensure serials are unique within this list after normalization
-                     if (normalizedSerials.Distinct().Count() != normalizedSerials.Count)
-                         throw new InvalidOperationException($"Duplicate serial numbers provided for product {product.ProductName}.");
-                     // Replace original list with normalized for later processing
-                     cart.SerialNumbers[product.ProductId] = normalizedSerials;
-                 }
+                // Select existing physical units, never mint a serial at checkout.
+                if (product.IsSerialized)
+                {
+                    var available = await _context.SerialUnits
+                        .Where(s => s.ProductId == product.ProductId && s.Status == "Available" && s.SalesTransactionId == null)
+                        .OrderBy(s => s.SerialUnitId).Take(cartItem.Quantity).ToListAsync();
+                    if (available.Count != cartItem.Quantity)
+                        throw new InvalidOperationException($"Not enough serialized units are available for {product.ProductName}.");
+
+                    if (cart.SerialNumbers.TryGetValue(product.ProductId, out var selected) && selected.Count > 0)
+                    {
+                        if (selected.Count != cartItem.Quantity ||
+                            selected.Distinct(StringComparer.OrdinalIgnoreCase).Count() != selected.Count ||
+                            !selected.OrderBy(s => s).SequenceEqual(available.Select(s => s.SerialNumber).OrderBy(s => s)))
+                            throw new InvalidOperationException($"Available serial numbers changed for {product.ProductName}. Refresh the cart before payment.");
+                    }
+                    serialsToSell.AddRange(available);
+                }
 
                 // Prepare SalesItem
                 var salesItem = new SalesItem
@@ -110,8 +134,6 @@ if (product.IsSerialized)
 
             // Create SalesTransaction
             // Generate receipt number in format MMM-XXYY (month, transaction count, total quantity)
-                var transactionDate = DateTime.Now;
-                var monthStart = new DateTime(transactionDate.Year, transactionDate.Month, 1);
                 var monthEnd = monthStart.AddMonths(1);
                 var monthTransactionCount = await _context.SalesTransactions
                     .Where(t => t.TransactionDate >= monthStart && t.TransactionDate < monthEnd)
@@ -133,7 +155,7 @@ if (product.IsSerialized)
                     InvoiceNumber = receiptNumber,
                     CheckoutKey = checkoutKey,
                     CustomerName = cart.CustomerName ?? string.Empty,
-                    TransactionDate = DateTime.Now,
+                    TransactionDate = transactionDate,
                     TotalAmount = serverTotal,
                     AmountPaid = amountPaid,
                     Change = change,
@@ -151,32 +173,12 @@ if (product.IsSerialized)
                 transaction.Items.Add(item);
             }
 
-            // Create SerialUnit records for serialized products
-            foreach (var cartItem in cart.Items)
+            // Assign previously generated serials to the saved sale without changing their identity.
+            foreach (var serialUnit in serialsToSell)
             {
-                var product = affectedProducts.First(p => p.ProductId == cartItem.ProductId);
-                if (product.IsSerialized)
-                {
-                    var serialList = cart.SerialNumbers[product.ProductId];
-                    foreach (var serial in serialList)
-                    {
-                        // Ensure serial is not already used in another sale
-                        if (await _context.SerialUnits.AnyAsync(s => s.SerialNumber == serial))
-                        {
-                            throw new InvalidOperationException($"Serial number '{serial}' has already been used in another transaction.");
-                        }
-                        var serialUnit = new SerialUnit
-                        {
-                            SerialNumber = serial,
-                            ProductId = product.ProductId,
-                            SalesTransactionId = transaction.TransactionId,
-                            Status = "Sold",
-                            SoldDate = DateTime.Now,
-                            CreatedDate = DateTime.Now
-                        };
-                        _context.SerialUnits.Add(serialUnit);
-                    }
-                }
+                serialUnit.Status = "Sold";
+                serialUnit.SalesTransactionId = transaction.TransactionId;
+                serialUnit.SoldDate = DateTime.UtcNow;
             }
 
             // Update inventory and status with notification handling

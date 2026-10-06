@@ -3,12 +3,14 @@
 @{
     ViewData["Title"] = $"Service Job {Model.ServiceJobNumber}";
     var histories = ViewBag.Histories as List<KaijensonIventory_SalesMotorShopWeb.Models.ServiceHistory> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.ServiceHistory>();
-    decimal serviceAmount = Model.Service?.ServicePrice ?? 0m;
+    decimal serviceAmount = Model.TotalPrice;
     decimal remainingBalance = Math.Max(0m, serviceAmount - Model.AmountReceived);
     bool isStillWorking = Model.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusStillWorking;
     string StatusBadge(string s) => s == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished
         ? "<span class=\"badge bg-success\">Finished</span>"
-        : "<span class=\"badge bg-warning text-dark\">Still Working</span>";
+        : s == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusPending
+            ? "<span class=\"badge bg-secondary\">Pending</span>"
+            : "<span class=\"badge bg-warning text-dark\">Still Working</span>";
     string PaymentBadge(string s) => s == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.PaymentPaid
         ? "<span class=\"badge bg-success\">Paid</span>"
         : "<span class=\"badge bg-danger\">Unpaid</span>";
@@ -26,14 +28,14 @@
                     data-mark-done
                     data-job-id="@Model.ServiceJobId"
                     data-job-number="@Model.ServiceJobNumber"
-                    data-service="@Model.Service?.ServiceName"
+                    data-service="@Model.ServiceNameSnapshot"
                     data-price="@serviceAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                     data-received="@Model.AmountReceived.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                     data-return-url="@(Context.Request.Path + Context.Request.QueryString)">
                 <i class="bi bi-check-circle"></i> Mark Done
             </button>
         }
-        else
+        else if (Model.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished)
         {
             <button type="button" class="btn btn-primary" onclick="openServiceReceiptPreview(@Model.ServiceJobId, '@Model.ServiceJobNumber')"><i class="bi bi-receipt"></i> View Receipt</button>
 
@@ -50,7 +52,7 @@
             <dd class="col-sm-9"><span class="fw-medium">@Model.ServiceJobNumber</span></dd>
 
             <dt class="col-sm-3">Service Name</dt>
-            <dd class="col-sm-9">@Model.Service?.ServiceName</dd>
+            <dd class="col-sm-9">@Model.ServiceNameSnapshot</dd>
 
             <dt class="col-sm-3">Mechanic</dt>
             <dd class="col-sm-9">@Model.Mechanic?.MechanicName</dd>
@@ -66,11 +68,36 @@
 
             <dt class="col-sm-3">Status</dt>
             <dd class="col-sm-9">@Html.Raw(StatusBadge(Model.Status))</dd>
+            @if (Model.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusPending)
+            {
+                <dt class="col-sm-3"></dt>
+                <dd class="col-sm-9 text-muted">Waiting for this mechanic to finish the previous job.</dd>
+            }
 
             <dt class="col-sm-3">Payment</dt>
             <dd class="col-sm-9">@Html.Raw(PaymentBadge(Model.PaymentStatus))</dd>
 
-            <dt class="col-sm-3">Service Amount</dt>
+            <dt class="col-sm-3">Base Service Price</dt>
+            <dd class="col-sm-9">@Model.BasePriceSnapshot.ToString("C", ph)</dd>
+
+            <dt class="col-sm-3">Add-ons</dt>
+            <dd class="col-sm-9">
+                @if (Model.AddOns.Any())
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var addOn in Model.AddOns.OrderBy(a => a.AddOnServiceId))
+                        {
+                            <li>@addOn.AddOnNameSnapshot — @addOn.PriceSnapshot.ToString("C", ph)</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <span class="text-muted">None</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Total Service Price</dt>
             <dd class="col-sm-9">@serviceAmount.ToString("C", ph)</dd>
 
             <dt class="col-sm-3">Amount Received</dt>

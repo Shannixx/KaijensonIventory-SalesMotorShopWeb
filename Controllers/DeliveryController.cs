@@ -101,7 +101,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var result = await _deliveryService.DeliverAsync(model.DeliveryId, model.ReceiveQuantities, GetCurrentStaffId(), model.Remarks);
+            var result = await _deliveryService.DeliverAsync(model.DeliveryId, model.ReceiveQuantities, GetCurrentStaffId(), model.ReceiptKey, model.Remarks);
 
             if (!result.Succeeded)
             {

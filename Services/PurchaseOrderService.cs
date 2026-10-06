@@ -216,7 +216,9 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         public async Task<Result> UpdateAsync(PurchaseOrderViewModel model, int currentStaffId)
         {
-            // Load existing order first to allow supplier‑change rules.
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await InventoryWriteLock.AcquireOrderAsync(_context, model.PurchaseOrderId ?? 0);
+            // Load the current order and lines only after the receipt/PO lock is held.
             PurchaseOrder? order = await _context.PurchaseOrders
                 .Include(p => p.Items)
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == model.PurchaseOrderId);
@@ -292,7 +294,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             // Recalculate total amount from active submitted lines only.
             order.TotalAmount = validItems.Sum(i => i.Quantity * i.Price);
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -308,6 +309,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         public async Task<Result> DeleteAsync(int id, int currentStaffId)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await InventoryWriteLock.AcquireOrderAsync(_context, id);
             PurchaseOrder? order = await _context.PurchaseOrders
                 .Include(p => p.Items)
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == id && !p.IsDeleted);
@@ -332,6 +335,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
             await _activityLogService.LogAsync("Archive Purchase Order", "PurchaseOrder",
                 $"Archived PO {poNumber} ({order.PurchaseOrderId})", currentStaffId);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return Result.Success();
         }
 

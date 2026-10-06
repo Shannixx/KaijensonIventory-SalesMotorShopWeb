@@ -19,26 +19,6 @@
                 <span asp-validation-for="BrandName" class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="CountryOrigin" class="form-label"></label>
-                <input asp-for="CountryOrigin" class="form-control" placeholder="e.g. Japan" required />
-                <span asp-validation-for="CountryOrigin" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Description" class="form-label"></label>
-                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Enter brand description (optional)"></textarea>
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="SupplierId" class="form-label"></label>
-                <select asp-for="SupplierId" class="form-select" asp-items="Model.Suppliers">
-                    <option value="">Select Supplier</option>
-                </select>
-                <span asp-validation-for="SupplierId" class="text-danger"></span>
-            </div>
-
             <div class="form-actions">
                 <button type="submit" class="btn btn-app-primary">
                     

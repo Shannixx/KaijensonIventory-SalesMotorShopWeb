@@ -19,6 +19,10 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [Range(1, int.MaxValue)]
         public int ReceivedQuantity { get; set; }
 
+        // All lines of one receipt submission share this immutable operation key.
+        [StringLength(32)]
+        public string? ReceiptKey { get; set; }
+
         public DateTime ReceivedDate { get; set; } = DateTime.Now;
     }
 }

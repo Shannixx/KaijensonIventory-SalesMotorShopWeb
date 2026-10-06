@@ -27,12 +27,6 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="Description" class="form-label"></label>
-                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Optional description"></textarea>
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
                 <label class="form-label">Created By</label>
                 <p class="form-control-plaintext">@(Model.CreatedByStaff?.StaffName ?? "System Admin")</p>
                 

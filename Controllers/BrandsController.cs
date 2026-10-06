@@ -40,19 +40,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             return null;
         }
 
-        private async Task<List<SelectListItem>> GetSupplierOptionsAsync(int? selectedId = null)
-        {
-            return await _context.Suppliers
-                .OrderBy(s => s.CompanyName)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.SupplierId.ToString(),
-                    Text = s.CompanyName,
-                    Selected = selectedId.HasValue && s.SupplierId == selectedId.Value
-                })
-                .ToListAsync();
-        }
-
         public async Task<IActionResult> Index(string? searchString, int page = 1, bool archived = false)
         {
             var accessCheck = CheckAccess();
@@ -68,8 +55,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (!string.IsNullOrWhiteSpace(searchString))
                 {
                     string s = searchString.ToLower();
-                    query = query.Where(b => b.BrandName.ToLower().Contains(s) ||
-                                             b.CountryOrigin.ToLower().Contains(s));
+                    query = query.Where(b => b.BrandName.ToLower().Contains(s));
                 }
 
 
@@ -144,11 +130,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
 
-            var model = new BrandFormViewModel
-            {
-                Suppliers = await GetSupplierOptionsAsync()
-            };
-            return View(model);
+            return View(new BrandFormViewModel());
         }
 
         [HttpPost]
@@ -163,8 +145,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 // ModelState validation via data annotations will be performed automatically.
                 if (!ModelState.IsValid)
                 {
-                    // Ensure supplier list is populated before returning view.
-                    model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
                     return View(model);
                 }
 
@@ -173,17 +153,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 if (exists)
                 {
                     ModelState.AddModelError(nameof(model.BrandName), "A brand with this name already exists.");
-                    model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
                     return View(model);
                 }
 
                 var brand = new Brand
                 {
                     BrandName = model.BrandName.Trim(),
-                    Description = model.Description,
-                    CountryOrigin = model.CountryOrigin.Trim(),
-   
-                    SupplierId = model.SupplierId,
+                    CountryOrigin = string.Empty,
                     CreatedBy = GetStaffId(),
                     CreatedAt = DateTime.UtcNow
                 };
@@ -196,7 +172,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     StaffId = GetStaffId(),
                     Action = "Add",
                     Module = "Brand",
-                     Description = $"Added brand: {brand.BrandName} ({brand.CountryOrigin})",
+                    Description = $"Added brand: {brand.BrandName}",
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
@@ -208,12 +184,12 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             {
                 _logger.LogError(ex, "Error occurred while creating brand.");
                 TempData["ErrorMessage"] = "An error occurred while creating the brand. Please try again.";
-                model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
+
                 return View(model);
             }
         }
 
-public async Task<IActionResult> Edit(int? id)
+        public async Task<IActionResult> Edit(int? id)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
@@ -232,13 +208,8 @@ public async Task<IActionResult> Edit(int? id)
                 {
                     BrandId = brand.BrandId,
                     BrandName = brand.BrandName,
-                    Description = brand.Description,
-                    CountryOrigin = brand.CountryOrigin,
-
-                    SupplierId = brand.SupplierId,
                     CreatedByName = brand.CreatedByStaff?.StaffName ?? "System",
                     CreatedAt = brand.CreatedAt,
-                    Suppliers = await GetSupplierOptionsAsync(brand.SupplierId)
                 };
 
                 return View(model);
@@ -251,7 +222,7 @@ public async Task<IActionResult> Edit(int? id)
             }
         }
 
-[HttpPost]
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, BrandFormViewModel model)
         {
@@ -263,13 +234,8 @@ public async Task<IActionResult> Edit(int? id)
             // Basic validation (DataAnnotations already applied)
             if (string.IsNullOrWhiteSpace(model.BrandName))
                 ModelState.AddModelError(nameof(model.BrandName), "Brand name is required.");
-            if (string.IsNullOrWhiteSpace(model.CountryOrigin))
-                ModelState.AddModelError(nameof(model.CountryOrigin), "Country of origin is required.");
-
-
             if (!ModelState.IsValid)
             {
-                model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
                 return View(model);
             }
 
@@ -280,7 +246,6 @@ public async Task<IActionResult> Edit(int? id)
                 if (exists)
                 {
                     ModelState.AddModelError(nameof(model.BrandName), "A brand with this name already exists.");
-                    model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
                     return View(model);
                 }
 
@@ -294,24 +259,19 @@ public async Task<IActionResult> Edit(int? id)
                     if (prodCount > 0)
                     {
                         ModelState.AddModelError(nameof(model.BrandName), "This brand name cannot be changed because products are assigned to it.");
-                        model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
+
                         return View(model);
                     }
                 }
 
                 // Update allowed fields only
                 existing.BrandName = model.BrandName.Trim();
-                existing.Description = model.Description;
-                existing.CountryOrigin = model.CountryOrigin.Trim();
-
-                existing.SupplierId = model.SupplierId;
-
                 _context.ActivityLogs.Add(new ActivityLog
                 {
                     StaffId = GetStaffId(),
                     Action = "Edit",
                     Module = "Brand",
-                     Description = $"Edited brand: {model.BrandName} ({model.CountryOrigin})",
+                    Description = $"Edited brand: {model.BrandName}",
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
@@ -326,14 +286,14 @@ public async Task<IActionResult> Edit(int? id)
                     return NotFound();
 
                 TempData["ErrorMessage"] = "The brand was modified by another user. Please try again.";
-                model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
+
                 return View(model);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating brand. BrandId: {BrandId}", id);
                 TempData["ErrorMessage"] = "An error occurred while updating the brand. Please try again.";
-                model.Suppliers = await GetSupplierOptionsAsync(model.SupplierId);
+
                 return View(model);
             }
         }

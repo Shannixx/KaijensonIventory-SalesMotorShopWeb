@@ -97,6 +97,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
+            if (IsAdmin()) return Forbid();
 
             return View();
         }
@@ -107,6 +108,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
+            if (IsAdmin()) return Forbid();
 
             try
             {
@@ -160,6 +162,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
+            if (IsAdmin()) return Forbid();
 
             if (id == null || id <= 0) return NotFound();
 
@@ -183,6 +186,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
+            if (IsAdmin()) return Forbid();
 
             if (id != staff.StaffId) return NotFound();
 
@@ -366,17 +370,15 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
-                if (staff == null) return NotFound();
-
                 bool isSelf = GetCurrentStaffId() == id;
-                bool isAdmin = IsAdmin();
-
-                if (!isSelf && !isAdmin)
+                if (!isSelf)
                 {
                     TempData["ErrorMessage"] = "Access denied. You can only change your own password.";
                     return RedirectToAction("Index", "Dashboard");
                 }
+
+                Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
+                if (staff == null) return NotFound();
 
                 ViewData["TargetStaffId"] = id;
                 ViewData["TargetStaffName"] = staff.StaffName;
@@ -399,24 +401,19 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
             try
             {
-                Staff? staff = await _context.Staff.FindAsync(id);
-                if (staff == null) return NotFound();
-
                 bool isSelf = GetCurrentStaffId() == id;
-                bool isAdmin = IsAdmin();
-
-                if (!isSelf && !isAdmin)
+                if (!isSelf)
                 {
                     TempData["ErrorMessage"] = "Access denied. You can only change your own password.";
                     return RedirectToAction("Index", "Dashboard");
                 }
 
-                if (isSelf)
+                Staff? staff = await _context.Staff.FindAsync(id);
+                if (staff == null) return NotFound();
+
+                if (!_hashing.VerifyPassword(CurrentPassword ?? "", staff.PasswordHash))
                 {
-                    if (!_hashing.VerifyPassword(CurrentPassword ?? "", staff.PasswordHash))
-                    {
-                        ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
-                    }
+                    ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
                 }
 
                 if (string.IsNullOrWhiteSpace(NewPassword))
@@ -474,6 +471,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
+            if (IsAdmin()) return Forbid();
             if (id == null) return NotFound();
 
             Staff? staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.StaffId == id);
@@ -494,6 +492,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         {
             var accessCheck = CheckAdminAccess();
             if (accessCheck != null) return accessCheck;
+            if (IsAdmin()) return Forbid();
 
             if (string.IsNullOrWhiteSpace(TemporaryPassword))
                 ModelState.AddModelError("TemporaryPassword", "Temporary password is required.");

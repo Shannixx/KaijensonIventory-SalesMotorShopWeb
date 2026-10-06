@@ -8,7 +8,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
 
         Task<DeliveryViewModel?> GetDeliveryDetailsAsync(int id, bool archived = false);
 
-        Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId, string? remarks = null);
+        Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId, string receiptKey, string? remarks = null);
 
         Task<Result> ArchiveAsync(int id, int currentStaffId);
 

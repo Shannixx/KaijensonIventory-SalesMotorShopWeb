@@ -115,6 +115,14 @@
                                 <i class="bi bi-truck"></i><span>Delivery</span>
                             </a>
                         </li>
+                        @if (isAdmin)
+                        {
+                            <li class="nav-item">
+                                <a asp-controller="Archives" asp-action="Index" class="nav-link @(IsActive("Archives") ? "active" : "")" data-title="Archives" aria-current="@ActiveAttr("Archives")">
+                                    <i class="bi bi-archive"></i><span>Archives</span>
+                                </a>
+                            </li>
+                        }
                     }
                     <li class="nav-item">
                         <a asp-controller="Services" asp-action="Index" class="nav-link @(IsActive("Services") ? "active" : "")" data-title="Service" aria-current="@ActiveAttr("Services")">
@@ -122,8 +130,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a asp-controller="Sales" asp-action="Search" class="nav-link @(IsActive("Sales") ? "active" : "")" data-title="Customer Purchase Order" aria-current="@ActiveAttr("Sales")">
-                            <i class="bi bi-cart-plus"></i><span>Customer Purchase Order</span>
+                        <a asp-controller="Sales" asp-action="Search" class="nav-link @(IsActive("Sales") ? "active" : "")" data-title="Sales" aria-current="@ActiveAttr("Sales")">
+                            <i class="bi bi-cart-plus"></i><span>Sales</span>
                         </a>
                     </li>
                     <li class="nav-item">

@@ -14,10 +14,6 @@
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Create" class="btn btn-primary">Add Mechanic</a>
-        @if (Context.Session.GetString("StaffRole") == "Admin")
-        {
-            <a asp-action="Index" asp-route-archived="@(ViewBag.ShowArchived == true ? "false" : "true")" class="btn btn-outline-secondary">@(ViewBag.ShowArchived == true ? "Active Mechanics" : "Archived")</a>
-        }
     </div>
 </div>
 
@@ -26,7 +22,7 @@
     {
         ControllerName = "Mechanics",
         QueryValue = currentFilter,
-        Placeholder = "Search ID, name, specialization, contact, email, address...",
+        Placeholder = "Search ID, name, specialization, contact...",
         AriaLabel = "Search mechanics",
         InputId = "searchMechanics",
         ClearActionName = "Index",

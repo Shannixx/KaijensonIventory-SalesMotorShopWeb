@@ -1,8 +1,11 @@
-@model KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob
+@model KaijensonIventory_SalesMotorShopWeb.ViewModels.ServiceJobFormViewModel
 @using System.Globalization
 @{
     ViewData["Title"] = "Create Service Job";
     var services = ViewBag.ServicesList as List<KaijensonIventory_SalesMotorShopWeb.Models.Service> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.Service>();
+    var addOns = ViewBag.AddOnsList as List<KaijensonIventory_SalesMotorShopWeb.Models.Service> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.Service>();
+    var mechanics = ViewBag.CreateMechanics as List<KaijensonIventory_SalesMotorShopWeb.Models.Mechanic> ?? new List<KaijensonIventory_SalesMotorShopWeb.Models.Mechanic>();
+    var busyMechanicIds = ViewBag.BusyMechanicIds as HashSet<int> ?? new HashSet<int>();
     var ph = CultureInfo.GetCultureInfo("en-PH");
 }
 <div class="page-header">
@@ -18,7 +21,7 @@
             <div asp-validation-summary="All" class="text-danger mb-3 small"></div>
 
             <div class="mb-3">
-                <label asp-for="ServiceId" class="form-label"></label>
+                <label asp-for="ServiceId" class="form-label">Base Service</label>
                 @if (services.Any())
                 {
                     <div class="d-flex flex-wrap gap-2 mb-2" role="group" aria-label="Quick service selection">
@@ -29,10 +32,10 @@
                     </div>
                 }
                 <select asp-for="ServiceId" id="serviceSelect" class="form-select">
-                    <option value="">-- Select Service --</option>
+                    <option value="">-- Select Base Service --</option>
                     @foreach (var s in services)
                     {
-                        <option value="@s.ServiceId" data-price="@s.ServicePrice.ToString(CultureInfo.InvariantCulture)" selected="@(Model.ServiceId == s.ServiceId)">
+                        <option value="@s.ServiceId" data-price-cents="@((s.ServicePrice * 100m).ToString("0", CultureInfo.InvariantCulture))" selected="@(Model.ServiceId == s.ServiceId)">
                             @s.ServiceName — ₱@s.ServicePrice.ToString("N2", ph)
                         </option>
                     }
@@ -40,43 +43,70 @@
                 <span asp-validation-for="ServiceId" class="text-danger small"></span>
                 @if (!services.Any())
                 {
-                    <div class="form-text">No services defined yet. Add one under the Service tab first.</div>
+                    <div class="form-text">No active base services are available. Add one under the Service tab first.</div>
                 }
             </div>
 
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6">Add-ons (optional)</legend>
+                @foreach (var addOn in addOns)
+                {
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input service-addon-check" id="addOn_@addOn.ServiceId"
+                               name="SelectedAddOnIds" value="@addOn.ServiceId"
+                               data-price-cents="@((addOn.ServicePrice * 100m).ToString("0", CultureInfo.InvariantCulture))"
+                               checked="@(Model.SelectedAddOnIds.Contains(addOn.ServiceId))" />
+                        <label class="form-check-label" for="addOn_@addOn.ServiceId">@addOn.ServiceName — ₱@addOn.ServicePrice.ToString("N2", ph)</label>
+                    </div>
+                }
+                @if (!addOns.Any())
+                {
+                    <div class="form-text">No active add-ons are available.</div>
+                }
+                <span asp-validation-for="SelectedAddOnIds" class="text-danger small"></span>
+            </fieldset>
+
             <!-- Service Price (read‑only) -->
             <div class="mb-3">
-                <label for="servicePriceDisplay" class="form-label">Service Price</label>
-                <input type="text" class="form-control" id="servicePriceDisplay" value="" readonly placeholder="-- Select a service --" />
-                <div class="form-text">Price comes automatically from the selected service.</div>
+                <label for="servicePriceDisplay" class="form-label">Base Service Price</label>
+                <input type="text" class="form-control" id="servicePriceDisplay" value="₱0.00" readonly />
+                <div class="form-text">Prices are calculated from the selected base service and add-ons when saved.</div>
             </div>
 
             <!-- Transaction summary (read‑only) -->
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Total Service Price</label>
-                    <input type="text" class="form-control" id="totalPriceDisplay" readonly />
+                    <label for="totalPriceDisplay" class="form-label">Total Service Price</label>
+                    <input type="text" class="form-control" id="totalPriceDisplay" readonly value="₱0.00" />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Work Status</label>
-                    <input type="text" class="form-control" value="Still Working" readonly />
+                    <label for="jobStatusDisplay" class="form-label">Job Status</label>
+                    <input type="text" class="form-control" id="jobStatusDisplay" value="-- Select mechanic --" readonly />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Change</label>
+                    <label for="changeDisplay" class="form-label">Change</label>
                     <input type="text" class="form-control" id="changeDisplay" readonly value="₱0.00" />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Payment Status</label>
+                    <label for="paymentStatusDisplay" class="form-label">Payment Status</label>
                     <input type="text" class="form-control" id="paymentStatusDisplay" readonly value="Unpaid" />
                 </div>
             </div>
 
             <div class="mb-3">
                 <label asp-for="MechanicId" class="form-label"></label>
-                <select asp-for="MechanicId" asp-items="ViewBag.MechanicId" class="form-select">
+                <select asp-for="MechanicId" id="mechanicSelect" class="form-select">
                     <option value="">-- Select Mechanic --</option>
+                    @foreach (var mechanic in mechanics)
+                    {
+                        bool busy = busyMechanicIds.Contains(mechanic.MechanicId);
+                        <option value="@mechanic.MechanicId" data-job-status="@(busy ? "Pending" : "Still Working")" selected="@(Model.MechanicId == mechanic.MechanicId)">
+                            @mechanic.MechanicName — @(busy ? "Working; next job Pending" : "Available; starts Still Working")
+                        </option>
+                    }
                 </select>
                 <span asp-validation-for="MechanicId" class="text-danger small"></span>
+                <div class="form-text">The final job status is determined from current jobs when saved.</div>
             </div>
 
             <div class="mb-3">
@@ -93,7 +123,7 @@
 
             <div class="mb-3">
                 <label asp-for="AmountReceived" class="form-label">Amount Received (₱)</label>
-                <input asp-for="AmountReceived" class="form-control" type="number" step="0.01" min="0" value="0" />
+                <input asp-for="AmountReceived" class="form-control" type="number" step="0.01" min="0" />
                 <span asp-validation-for="AmountReceived" class="text-danger small"></span>
                 <div class="form-text">Payment status and change are calculated automatically.</div>
             </div>
@@ -119,25 +149,55 @@
             var changeDisplay = document.getElementById('changeDisplay');
             var paymentStatusDisplay = document.getElementById('paymentStatusDisplay');
             var amountInput = document.getElementById('AmountReceived'); // generated by asp-for
+            var addOnInputs = document.querySelectorAll('.service-addon-check');
+            var mechanicSelect = document.getElementById('mechanicSelect');
+            var jobStatusDisplay = document.getElementById('jobStatusDisplay');
             if (!select || !priceDisplay || !totalDisplay || !changeDisplay || !paymentStatusDisplay || !amountInput) return;
 
             var fmt = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
 
+            function priceCents(element) {
+                var cents = Number(element && element.getAttribute('data-price-cents'));
+                return Number.isSafeInteger(cents) && cents >= 0 ? cents : 0;
+            }
+
+            function paymentCents(value) {
+                var text = String(value || '').trim();
+                if (!/^(?:\d+\.?\d{0,2}|\.\d{1,2})$/.test(text)) return 0;
+                var parts = text.split('.');
+                var cents = Number(parts[0] || '0') * 100 + Number((parts[1] || '').padEnd(2, '0'));
+                return Number.isSafeInteger(cents) && cents >= 0 ? cents : 0;
+            }
+
             function recalc() {
                 var option = select.options[select.selectedIndex];
-                var price = option ? parseFloat(option.getAttribute('data-price')) : 0;
-                var received = parseFloat(amountInput.value) || 0;
-                var change = Math.max(0, received - price);
-                var paymentStatus = (received >= price && received > 0) ? 'Paid' : 'Unpaid';
+                var baseCents = priceCents(option);
+                var totalCents = baseCents;
+                addOnInputs.forEach(function (input) {
+                    if (input.checked) totalCents += priceCents(input);
+                });
+                var receivedCents = paymentCents(amountInput.value);
+                var changeCents = Math.max(0, receivedCents - totalCents);
+                var paymentStatus = (receivedCents >= totalCents && receivedCents > 0) ? 'Paid' : 'Unpaid';
 
-                priceDisplay.value = fmt.format(price);
-                totalDisplay.value = fmt.format(price);
-                changeDisplay.value = fmt.format(change);
+                priceDisplay.value = fmt.format(baseCents / 100);
+                totalDisplay.value = fmt.format(totalCents / 100);
+                changeDisplay.value = fmt.format(changeCents / 100);
                 paymentStatusDisplay.value = paymentStatus;
             }
 
             select.addEventListener('change', recalc);
             amountInput.addEventListener('input', recalc);
+            amountInput.addEventListener('change', recalc);
+            addOnInputs.forEach(function (input) { input.addEventListener('change', recalc); });
+            if (mechanicSelect && jobStatusDisplay) {
+                function updateJobStatus() {
+                    var selected = mechanicSelect.options[mechanicSelect.selectedIndex];
+                    jobStatusDisplay.value = selected && selected.getAttribute('data-job-status') || '-- Select mechanic --';
+                }
+                mechanicSelect.addEventListener('change', updateJobStatus);
+                updateJobStatus();
+            }
 
             document.querySelectorAll('.quick-service-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {

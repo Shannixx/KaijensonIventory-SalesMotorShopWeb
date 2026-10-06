@@ -1,0 +1,75 @@
+@model ArchivesIndexViewModel
+@{
+    ViewData["Title"] = "Archives";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Archives</h1>
+        <p>Browse and restore archived records from across the system.</p>
+    </div>
+</div>
+
+<p class="text-secondary mb-3">@Model.TotalCount archived @(Model.TotalCount == 1 ? "record" : "records") found.</p>
+
+@foreach (var group in Model.Groups)
+{
+    <section class="card mb-4" aria-labelledby="archive-@group.Key">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h2 id="archive-@group.Key" class="h5 mb-0">@group.Label</h2>
+            <span class="badge bg-secondary">@group.Records.Count</span>
+        </div>
+        @if (group.Records.Count == 0)
+        {
+            <div class="card-body text-muted">No archived @group.Label.ToLowerInvariant() found.</div>
+        }
+        else
+        {
+            <div class="table-container">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Record</th>
+                            <th scope="col">Archived on</th>
+                            <th scope="col" class="actions-column">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in group.Records)
+                        {
+                            <tr>
+                                <td>@record.Id</td>
+                                <td>
+                                    <span class="fw-medium">@record.Name</span>
+                                    @if (!string.IsNullOrWhiteSpace(record.SecondaryText))
+                                    {
+                                        <div class="small text-secondary text-break">@record.SecondaryText</div>
+                                    }
+                                </td>
+                                <td>@(record.ArchivedAt?.ToString("MMM dd, yyyy h:mm tt") ?? "Date unavailable")</td>
+                                <td class="action-cell">
+                                    <div class="action-buttons">
+                                        <a asp-controller="@record.ControllerName" asp-action="Details" asp-route-id="@record.Id"
+                                           asp-route-archived="true" class="btn btn-icon btn-icon-view"
+                                           title="View archived @group.Label record" aria-label="View archived @record.Name">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <form asp-controller="@record.ControllerName" asp-action="Restore" asp-route-id="@record.Id"
+                                              method="post" class="action-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-icon archive-restore-button"
+                                                    title="Restore @group.Label record" aria-label="Restore @record.Name">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

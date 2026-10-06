@@ -16,16 +16,6 @@
             <input type="text" name="searchString" class="form-control" placeholder="PO number or supplier..." value="@ViewData["CurrentFilter"]" style="min-width:200px;" />
         </div>
         <div>
-            @if (ViewBag.ShowArchived == true)
-            {
-                <a asp-action="Index" class="btn btn-outline-secondary">Active Purchase Orders</a>
-            }
-            else if (ViewBag.CanDelete == true)
-            {
-                <a asp-action="Index" asp-route-archived="true" class="btn btn-outline-secondary">Archived</a>
-            }
-        </div>
-        <div>
             <label class="form-label small">Status</label>
             <select name="statusFilter" class="form-select" style="min-width:150px;">
                 <option value="">All Status</option>

@@ -13,6 +13,8 @@ namespace KaijensonIventory_SalesMotorShopWeb.ViewModels
         [Display(Name = "Supplier")]
         public int SupplierId { get; set; }
         public int QuantityOnHand { get; set; }
+        // Original database revision from the edit form; never use wall-clock timestamps for concurrency.
+        public string OriginalVersion { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string? ModelCompatibility { get; set; }
         public int? PurchaseOrderId { get; set; }

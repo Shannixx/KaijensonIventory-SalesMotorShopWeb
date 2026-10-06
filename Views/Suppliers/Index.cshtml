@@ -8,10 +8,6 @@
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Create" class="btn btn-primary">Add Supplier</a>
-        @if (Context.Session.GetString("StaffRole") == "Admin")
-        {
-            <a asp-action="Index" asp-route-archived="@(ViewBag.ShowArchived == true ? "false" : "true")" class="btn btn-outline-secondary">@(ViewBag.ShowArchived == true ? "Active Suppliers" : "Archived")</a>
-        }
     </div>
 </div>
 
@@ -88,13 +84,7 @@
 <div class="action-buttons">
                                       <a asp-action="Details" asp-route-id="@item.SupplierId" asp-route-archived="@(ViewBag.ShowArchived == true ? "true" : "false")" class="btn btn-icon btn-icon-view" title="View Supplier Details" aria-label="View @item.CompanyName"><i class="bi bi-eye"></i></a>
                                       <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-icon btn-icon-edit" title="Edit Supplier" aria-label="Edit @item.CompanyName"><i class="bi bi-pencil"></i></a>
-                                      @if (ViewBag.ShowArchived != true)
-                                      {
-                                          <form asp-action="ToggleStatus" asp-route-id="@item.SupplierId" method="post" class="d-inline">
-                                              @Html.AntiForgeryToken()
-                                              <button type="submit" class="btn btn-icon btn-icon-toggle" title="Toggle Supplier Status" aria-label="Toggle status for @item.CompanyName"><i class="bi bi-arrow-repeat"></i></button>
-                                          </form>
-                                      }
+
                                       @if (ViewBag.ShowArchived == true)
                                       {
                                           <form asp-action="Restore" asp-route-id="@item.SupplierId" method="post" class="action-form">

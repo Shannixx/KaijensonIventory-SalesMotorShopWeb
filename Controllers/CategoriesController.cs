@@ -112,7 +112,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Category category)
+        public async Task<IActionResult> Create([Bind("CategoryName")] Category category)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
@@ -128,10 +128,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     category.CategoryName = category.CategoryName.Trim();
                 }
 
-                if (!string.IsNullOrWhiteSpace(category.Description))
-                {
-                    category.Description = category.Description.Trim();
-                }
+
 
                 if (ModelState.IsValid)
                 {
@@ -197,7 +194,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Category category)
+        public async Task<IActionResult> Edit(int id, [Bind("CategoryId,CategoryName")] Category category)
         {
             var accessCheck = CheckAccess();
             if (accessCheck != null) return accessCheck;
@@ -213,10 +210,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 category.CategoryName = category.CategoryName.Trim();
             }
 
-            if (!string.IsNullOrWhiteSpace(category.Description))
-            {
-                category.Description = category.Description.Trim();
-            }
+
 
             if (ModelState.IsValid)
             {
@@ -233,8 +227,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     if (existing == null) return NotFound();
 
                     existing.CategoryName = category.CategoryName;
-                    existing.Description = category.Description;
-
                     _context.ActivityLogs.Add(new ActivityLog
                     {
                         StaffId = GetStaffId(),

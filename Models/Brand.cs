@@ -14,7 +14,6 @@ namespace KaijensonIventory_SalesMotorShopWeb.Models
         [StringLength(500, ErrorMessage = "Brand description cannot exceed 500 characters.")]
         public string? Description { get; set; }
 
-        [Required(ErrorMessage = "Country of origin is required")]
         [StringLength(50)]
         public string CountryOrigin { get; set; } = string.Empty;
 

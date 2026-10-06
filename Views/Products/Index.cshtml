@@ -9,17 +9,6 @@
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Create" class="btn btn-primary">Add Product</a>
-        @if (Context.Session.GetString("StaffRole") == "Admin")
-        {
-            if (ViewBag.ShowArchived == true)
-            {
-                <a asp-action="Index" class="btn btn-outline-secondary">Active Products</a>
-            }
-            else
-            {
-                <a asp-action="Index" asp-route-archived="true" class="btn btn-outline-secondary">Archived</a>
-            }
-        }
     </div>
 </div>
 
@@ -82,10 +71,7 @@
                                      {
                                          <a asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-icon btn-icon-edit" title="Edit Product" aria-label="Edit @item.ProductName"><i class="bi bi-pencil"></i></a>
                                      }
-                                     @if (item.QuantityOnHand <= item.ReorderLevel && item.Supplier?.Status == "Active")
-                                     {
-                                         <a asp-controller="Sales" asp-action="Search" asp-route-reorder="true" asp-route-productId="@item.ProductId" class="btn btn-icon btn-icon-primary" title="Create Purchase Order" aria-label="Create PO for @item.ProductName"><i class="bi bi-cart-plus"></i></a>
-                                     }
+
                                      @if (ViewBag.ShowArchived == true)
                                      {
                                          <form asp-action="Restore" asp-route-id="@item.ProductId" method="post" class="action-form">

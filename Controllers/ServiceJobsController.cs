@@ -1,5 +1,6 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     query = query.Where(j =>
                         j.ServiceJobNumber.Contains(term) ||
                         j.CustomerName.Contains(term) ||
-                        j.Service!.ServiceName.Contains(term));
+                        j.ServiceNameSnapshot.Contains(term));
                 }
 
                 if (mechanicId.HasValue && mechanicId.Value > 0)
@@ -103,6 +104,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                     .Include(j => j.Mechanic)
                     .Include(j => j.SalesTransaction)
                     .Include(j => j.Histories)
+                    .Include(j => j.AddOns)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(j => j.ServiceJobId == id);
 
@@ -133,7 +135,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             try
             {
                 await PopulateCreateListsAsync();
-                var model = new ServiceJob();
+                var model = new ServiceJobFormViewModel();
                 // Generate a unique token for duplicate submission protection.
                 model.SubmissionToken = Guid.NewGuid().ToString();
                 return View(model);
@@ -148,121 +150,102 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         // POST: /ServiceJobs/Create
         [HttpPost]
-                [ValidateAntiForgeryToken]
-                public async Task<IActionResult> Create([Bind("ServiceId,MechanicId,CustomerName,Description,AmountReceived,SubmissionToken")] ServiceJob job)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ServiceJobFormViewModel model)
+        {
+            var redirect = RedirectIfNotAuthenticated();
+            if (redirect != null) return redirect;
+
+            ValidateJobInput(model);
+            if (ModelState.IsValid)
+            {
+                try
                 {
-                    var redirect = RedirectIfNotAuthenticated();
-                    if (redirect != null)
-                        return redirect;
-
-                    // Validate user-submitted fields only. Server-generated fields have
-                                        // Required attributes on the model, which would cause ModelState
-                                        // to be invalid before we assign them. Remove those entries so the
-                                        // validation step focuses on the fields the client actually posts.
-Service? service = await ValidateNewServiceJobAsync(job);
-                                        ModelState.Remove(nameof(ServiceJob.ServiceJobNumber));
-                                        ModelState.Remove(nameof(ServiceJob.Status));
-                                        ModelState.Remove(nameof(ServiceJob.PaymentStatus));
-
-                                        bool paymentValid = ModelState.IsValid ? await ValidateAmountAsync(job, service) : false;
-                                        if (paymentValid && service != null)
-                                            job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, service.ServicePrice);
-
-                                        // Duplicate submission protection: token must be unique.
-                                        if (!string.IsNullOrWhiteSpace(job.SubmissionToken))
-                                        {
-                                            bool tokenExists = await _context.ServiceJobs.AnyAsync(j => j.SubmissionToken == job.SubmissionToken);
-                                            if (tokenExists)
-                                            {
-                                                // Find existing job and redirect to its details.
-                                                var existing = await _context.ServiceJobs.FirstOrDefaultAsync(j => j.SubmissionToken == job.SubmissionToken);
-                                                if (existing != null)
-return RedirectToAction(nameof(Details), new { id = existing.ServiceJobId });
-                                            }
-                                        }
-
-                    if (ModelState.IsValid && service != null)
+                    await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                    await ReserveMechanicsAsync(model.MechanicId);
+                    // Check the token inside the same transaction as number generation and saving.
+                    if (!string.IsNullOrWhiteSpace(model.SubmissionToken))
                     {
-                        try
-                        {
-                            job.Status = ServiceJob.StatusStillWorking;
-                            job.ServiceDate = DateTime.Now;
-                            job.CreatedAt = DateTime.Now;
-
-                            // Compute change amount server‑side.
-                            job.ChangeAmount = Math.Max(0m, job.AmountReceived - service.ServicePrice);
-
-await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-                             job.ServiceJobNumber = await GenerateServiceJobNumberAsync();
-                             job.ProcessedByStaffId = GetCurrentStaffId();
-                             // Ensure token is set; generate if missing.
-                             if (string.IsNullOrWhiteSpace(job.SubmissionToken))
-                                 job.SubmissionToken = Guid.NewGuid().ToString();
-// Reload mechanic and verify availability inside transaction.
-                              var mechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted);
-                              if (mechanic == null)
-                              {
-                                  ModelState.AddModelError("MechanicId", "The selected mechanic is no longer available. Please choose another mechanic.");
-                                  await tx.RollbackAsync();
-                                  // Re-populate lists and return view with errors.
-                                  await PopulateCreateListsAsync(job);
-                                  return View(job);
-                              }
-                              if (mechanic.Status != "Active" || mechanic.WorkStatus != "Available")
-                              {
-                                  ModelState.AddModelError("MechanicId", "The selected mechanic is no longer available. Please choose another mechanic.");
-                                  await tx.RollbackAsync();
-                                  await PopulateCreateListsAsync(job);
-                                  return View(job);
-                              }
-                              // Assign mechanic to Working.
-mechanic.WorkStatus = "Working";
-                               _context.ServiceJobs.Add(job);
-                               // Add audit log before persisting changes
-                               _context.ActivityLogs.Add(new ActivityLog
-                               {
-                                   Action = "Create Service Job",
-                                   Module = "Service",
-                                   Description = $"Created service job {job.ServiceJobNumber} for {job.CustomerName}",
-                                   StaffId = GetCurrentStaffId(),
-                                   Timestamp = DateTime.Now
-                               });
-                               await _context.SaveChangesAsync();
-                               await tx.CommitAsync();
-
-                            TempData["SuccessMessage"] = $"Service job {job.ServiceJobNumber} created successfully.";
-                            return RedirectToAction(nameof(Details), new { id = job.ServiceJobId });
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error occurred while creating service job.");
-                            TempData["ErrorMessage"] = "An error occurred while creating the service job. Please try again.";
-                        }
+                        var duplicate = await _context.ServiceJobs.AsNoTracking()
+                            .FirstOrDefaultAsync(j => j.SubmissionToken == model.SubmissionToken);
+                        if (duplicate != null)
+                            return RedirectToAction(nameof(Details), new { id = duplicate.ServiceJobId });
                     }
 
-                    await PopulateCreateListsAsync(job);
-                    return View(job);
+                    var pricing = await LoadJobPricingAsync(model);
+                    var mechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == model.MechanicId && !m.IsDeleted);
+                    if (mechanic == null || mechanic.Status != "Active")
+                        ModelState.AddModelError(nameof(model.MechanicId), "Select an active, non-archived mechanic.");
+
+                    if (ModelState.IsValid && pricing != null && mechanic != null)
+                    {
+                        bool hasWorkingJob = await HasWorkingJobAsync(mechanic.MechanicId);
+                        var job = new ServiceJob
+                        {
+                            ServiceJobNumber = await GenerateServiceJobNumberAsync(),
+                            ServiceId = model.ServiceId,
+                            ServiceNameSnapshot = pricing.ServiceName,
+                            BasePriceSnapshot = pricing.BasePrice,
+                            TotalPrice = pricing.TotalPrice,
+                            AddOns = pricing.AddOns,
+                            MechanicId = model.MechanicId,
+                            CustomerName = model.CustomerName,
+                            Description = model.Description,
+                            AmountReceived = model.AmountReceived,
+                            ChangeAmount = Math.Max(0m, model.AmountReceived - pricing.TotalPrice),
+                            PaymentStatus = ComputePaymentStatus(model.AmountReceived, pricing.TotalPrice),
+                            Status = hasWorkingJob ? ServiceJob.StatusPending : ServiceJob.StatusStillWorking,
+                            ServiceDate = DateTime.Now,
+                            CreatedAt = DateTime.Now,
+                            ProcessedByStaffId = GetCurrentStaffId(),
+                            SubmissionToken = string.IsNullOrWhiteSpace(model.SubmissionToken) ? Guid.NewGuid().ToString() : model.SubmissionToken
+                        };
+                        // The job table is authoritative even if the cached WorkStatus was stale.
+                        mechanic.WorkStatus = "Working";
+                        _context.ServiceJobs.Add(job);
+                        _context.ActivityLogs.Add(new ActivityLog
+                        {
+                            Action = "Create Service Job", Module = "Service",
+                            Description = $"Created service job {job.ServiceJobNumber} for {job.CustomerName}",
+                            StaffId = GetCurrentStaffId(), Timestamp = DateTime.Now
+                        });
+                        await _context.SaveChangesAsync();
+                        await tx.CommitAsync();
+                        TempData["SuccessMessage"] = $"Service job {job.ServiceJobNumber} created successfully.";
+                        return RedirectToAction(nameof(Details), new { id = job.ServiceJobId });
+                    }
+                    await tx.RollbackAsync();
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error occurred while creating service job.");
+                    ModelState.AddModelError(string.Empty, "An error occurred while creating the service job. Please try again.");
+                }
+            }
+            await PopulateCreateListsAsync(model);
+            return View(model);
+        }
 
         // GET: /ServiceJobs/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
+            if (redirect != null) return redirect;
             if (id == null) return NotFound();
-
             try
             {
-                ServiceJob? job = await _context.ServiceJobs
-                    .Include(j => j.Service)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(j => j.ServiceJobId == id && !j.Service!.IsDeleted);
+                var job = await _context.ServiceJobs.Include(j => j.AddOns).AsNoTracking()
+                    .FirstOrDefaultAsync(j => j.ServiceJobId == id);
                 if (job == null) return NotFound();
-
-                await PopulateCreateListsAsync(job);
-                return View(job);
+                var model = new ServiceJobFormViewModel
+                {
+                    ServiceJobId = job.ServiceJobId, ServiceId = job.ServiceId,
+                    MechanicId = job.MechanicId, CustomerName = job.CustomerName,
+                    Description = job.Description, AmountReceived = job.AmountReceived,
+                    SelectedAddOnIds = job.AddOns.Select(a => a.AddOnServiceId).ToList()
+                };
+                await PopulateCreateListsAsync(model, job);
+                return View(model);
             }
             catch (Exception ex)
             {
@@ -275,159 +258,128 @@ mechanic.WorkStatus = "Working";
         // POST: /ServiceJobs/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ServiceJobId,ServiceId,MechanicId,CustomerName,Description,AmountReceived")] ServiceJob job)
+        public async Task<IActionResult> Edit(int id, ServiceJobFormViewModel model)
         {
             var redirect = RedirectIfNotAuthenticated();
-            if (redirect != null)
-                return redirect;
-
-            if (id != job.ServiceJobId) return NotFound();
-
-            Service? service = await ValidateServiceJobEditAsync(job);
-            bool paymentValid = ModelState.IsValid ? await ValidateAmountAsync(job, service) : false;
-            if (paymentValid)
-                job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, service!.ServicePrice);
-
-            // Manual edits may never undercut payments already recorded in history.
-            if (ModelState.IsValid)
+            if (redirect != null) return redirect;
+            if (id != model.ServiceJobId) return NotFound();
+            ValidateJobInput(model);
+            ServiceJob? existingJob = null;
+            try
             {
-                decimal historyTotal = await _context.ServiceHistories
-                    .Where(h => h.ServiceJobId == id)
-                    .SumAsync(h => (decimal?)h.AmountReceived) ?? 0m;
-                if (job.AmountReceived < historyTotal)
+                // Read the old assignment before the transaction so every queue writer
+                // can reserve mechanics in the same order before reading job rows.
+                int? assignedMechanicId = await _context.ServiceJobs.AsNoTracking()
+                    .Where(j => j.ServiceJobId == id)
+                    .Select(j => (int?)j.MechanicId).FirstOrDefaultAsync();
+                if (!assignedMechanicId.HasValue) return NotFound();
+                await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                await ReserveMechanicsAsync(assignedMechanicId.Value, model.MechanicId);
+                existingJob = await _context.ServiceJobs.Include(j => j.AddOns)
+                    .FirstOrDefaultAsync(j => j.ServiceJobId == id);
+                if (existingJob == null) return NotFound();
+                if (existingJob.MechanicId != assignedMechanicId.Value)
                 {
-                    ModelState.AddModelError("AmountReceived",
-                        "Amount received cannot be less than the total recorded payments in service history.");
+                    await tx.RollbackAsync();
+                    TempData["ErrorMessage"] = "The mechanic assignment changed. Reload the job and try again.";
+                    return RedirectToAction(nameof(Edit), new { id });
                 }
-            }
 
-            if (ModelState.IsValid && service != null)
-            {
-                try
+                if (existingJob.Status == ServiceJob.StatusFinished)
                 {
-
-
-
-
-
-
-                    if (!ModelState.IsValid)
+                    if (model.ServiceId != existingJob.ServiceId || model.MechanicId != existingJob.MechanicId ||
+                        model.CustomerName != existingJob.CustomerName || model.Description != existingJob.Description ||
+                        model.AmountReceived != existingJob.AmountReceived ||
+                        !model.SelectedAddOnIds.ToHashSet().SetEquals(existingJob.AddOns.Select(a => a.AddOnServiceId)))
+                        ModelState.AddModelError(string.Empty, "Completed service jobs cannot change service, add-ons, mechanic, customer, or payment information.");
+                    if (ModelState.IsValid)
                     {
-                        // Re-populate lists and return view with errors
-                        await PopulateCreateListsAsync(job);
-                        return View(job);
+                        await tx.CommitAsync();
+                        TempData["SuccessMessage"] = $"Service job {existingJob.ServiceJobNumber} updated successfully.";
+                        return RedirectToAction(nameof(Details), new { id });
                     }
-
-// Begin transaction to update job and mechanic statuses atomically
-await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-
-// Reload the ServiceJob inside the transaction
-var existingJob = await _context.ServiceJobs.FirstOrDefaultAsync(j => j.ServiceJobId == id);
-if (existingJob == null) return NotFound();
-
-// ---------- Finished job protection ----------
-if (existingJob.Status == ServiceJob.StatusFinished)
-{
-    // Disallow changes to key fields (service, mechanic, customer, amount, description).
-    if (job.ServiceId != existingJob.ServiceId ||
-        job.MechanicId != existingJob.MechanicId ||
-        job.CustomerName != existingJob.CustomerName ||
-        job.AmountReceived != existingJob.AmountReceived ||
-        job.Description != existingJob.Description)
-    {
-        ModelState.AddModelError(string.Empty, "Completed service jobs cannot change service, mechanic, customer, or payment information.");
-        await tx.RollbackAsync();
-        await PopulateCreateListsAsync(job);
-        return View(job);
-    }
-    // No modifications needed; commit transaction.
-    await tx.CommitAsync();
-    TempData["SuccessMessage"] = $"Service job {existingJob.ServiceJobNumber} updated successfully.";
-    return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
-}
-
-// Preserve original amount for payment audit
-decimal originalAmount = existingJob.AmountReceived;
-int oldMechanicId = existingJob.MechanicId;
-bool mechanicChanged = job.MechanicId != oldMechanicId;
-
-// Update mutable fields
-existingJob.ServiceId = job.ServiceId;
-existingJob.MechanicId = job.MechanicId;
-existingJob.CustomerName = job.CustomerName;
-existingJob.Description = job.Description;
-existingJob.AmountReceived = job.AmountReceived;
-if (existingJob.Service != null)
-    existingJob.ChangeAmount = Math.Max(0m, existingJob.AmountReceived - existingJob.Service.ServicePrice);
-existingJob.PaymentStatus = ComputePaymentStatus(existingJob.AmountReceived, existingJob.Service?.ServicePrice ?? 0m);
-
-// ---------- Reassignment handling for active jobs ----------
-if (mechanicChanged && existingJob.Status == ServiceJob.StatusStillWorking)
-{
-    var oldMech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == oldMechanicId && !m.IsDeleted);
-        var newMech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted);
-
-    if (newMech == null || newMech.Status != "Active" || newMech.WorkStatus != "Available")
-    {
-        ModelState.AddModelError("MechanicId", "The selected mechanic is no longer available. Please choose another mechanic.");
-        await tx.RollbackAsync();
-        await PopulateCreateListsAsync(job);
-        return View(job);
-    }
-
-    if (oldMech != null)
-        oldMech.WorkStatus = oldMech.Status == "Active" ? "Available" : "Unavailable";
-    newMech.WorkStatus = "Working";
-}
-
-// ---------- Audit logging before commit ----------
-if (originalAmount != existingJob.AmountReceived)
-{
-    _context.ActivityLogs.Add(new ActivityLog
-    {
-        Action = "Record Payment",
-        Module = "Service",
-        Description = $"{existingJob.ServiceJobNumber}: received ₱{existingJob.AmountReceived:N2} of ₱{service.ServicePrice:N2} ({existingJob.PaymentStatus})",
-        StaffId = GetCurrentStaffId(),
-        Timestamp = DateTime.Now
-    });
-}
-_context.ActivityLogs.Add(new ActivityLog
-{
-    Action = "Edit Service Job",
-    Module = "Service",
-    Description = $"Edited service job {existingJob.ServiceJobNumber}",
-    StaffId = GetCurrentStaffId(),
-    Timestamp = DateTime.Now
-});
-
-// Persist all changes atomically
-await _context.SaveChangesAsync();
-await tx.CommitAsync();
-
-
-
-
-                    TempData["SuccessMessage"] = $"Service job {existingJob.ServiceJobNumber} updated successfully.";
-return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                 }
-                catch (DbUpdateConcurrencyException ex)
+                else if (ModelState.IsValid)
                 {
-                    _logger.LogWarning(ex, "Concurrency conflict while updating service job. ServiceJobId: {ServiceJobId}", id);
-                    if (!await _context.ServiceJobs.AnyAsync(j => j.ServiceJobId == id))
-                        return NotFound();
+                    var pricing = await LoadJobPricingAsync(model, existingJob);
+                    decimal historyTotal = await _context.ServiceHistories.Where(h => h.ServiceJobId == id)
+                        .SumAsync(h => (decimal?)h.AmountReceived) ?? 0m;
+                    if (model.AmountReceived < historyTotal)
+                        ModelState.AddModelError(nameof(model.AmountReceived), "Amount received cannot be less than the total recorded payments in service history.");
 
-                    TempData["ErrorMessage"] = "The service job was modified by another user. Please try again.";
+                    bool mechanicChanged = model.MechanicId != existingJob.MechanicId;
+                    var newMechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == model.MechanicId && !m.IsDeleted);
+                    if (newMechanic == null || (mechanicChanged && newMechanic.Status != "Active"))
+                        ModelState.AddModelError(nameof(model.MechanicId), "Select an active, non-archived mechanic.");
+
+                    if (ModelState.IsValid && pricing != null && newMechanic != null)
+                    {
+                        decimal originalAmount = existingJob.AmountReceived;
+                        if (mechanicChanged)
+                        {
+                            var oldMechanic = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == existingJob.MechanicId);
+                            existingJob.Status = await HasWorkingJobAsync(newMechanic.MechanicId, existingJob.ServiceJobId)
+                                ? ServiceJob.StatusPending : ServiceJob.StatusStillWorking;
+                            newMechanic.WorkStatus = "Working";
+                            if (oldMechanic != null)
+                                await RecalculateMechanicWorkStatusAsync(oldMechanic, existingJob.ServiceJobId);
+                        }
+                        existingJob.ServiceId = model.ServiceId;
+                        existingJob.ServiceNameSnapshot = pricing.ServiceName;
+                        existingJob.BasePriceSnapshot = pricing.BasePrice;
+                        existingJob.TotalPrice = pricing.TotalPrice;
+                        // Keep retained rows and their agreed snapshots; delete only removed selections.
+                        foreach (var removed in existingJob.AddOns.Where(a => !model.SelectedAddOnIds.Contains(a.AddOnServiceId)).ToList())
+                        {
+                            existingJob.AddOns.Remove(removed);
+                            _context.ServiceJobAddOns.Remove(removed);
+                        }
+                        foreach (var added in pricing.AddOns.Where(a => !existingJob.AddOns.Any(old => old.AddOnServiceId == a.AddOnServiceId)))
+                            existingJob.AddOns.Add(added);
+
+                        existingJob.MechanicId = model.MechanicId;
+                        existingJob.CustomerName = model.CustomerName;
+                        existingJob.Description = model.Description;
+                        existingJob.AmountReceived = model.AmountReceived;
+                        existingJob.ChangeAmount = Math.Max(0m, model.AmountReceived - existingJob.TotalPrice);
+                        existingJob.PaymentStatus = ComputePaymentStatus(model.AmountReceived, existingJob.TotalPrice);
+                        if (originalAmount != existingJob.AmountReceived)
+                            _context.ActivityLogs.Add(new ActivityLog
+                            {
+                                Action = "Record Payment", Module = "Service",
+                                Description = $"{existingJob.ServiceJobNumber}: received ₱{existingJob.AmountReceived:N2} of ₱{existingJob.TotalPrice:N2} ({existingJob.PaymentStatus})",
+                                StaffId = GetCurrentStaffId(), Timestamp = DateTime.Now
+                            });
+                        _context.ActivityLogs.Add(new ActivityLog
+                        {
+                            Action = "Edit Service Job", Module = "Service",
+                            Description = $"Edited service job {existingJob.ServiceJobNumber}",
+                            StaffId = GetCurrentStaffId(), Timestamp = DateTime.Now
+                        });
+                        await _context.SaveChangesAsync();
+                        await tx.CommitAsync();
+                        TempData["SuccessMessage"] = $"Service job {existingJob.ServiceJobNumber} updated successfully.";
+                        return RedirectToAction(nameof(Details), new { id });
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error occurred while updating service job. ServiceJobId: {ServiceJobId}", id);
-                    TempData["ErrorMessage"] = "An error occurred while updating the service job. Please try again.";
-                }
+                await tx.RollbackAsync();
             }
-
-            await PopulateCreateListsAsync(job);
-            return View(job);
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogWarning(ex, "Concurrency conflict while updating service job. ServiceJobId: {ServiceJobId}", id);
+                if (!await _context.ServiceJobs.AnyAsync(j => j.ServiceJobId == id)) return NotFound();
+                ModelState.AddModelError(string.Empty, "The service job was modified by another user. Please try again.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating service job. ServiceJobId: {ServiceJobId}", id);
+                ModelState.AddModelError(string.Empty, "An error occurred while updating the service job. Please try again.");
+            }
+            // Reload saved snapshots after a failed transaction rather than redisplaying modified tracked values.
+            var savedJob = await _context.ServiceJobs.AsNoTracking().Include(j => j.AddOns)
+                .FirstOrDefaultAsync(j => j.ServiceJobId == id);
+            await PopulateCreateListsAsync(model, savedJob);
+            return View(model);
         }
 
         // GET: /ServiceJobs/AddHistory/5
@@ -462,7 +414,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
         // POST: /ServiceJobs/AddHistory/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddHistory(int id, [Bind("WorkDate,Description,AmountReceived,PaymentStatus")] ServiceHistory history)
+        public async Task<IActionResult> AddHistory(int id, [Bind("WorkDate,Description,AmountReceived")] ServiceHistory history)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
@@ -475,6 +427,9 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
             if (job == null) return NotFound();
 
             history.ServiceJobId = id;
+            // A history entry records a payment, not another service charge.
+            history.PaymentStatus = history.AmountReceived > 0 ? ServiceJob.PaymentPaid : ServiceJob.PaymentUnpaid;
+            ModelState.Remove(nameof(history.PaymentStatus));
 
             if (string.IsNullOrWhiteSpace(history.Description))
                 ModelState.AddModelError("Description", "Work description is required.");
@@ -486,7 +441,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
             // Payment consistency: the recorded amount must agree with the declared
             // status (Unpaid or Paid only), and the running job total must never
             // exceed the service price.
-            decimal servicePrice = job.Service?.ServicePrice ?? 0m;
+            decimal servicePrice = job.TotalPrice;
             if (ModelState.IsValid && IsValidPaymentStatus(history.PaymentStatus))
             {
                 switch (history.PaymentStatus)
@@ -523,8 +478,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                     {
                         job.AmountReceived += history.AmountReceived;
                         // Recalculate change amount based on service price.
-                        if (job.Service != null)
-                            job.ChangeAmount = Math.Max(0m, job.AmountReceived - job.Service.ServicePrice);
+                        job.ChangeAmount = Math.Max(0m, job.AmountReceived - job.TotalPrice);
                         job.PaymentStatus = ComputePaymentStatus(job.AmountReceived, servicePrice);
                     }
 
@@ -572,7 +526,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
 
         // POST: /ServiceJobs/MarkDone/5
         // Finishes a "Still Working" job after recording the customer's payment.
-        // The service price always comes from the Service table, never from the browser.
+        // The agreed total always comes from the saved job, never from the browser or live catalog.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkDone(int id, string? returnUrl = null)
@@ -587,26 +541,40 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                     ? Redirect(returnUrl)
                     : RedirectToAction(nameof(Details), new { id });
 
-            // Begin a serializable transaction to ensure atomicity and recheck state.
+            int? assignedMechanicId = await _context.ServiceJobs.AsNoTracking()
+                .Where(j => j.ServiceJobId == id)
+                .Select(j => (int?)j.MechanicId).FirstOrDefaultAsync();
+            if (!assignedMechanicId.HasValue) return NotFound();
+            // Reserve this mechanic before reading job rows in the transaction.
             await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            await ReserveMechanicsAsync(assignedMechanicId.Value);
 
             // Reload the ServiceJob inside the transaction to get the latest state.
             var job = await _context.ServiceJobs
                 .Include(j => j.Service)
                 .Include(j => j.Histories)
+                    .Include(j => j.AddOns)
                 .Include(j => j.Mechanic)
                 .FirstOrDefaultAsync(j => j.ServiceJobId == id);
             if (job == null) return NotFound();
+            if (job.MechanicId != assignedMechanicId.Value)
+            {
+                await tx.RollbackAsync();
+                TempData["ErrorMessage"] = "The mechanic assignment changed. Reload the job and try again.";
+                return Back();
+            }
 
             if (job.Status != ServiceJob.StatusStillWorking)
             {
                 await tx.RollbackAsync();
-                TempData["ErrorMessage"] = "This service job has already been completed.";
+                TempData["ErrorMessage"] = job.Status == ServiceJob.StatusPending
+                    ? "This service job is Pending and cannot be marked Done until it starts."
+                    : "This service job has already been completed.";
                 return Back();
             }
 
             // Ensure full payment.
-            decimal servicePrice = job.Service?.ServicePrice ?? 0m;
+            decimal servicePrice = job.TotalPrice;
             decimal totalAfterPayment = job.AmountReceived;
             if (totalAfterPayment < servicePrice)
             {
@@ -623,21 +591,15 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
             job.Status = ServiceJob.StatusFinished;
             job.CompletedDate ??= DateTime.Now;
 
-                // Update mechanic work status based on employment status
-                if (job.Mechanic != null)
-                {
-                    job.Mechanic.WorkStatus = job.Mechanic.Status == "Active" ? "Available" : "Unavailable";
-                }
-                else if (job.MechanicId != 0)
-                {
-                    var mech = await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted);
-                    if (mech != null)
-                        mech.WorkStatus = mech.Status == "Active" ? "Available" : "Unavailable";
-                }
+            // Exclude this still-persisted working row while finding the next turn:
+            // its Finished status is not written until SaveChanges below.
+            var mechanic = job.Mechanic ?? await _context.Mechanics.FirstOrDefaultAsync(m => m.MechanicId == job.MechanicId);
+            if (mechanic != null)
+                await RecalculateMechanicWorkStatusAsync(mechanic, job.ServiceJobId);
 
             // ---- Automatic ServiceHistory (single record) ----
                         // Determine the description that represents the completion entry.
-                        var completionDescription = string.IsNullOrWhiteSpace(job.Description) ? job.Service?.ServiceName ?? "Service" : job.Description;
+                        var completionDescription = string.IsNullOrWhiteSpace(job.Description) ? job.ServiceNameSnapshot : job.Description;
                         // Check if a completion history already exists (by description and paid status).
                         bool hasCompletionHistory = job.Histories.Any(h =>
                             h.Description == completionDescription &&
@@ -756,6 +718,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                 .Include(j => j.Service)
                 .Include(j => j.Mechanic)
                 .Include(j => j.Histories)
+                    .Include(j => j.AddOns)
                 .Include(j => j.ProcessedByStaff)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(j => j.ServiceJobId == id);
@@ -765,7 +728,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
         private static byte[] GenerateServiceReceiptPdfBytes(ServiceJob job)
         {
             var ph = System.Globalization.CultureInfo.GetCultureInfo("en-PH");
-            decimal total = job.Service?.ServicePrice ?? 0m;
+            decimal total = job.TotalPrice;
             decimal paid = job.AmountReceived;
             decimal change = job.ChangeAmount;
             string customer = string.IsNullOrWhiteSpace(job.CustomerName) ? "Walk-in" : job.CustomerName;
@@ -804,7 +767,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                                 }
 
                                 MetaRow("Service ID", job.ServiceJobNumber);
-                                MetaRow("Service", job.Service?.ServiceName ?? "");
+                                MetaRow("Service", job.ServiceNameSnapshot);
                                 MetaRow("Mechanic", job.Mechanic?.MechanicName ?? "");
                                 MetaRow("Customer", customer);
                                 MetaRow("Date", job.ServiceDate.ToString("MMM dd, yyyy"));
@@ -814,10 +777,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
 
                             col.Item().PaddingVertical(3).LineHorizontal(1).LineColor("#999999");
 
-                            // ── Work performed (history lines when present) ──
-                            List<ServiceHistory> histories = job.Histories?
-                                .OrderBy(h => h.WorkDate).ThenBy(h => h.ServiceHistoryId).ToList()
-                                ?? new List<ServiceHistory>();
+                            // Agreed charges are base plus add-ons, never history payment entries.
 
                             col.Item().Table(table =>
                             {
@@ -835,21 +795,14 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                                     header.Cell().BorderBottom(1).BorderColor("#111111").AlignRight().Text("Amount").FontSize(7).Bold();
                                 });
 
-                                if (histories.Any())
+                                table.Cell().PaddingVertical(1.5f).Text("Base Service: " + job.ServiceNameSnapshot);
+                                table.Cell().PaddingVertical(1.5f).AlignCenter().Text("1");
+                                table.Cell().PaddingVertical(1.5f).AlignRight().Text(job.BasePriceSnapshot.ToString("C", ph));
+                                foreach (var addOn in job.AddOns.OrderBy(a => a.AddOnServiceId))
                                 {
-                                    foreach (ServiceHistory h in histories)
-                                    {
-                                        table.Cell().PaddingVertical(1.5f).Text(
-                                            $"{h.WorkDate:ddd, MMM dd}: {h.Description}");
-                                        table.Cell().PaddingVertical(1.5f).AlignCenter().Text("1");
-                                        table.Cell().PaddingVertical(1.5f).AlignRight().Text(h.AmountReceived.ToString("C", ph));
-                                    }
-                                }
-                                else
-                                {
-                                    table.Cell().PaddingVertical(1.5f).Text(job.Service?.ServiceName ?? "");
+                                    table.Cell().PaddingVertical(1.5f).Text("Add-on: " + addOn.AddOnNameSnapshot);
                                     table.Cell().PaddingVertical(1.5f).AlignCenter().Text("1");
-                                    table.Cell().PaddingVertical(1.5f).AlignRight().Text(total.ToString("C", ph));
+                                    table.Cell().PaddingVertical(1.5f).AlignRight().Text(addOn.PriceSnapshot.ToString("C", ph));
                                 }
                             });
 
@@ -877,6 +830,7 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
                                 });
                                 decimal remaining = Math.Max(0m, total - paid);
                                 TotalRow("REMAINING", remaining.ToString("C", ph));
+                                TotalRow("CHANGE", change.ToString("C", ph));
 
                                 tot.Item().PaddingTop(2).Row(r =>
                                 {
@@ -927,6 +881,47 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
             return $"SV-{(max + 1):D3}";
         }
 
+        // All queue writers reserve the same mechanic resource before reading job
+        // states. Sorted reservations also serialize transfers between mechanics.
+        private async Task ReserveMechanicsAsync(params int[] mechanicIds)
+        {
+            foreach (int mechanicId in mechanicIds.Where(id => id > 0).Distinct().OrderBy(id => id))
+            {
+                string resource = $"ServiceJob:Mechanic:{mechanicId}";
+                await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                    DECLARE @lockResult int;
+                    EXEC @lockResult = sp_getapplock @Resource = {resource},
+                        @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 30000;
+                    IF @lockResult < 0 THROW 51006, 'The mechanic is busy. Please retry.', 1;");
+            }
+        }
+
+        private Task<bool> HasWorkingJobAsync(int mechanicId, int? departingJobId = null) =>
+            _context.ServiceJobs.AnyAsync(job =>
+                job.MechanicId == mechanicId && job.Status == ServiceJob.StatusStillWorking &&
+                (!departingJobId.HasValue || job.ServiceJobId != departingJobId.Value));
+
+        private async Task RecalculateMechanicWorkStatusAsync(Mechanic mechanic, int departingJobId)
+        {
+            // The departing job still has its old database state until SaveChanges.
+            bool hasWorkingJob = await HasWorkingJobAsync(mechanic.MechanicId, departingJobId);
+            if (!hasWorkingJob)
+            {
+                var next = await _context.ServiceJobs
+                    .Where(job => job.MechanicId == mechanic.MechanicId &&
+                                  job.Status == ServiceJob.StatusPending && job.ServiceJobId != departingJobId)
+                    .OrderBy(job => job.ServiceJobId)
+                    .FirstOrDefaultAsync();
+                if (next != null)
+                {
+                    next.Status = ServiceJob.StatusStillWorking;
+                    hasWorkingJob = true;
+                }
+            }
+            mechanic.WorkStatus = mechanic.Status == "Active"
+                ? (hasWorkingJob ? "Working" : "Available") : "Unavailable";
+        }
+
         private static string ComputePaymentStatus(decimal amountReceived, decimal serviceAmount)
         {
             // Two payment states only: Unpaid until the full service price is received.
@@ -940,114 +935,109 @@ return RedirectToAction(nameof(Details), new { id = existingJob.ServiceJobId });
         private static bool IsValidPaymentStatus(string? status) =>
             ServiceJob.AllPaymentStatuses.Contains(status);
 
-        /// <summary>Shared validations: service/mechanic exist and customer required. Job status is managed server-side (default Still Working, finished only via Mark Done).</summary>
-        private async Task<Service?> ValidateNewServiceJobAsync(ServiceJob job)
+        private void ValidateJobInput(ServiceJobFormViewModel model)
         {
-            if (string.IsNullOrWhiteSpace(job.CustomerName))
-                ModelState.AddModelError("CustomerName", "Customer name is required.");
-            else if (job.CustomerName.Length > 150)
-                ModelState.AddModelError("CustomerName", "Customer name must be 150 characters or fewer.");
+            model.SelectedAddOnIds ??= new List<int>();
+            if (string.IsNullOrWhiteSpace(model.CustomerName) || model.CustomerName.Length > 150)
+                ModelState.AddModelError(nameof(model.CustomerName), "Customer name is required and must be 150 characters or fewer.");
+            if (model.Description?.Length > 500)
+                ModelState.AddModelError(nameof(model.Description), "Description must be 500 characters or fewer.");
+            if (model.AmountReceived < 0 || model.AmountReceived > 999999.99m || decimal.Round(model.AmountReceived, 2) != model.AmountReceived)
+                ModelState.AddModelError(nameof(model.AmountReceived), "Amount received must be between 0 and 999999.99, with at most two decimal places.");
+            if (model.SubmissionToken?.Length > 64)
+                ModelState.AddModelError(nameof(model.SubmissionToken), "Invalid submission token.");
+            if (model.SelectedAddOnIds.Count != model.SelectedAddOnIds.Distinct().Count())
+                ModelState.AddModelError(nameof(model.SelectedAddOnIds), "Select each add-on only once.");
+        }
 
-            if (job.Description != null && job.Description.Length > 500)
-                ModelState.AddModelError("Description", "Description must be 500 characters or fewer.");
+        private sealed record JobPricing(string ServiceName, decimal BasePrice, List<ServiceJobAddOn> AddOns)
+        {
+            public decimal TotalPrice => BasePrice + AddOns.Sum(a => a.PriceSnapshot);
+        }
 
-            Service? service = null;
-            if (job.ServiceId <= 0)
+        // Called only inside the job's serializable save transaction. Retained selections
+        // use their agreement snapshots, even after catalog renames, repricing or archival.
+        private async Task<JobPricing?> LoadJobPricingAsync(ServiceJobFormViewModel model, ServiceJob? existing = null)
+        {
+            string name;
+            decimal basePrice;
+            if (existing != null && model.ServiceId == existing.ServiceId)
             {
-                ModelState.AddModelError("ServiceId", "Please select a service.");
+                name = existing.ServiceNameSnapshot;
+                basePrice = existing.BasePriceSnapshot;
             }
             else
             {
-                service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.ServiceId == job.ServiceId && !s.IsDeleted);
+                var service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.ServiceId == model.ServiceId && !s.IsDeleted && s.Status == "Active" && !s.IsAddOn);
                 if (service == null)
-                    ModelState.AddModelError("ServiceId", "Selected service does not exist.");
+                {
+                    ModelState.AddModelError(nameof(model.ServiceId), "Select an active, non-archived base service.");
+                    return null;
+                }
+                name = service.ServiceName;
+                basePrice = service.ServicePrice;
             }
-
-            if (job.MechanicId <= 0)
+            var retained = existing?.AddOns.ToDictionary(a => a.AddOnServiceId) ?? new Dictionary<int, ServiceJobAddOn>();
+            var newIds = model.SelectedAddOnIds.Where(id => !retained.ContainsKey(id)).ToList();
+            var newAddOns = await _context.Services.AsNoTracking()
+                .Where(s => newIds.Contains(s.ServiceId) && !s.IsDeleted && s.Status == "Active" && s.IsAddOn && s.ServicePrice > 0)
+                .ToDictionaryAsync(s => s.ServiceId);
+            if (newAddOns.Count != newIds.Count)
             {
-                ModelState.AddModelError("MechanicId", "Please select a mechanic.");
+                ModelState.AddModelError(nameof(model.SelectedAddOnIds), "Select only active, non-archived add-ons with a positive price.");
+                return null;
             }
-else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted && m.Status == "Active" && m.WorkStatus == "Available"))
-                     {
-                         ModelState.AddModelError("MechanicId", "Selected mechanic is not available for a new service job.");
-                     }
-
-            return service;
-        }
-
-        /// <summary>Validations for editing an existing ServiceJob. Does not enforce mechanic Availability unless changed.</summary>
-        private async Task<Service?> ValidateServiceJobEditAsync(ServiceJob job)
-        {
-            // Customer name validation
-            if (string.IsNullOrWhiteSpace(job.CustomerName))
-                ModelState.AddModelError("CustomerName", "Customer name is required.");
-            else if (job.CustomerName.Length > 150)
-                ModelState.AddModelError("CustomerName", "Customer name must be 150 characters or fewer.");
-
-            // Description length
-            if (job.Description != null && job.Description.Length > 500)
-                ModelState.AddModelError("Description", "Description must be 500 characters or fewer.");
-
-            // Service validation
-            Service? service = null;
-            if (job.ServiceId <= 0)
-                ModelState.AddModelError("ServiceId", "Please select a service.");
-            else
-            {
-                service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.ServiceId == job.ServiceId && !s.IsDeleted);
-                if (service == null)
-                    ModelState.AddModelError("ServiceId", "Selected service does not exist.");
-            }
-
-            if (job.MechanicId <= 0)
-                ModelState.AddModelError("MechanicId", "Please select a mechanic.");
-            else if (!await _context.Mechanics.AnyAsync(m => m.MechanicId == job.MechanicId && !m.IsDeleted))
-                ModelState.AddModelError("MechanicId", "Selected mechanic does not exist.");
-
-            return service;
-        }
-
-        /// <summary>Validates AmountReceived >= 0 and <= service amount.</summary>
-        private async Task<bool> ValidateAmountAsync(ServiceJob job, Service? service)
-        {
-            if (service == null) return false;
-
-            if (job.AmountReceived < 0)
-            {
-                ModelState.AddModelError("AmountReceived", "Amount received cannot be negative.");
-                return false;
-            }
-
-            // Overpayment is allowed – the excess will be shown as change on the receipt.
-
-            return true;
+            var selections = model.SelectedAddOnIds.Select(id => retained.TryGetValue(id, out var agreed)
+                ? new ServiceJobAddOn { AddOnServiceId = id, AddOnNameSnapshot = agreed.AddOnNameSnapshot, PriceSnapshot = agreed.PriceSnapshot }
+                : new ServiceJobAddOn { AddOnServiceId = id, AddOnNameSnapshot = newAddOns[id].ServiceName, PriceSnapshot = newAddOns[id].ServicePrice }).ToList();
+            return new JobPricing(name, basePrice, selections);
         }
 
         private async Task PopulateMechanicListAsync(int? selectedId)
         {
-List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
-                 .Where(m => !m.IsDeleted && m.Status == "Active" && m.WorkStatus == "Available")
-                 .OrderBy(m => m.MechanicName).ToListAsync();
+            List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
+                .Where(m => !m.IsDeleted && m.Status == "Active")
+                .OrderBy(m => m.MechanicName).ToListAsync();
             ViewBag.MechanicList = mechanics;
             ViewBag.MechanicId = new SelectList(mechanics, "MechanicId", "MechanicName", selectedId);
         }
 
-        private async Task PopulateCreateListsAsync(ServiceJob? job = null)
+        private async Task PopulateCreateListsAsync(ServiceJobFormViewModel? model = null, ServiceJob? existing = null)
         {
-            List<Service> services = await _context.Services.AsNoTracking()
-                .Where(s => !s.IsDeleted)
+            var available = await _context.Services.AsNoTracking()
+                .Where(s => !s.IsDeleted && s.Status == "Active")
                 .OrderBy(s => s.ServiceId).ToListAsync();
-
-            ViewBag.ServicesList = services;
-
-            ViewBag.ServiceId = new SelectList(
-                services.Select(s => new { s.ServiceId, Label = $"{s.ServiceName} — ₱{s.ServicePrice:N2}" }),
-                "ServiceId", "Label", job?.ServiceId);
-
-List<Mechanic> mechanics = await _context.Mechanics.AsNoTracking()
-                 .Where(m => !m.IsDeleted && m.Status == "Active" && m.WorkStatus == "Available")
-                 .OrderBy(m => m.MechanicName).ToListAsync();
-            ViewBag.MechanicId = new SelectList(mechanics, "MechanicId", "MechanicName", job?.MechanicId);
+            var services = available.Where(s => !s.IsAddOn).ToList();
+            var addOns = available.Where(s => s.IsAddOn && s.ServicePrice > 0).ToList();
+            if (existing != null)
+            {
+                // These display-only copies never update catalog records.
+                services.RemoveAll(s => s.ServiceId == existing.ServiceId);
+                services.Add(new Service { ServiceId = existing.ServiceId, ServiceName = existing.ServiceNameSnapshot, ServicePrice = existing.BasePriceSnapshot });
+                foreach (var agreed in existing.AddOns)
+                {
+                    addOns.RemoveAll(s => s.ServiceId == agreed.AddOnServiceId);
+                    addOns.Add(new Service { ServiceId = agreed.AddOnServiceId, ServiceName = agreed.AddOnNameSnapshot, ServicePrice = agreed.PriceSnapshot, IsAddOn = true });
+                }
+                if (model != null)
+                {
+                    model.ServiceJobNumber = existing.ServiceJobNumber;
+                    model.Status = existing.Status;
+                    model.CompletedDate = existing.CompletedDate;
+                }
+            }
+            ViewBag.ServicesList = services.OrderBy(s => s.ServiceId).ToList();
+            ViewBag.AddOnsList = addOns.OrderBy(s => s.ServiceId).ToList();
+            var mechanics = await _context.Mechanics.AsNoTracking()
+                .Where(m => (!m.IsDeleted && m.Status == "Active") ||
+                            (existing != null && m.MechanicId == existing.MechanicId))
+                .OrderBy(m => m.MechanicName).ToListAsync();
+            ViewBag.MechanicId = new SelectList(mechanics, "MechanicId", "MechanicName", model?.MechanicId);
+            ViewBag.CreateMechanics = mechanics.Where(m => !m.IsDeleted && m.Status == "Active").ToList();
+            var mechanicIds = mechanics.Select(m => m.MechanicId).ToList();
+            ViewBag.BusyMechanicIds = (await _context.ServiceJobs.AsNoTracking()
+                .Where(j => mechanicIds.Contains(j.MechanicId) && j.Status == ServiceJob.StatusStillWorking)
+                .Select(j => j.MechanicId).Distinct().ToListAsync()).ToHashSet();
         }
     }
 }

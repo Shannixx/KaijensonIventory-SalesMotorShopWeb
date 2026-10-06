@@ -24,7 +24,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Services
         {
             var deliveries = await _context.Deliveries
                 .Where(d => archived ? d.IsDeleted : !d.IsDeleted)
-                .Where(d => d.PurchaseOrder != null && (archived || !d.PurchaseOrder.IsDeleted) && (archived || d.Status == "Pending" || d.Status == "Partially Delivered"))
+                .Where(d => d.PurchaseOrder != null && (archived || !d.PurchaseOrder.IsDeleted) && (archived || d.Status == "Pending" || d.Status == "Partially Delivered" || d.Status == "Delivered"))
                 .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Supplier)
                 .Include(d => d.PurchaseOrder!)
@@ -136,8 +136,32 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
             };
         }
 
-        public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId, string? remarks = null)
+        public async Task<Result> DeliverAsync(int id, Dictionary<int,int> receiveQuantities, int currentStaffId, string receiptKey, string? remarks = null)
         {
+            if (!Guid.TryParseExact(receiptKey, "N", out var receiptId))
+                return Result.Failure("ReceiptKey", "Invalid receipt form. Reload the page and try again.");
+            receiptKey = receiptId.ToString("N");
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            // Reserve the receipt before reading its status or remaining quantities.
+            var receiptLock = $"Delivery:{id}";
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                DECLARE @lockResult int;
+                EXEC @lockResult = sp_getapplock @Resource = {receiptLock},
+                    @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+                IF @lockResult < 0 THROW 51002, 'Unable to reserve the delivery. Please retry.', 1;");
+
+            // A repeated POST for the same form is already committed; do not replay stock.
+            if (await _context.DeliveryItems.AsNoTracking()
+                .AnyAsync(di => di.DeliveryId == id && di.ReceiptKey == receiptKey))
+                return Result.Success();
+
+            var orderId = await _context.Deliveries.AsNoTracking()
+                .Where(d => d.DeliveryId == id).Select(d => (int?)d.PurchaseOrderId).FirstOrDefaultAsync();
+            if (!orderId.HasValue)
+                return Result.Failure(null, "The delivery could not be found.");
+            await InventoryWriteLock.AcquireOrderAsync(_context, orderId.Value);
+
             var delivery = await _context.Deliveries
                 .Include(d => d.PurchaseOrder!)
                     .ThenInclude(p => p.Items.Where(i => !i.IsDeleted))
@@ -158,13 +182,25 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
             if (order == null)
                 return Result.Failure(null, "Associated purchase order not found.");
 
+            // Reserve stock before using the initially loaded product and PO quantities.
+            var lockedProductIds = order.Items.Select(i => i.ProductId).Distinct().OrderBy(productId => productId).ToArray();
+            foreach (var productId in lockedProductIds)
+                await InventoryWriteLock.AcquireProductAsync(_context, productId);
+            var refreshedProducts = new HashSet<int>();
+            foreach (var item in order.Items)
+            {
+                await _context.Entry(item).ReloadAsync();
+                if (!lockedProductIds.Contains(item.ProductId))
+                    return Result.Failure(null, "The purchase order changed while receiving. Please retry.");
+                if (item.Product != null && refreshedProducts.Add(item.Product.ProductId))
+                    await _context.Entry(item.Product).ReloadAsync();
+            }
+
             if (order.Items.Any(i => i.Product == null || i.Product.IsDeleted))
                 return Result.Failure(null, "The purchase order contains an archived or missing product.");
 
             if (order.Items.All(i => i.Product == null))
                 return Result.Failure(null, "The purchase order has no deliverable items.");
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             var restockedProducts = new List<Product>();
             var receivedStockByProduct = new Dictionary<int, (Product Product, int QuantityReceived)>();
@@ -206,6 +242,9 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
                 // Update product inventory
                 int previousQty = item.Product?.QuantityOnHand ?? 0;
                 item.Product!.QuantityOnHand += receiveNow;
+                if (item.Product.IsSerialized)
+                    _context.SerialUnits.AddRange(Enumerable.Range(0, receiveNow)
+                        .Select(_ => SerialUnit.CreateAvailable(item.Product.ProductId)));
                 item.Product.LastStockInDate = DateTime.Now;
 
                 decimal unitCost = (item.Price > 0 ? item.Price : (item.Product?.Price > 0 ? item.Product.Price : item.Product?.AverageCost ?? 0));
@@ -237,6 +276,7 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
                     DeliveryId = delivery.DeliveryId,
                     PurchaseOrderItemId = item.PurchaseOrderItemId,
                     ReceivedQuantity = receiveNow,
+                    ReceiptKey = receiptKey,
                     ReceivedDate = DateTime.Now
                 };
                 _context.DeliveryItems.Add(deliveryItem);
@@ -318,8 +358,24 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
 
         public async Task<Result> ArchiveAsync(int id, int currentStaffId)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            // Match the receipt's lock order: delivery first, then its purchase order.
+            var receiptLock = $"Delivery:{id}";
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                DECLARE @lockResult int;
+                EXEC @lockResult = sp_getapplock @Resource = {receiptLock},
+                    @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+                IF @lockResult < 0 THROW 51002, 'Unable to reserve the delivery. Please retry.', 1;");
+            var orderId = await _context.Deliveries.AsNoTracking()
+                .Where(d => d.DeliveryId == id).Select(d => (int?)d.PurchaseOrderId).FirstOrDefaultAsync();
+            if (!orderId.HasValue)
+                return Result.Failure(null, "The delivery could not be found or is already archived.");
+            await InventoryWriteLock.AcquireOrderAsync(_context, orderId.Value);
             var delivery = await _context.Deliveries.FirstOrDefaultAsync(d => d.DeliveryId == id && !d.IsDeleted);
             if (delivery == null) return Result.Failure(null, "The delivery could not be found or is already archived.");
+            await _context.Entry(delivery).ReloadAsync();
+            if (delivery.IsDeleted || delivery.PurchaseOrderId != orderId.Value)
+                return Result.Failure(null, "The delivery changed while archiving. Please retry.");
 
             // Archiving is visibility-only; posted receipt events and their inventory effects remain unchanged.
             bool hasHistory = await _context.DeliveryItems.AnyAsync(di => di.DeliveryId == id);
@@ -343,17 +399,40 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
 
             await _activityLogService.LogAsync("Archive Delivery", "Delivery", $"Archived delivery {id} without changing inventory.", currentStaffId);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return Result.Success();
         }
 
         public async Task<Result> RestoreAsync(int id, int currentStaffId)
         {
-            var delivery = await _context.Deliveries
-                .Include(d => d.PurchaseOrder)
-                .FirstOrDefaultAsync(d => d.DeliveryId == id && d.IsDeleted);
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            // A restore must not race the receipt or archive of the same delivery/order.
+            var receiptLock = $"Delivery:{id}";
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                DECLARE @lockResult int;
+                EXEC @lockResult = sp_getapplock @Resource = {receiptLock},
+                    @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+                IF @lockResult < 0 THROW 51002, 'Unable to reserve the delivery. Please retry.', 1;");
+            var orderId = await _context.Deliveries.AsNoTracking()
+                .Where(d => d.DeliveryId == id).Select(d => (int?)d.PurchaseOrderId).FirstOrDefaultAsync();
+            if (!orderId.HasValue)
+                return Result.Failure(null, "The archived delivery could not be found.");
+            await InventoryWriteLock.AcquireOrderAsync(_context, orderId.Value);
+            var delivery = await _context.Deliveries.FirstOrDefaultAsync(d => d.DeliveryId == id);
             if (delivery == null) return Result.Failure(null, "The archived delivery could not be found.");
-            if (delivery.PurchaseOrder?.IsDeleted == true)
-                return Result.Failure(null, "Restore the archived purchase order before restoring this delivery.");
+            await _context.Entry(delivery).ReloadAsync();
+            if (!delivery.IsDeleted || delivery.PurchaseOrderId != orderId.Value)
+                return Result.Failure(null, "The archived delivery changed. Please reload before restoring.");
+            var order = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.PurchaseOrderId == orderId.Value);
+            if (order == null) return Result.Failure(null, "The linked purchase order could not be found.");
+            await _context.Entry(order).ReloadAsync();
+            if (order.IsDeleted)
+            {
+                var supplier = await _context.Suppliers.AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.SupplierId == order.SupplierId);
+                if (supplier == null || supplier.IsDeleted || supplier.Status != "Active")
+                    return Result.Failure(null, "The delivery cannot be restored until its supplier is active.");
+            }
 
             var activeProducts = await _context.PurchaseOrderItems
                 .Where(i => i.PurchaseOrderId == delivery.PurchaseOrderId && !i.IsDeleted)
@@ -363,11 +442,18 @@ Items = order?.Items?.Select(i => new DeliveryItemViewModel
             if (activeProducts)
                 return Result.Failure(null, "The delivery cannot be restored while a linked product is archived.");
 
+            if (order.IsDeleted)
+            {
+                order.IsDeleted = false;
+                order.DeletedAt = null;
+                order.DeletedBy = null;
+            }
             delivery.IsDeleted = false;
             delivery.DeletedAt = null;
             delivery.DeletedBy = null;
-            await _activityLogService.LogAsync("Restore Delivery", "Delivery", $"Restored delivery {id} without replaying inventory.", currentStaffId);
+            await _activityLogService.LogAsync("Restore Delivery", "Delivery", $"Restored delivery {id} and its parent order without replaying inventory.", currentStaffId);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return Result.Success();
         }
 

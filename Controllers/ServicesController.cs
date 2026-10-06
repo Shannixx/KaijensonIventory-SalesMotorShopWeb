@@ -1,5 +1,6 @@
 using KaijensonIventory_SalesMotorShopWeb.Data;
 using KaijensonIventory_SalesMotorShopWeb.Models;
+using KaijensonIventory_SalesMotorShopWeb.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -93,38 +94,40 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (!IsAdmin()) return StatusCode(StatusCodes.Status403Forbidden);
 
             return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice,Description,DurationMinutes")] Service service)
+        public async Task<IActionResult> Create([Bind("ServiceName,ServicePrice")] ServiceFormViewModel model)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (!IsAdmin()) return StatusCode(StatusCodes.Status403Forbidden);
 
-            // Server-side validation
-            if (string.IsNullOrWhiteSpace(service.ServiceName))
-            {
-                ModelState.AddModelError("ServiceName", "Service name is required.");
-            }
-            if (service.ServicePrice < 0)
-            {
-                ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
-            }
+            // The shared form model requires a type for Edit, but this modal always
+            // creates base services. Status and type cannot be posted to this action.
+            model.IsAddOn = false;
+            model.Status = "Active";
+            ModelState.Remove(nameof(ServiceFormViewModel.IsAddOn));
+            if (ModelState.IsValid && model.ServicePrice is decimal price && decimal.Round(price, 2) != price)
+                ModelState.AddModelError(nameof(ServiceFormViewModel.ServicePrice), "Price must have no more than two decimal places.");
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Set audit fields and defaults
-                    service.Status = "Active";
-                    service.CreatedAt = DateTime.UtcNow;
-                    service.CreatedBy = GetCurrentStaffId();
-                    // Duration will be provided by user input
-                    // CategoryId stays null: the Add Service form only collects ServiceName and ServicePrice.
+                    // The Service model provides the base-service and Active defaults.
+                    var service = new Service
+                    {
+                        ServiceName = model.ServiceName.Trim(),
+                        ServicePrice = model.ServicePrice!.Value,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = GetCurrentStaffId()
+                    };
                     _context.Services.Add(service);
                     await _context.SaveChangesAsync();
 
@@ -149,7 +152,13 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             }
             else if (!TempData.ContainsKey("ErrorMessage"))
             {
-                TempData["ErrorMessage"] = "Please provide a valid service name and price.";
+                var errors = ModelState.Values.SelectMany(value => value.Errors)
+                    .Select(error => error.ErrorMessage)
+                    .Where(message => !string.IsNullOrWhiteSpace(message));
+                var errorMessage = string.Join(" ", errors);
+                TempData["ErrorMessage"] = string.IsNullOrWhiteSpace(errorMessage)
+                    ? "Please provide a valid service name and price."
+                    : errorMessage;
             }
 
             // No full-page create form exists: the Add Service modal on Index owns this POST.
@@ -161,6 +170,7 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (!IsAdmin()) return StatusCode(StatusCodes.Status403Forbidden);
 
             if (id == null) return NotFound();
 
@@ -169,7 +179,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                 Service? service = await _context.Services.FirstOrDefaultAsync(s => s.ServiceId == id && !s.IsDeleted);
                 if (service == null) return NotFound();
 
-                return View(service);
+                return View(new ServiceFormViewModel
+                {
+                    ServiceId = service.ServiceId,
+                    ServiceName = service.ServiceName,
+                    ServicePrice = service.ServicePrice,
+                    Status = service.Status,
+                    IsAddOn = service.IsAddOn
+                });
             }
             catch (Exception ex)
             {
@@ -181,67 +198,61 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice,DurationMinutes,Status,Description")] Service service)
+        public async Task<IActionResult> Edit(int id, [Bind("ServiceId,ServiceName,ServicePrice,Status,IsAddOn")] ServiceFormViewModel model)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null)
                 return redirect;
+            if (!IsAdmin()) return StatusCode(StatusCodes.Status403Forbidden);
 
-            if (id != service.ServiceId) return NotFound();
+            if (id != model.ServiceId) return NotFound();
 
-            // Server-side validation
-            if (string.IsNullOrWhiteSpace(service.ServiceName))
+            try
             {
-                ModelState.AddModelError("ServiceName", "Service name is required.");
+                Service? existing = await _context.Services.FirstOrDefaultAsync(s => s.ServiceId == id && !s.IsDeleted);
+                if (existing == null) return NotFound();
+
+                // The hidden type is only a consistency check, never an editable entity field.
+                if (model.IsAddOn != existing.IsAddOn)
+                {
+                    return BadRequest("Service type cannot be changed after creation.");
+                }
+
+                if (!ModelState.IsValid) return View(model);
+
+                existing.ServiceName = model.ServiceName.Trim();
+                existing.ServicePrice = model.ServicePrice!.Value;
+                existing.Status = model.Status;
+
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Action = "Edit Service",
+                    Module = "Service",
+                    Description = $"Edited service: {existing.ServiceName}",
+                    StaffId = GetCurrentStaffId(),
+                    Timestamp = DateTime.Now
+                });
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Service updated successfully.";
+                return RedirectToAction(nameof(Index));
             }
-            if (service.ServicePrice < 0)
+            catch (DbUpdateConcurrencyException ex)
             {
-                ModelState.AddModelError("ServicePrice", "Price cannot be negative.");
+                _logger.LogWarning(ex, "Concurrency conflict while updating service. ServiceId: {ServiceId}", id);
+                if (!await _context.Services.AnyAsync(s => s.ServiceId == id))
+                    return NotFound();
+
+                TempData["ErrorMessage"] = "The service was modified by another user. Please try again.";
+                return View(model);
             }
-
-            if (ModelState.IsValid)
+            catch (Exception ex)
             {
-                try
-                {
-                    Service? existing = await _context.Services.FirstOrDefaultAsync(s => s.ServiceId == id && !s.IsDeleted);
-                    if (existing == null) return NotFound();
-existing.ServiceName = service.ServiceName;
-                     existing.ServicePrice = service.ServicePrice;
-                     existing.DurationMinutes = service.DurationMinutes;
-                     existing.Status = service.Status;
-                     // Persist description changes
-                     existing.Description = service.Description;
-
-                    _context.ActivityLogs.Add(new ActivityLog
-                    {
-                        Action = "Edit Service",
-                        Module = "Service",
-                        Description = $"Edited service: {service.ServiceName}",
-                        StaffId = GetCurrentStaffId(),
-                        Timestamp = DateTime.Now
-                    });
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Service updated successfully.";
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    _logger.LogWarning(ex, "Concurrency conflict while updating service. ServiceId: {ServiceId}", id);
-                    if (!await _context.Services.AnyAsync(s => s.ServiceId == id))
-                        return NotFound();
-
-                    TempData["ErrorMessage"] = "The service was modified by another user. Please try again.";
-                    return View(service);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error occurred while updating service. ServiceId: {ServiceId}", id);
-                    TempData["ErrorMessage"] = "An error occurred while updating the service. Please try again.";
-                }
+                _logger.LogError(ex, "Error occurred while updating service. ServiceId: {ServiceId}", id);
+                TempData["ErrorMessage"] = "An error occurred while updating the service. Please try again.";
             }
 
-            return View(service);
+            return View(model);
         }
 
         public async Task<IActionResult> Delete(int? id)

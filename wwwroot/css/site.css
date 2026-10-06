@@ -1162,6 +1162,18 @@ a:hover { color: var(--primary-hover); }
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
+/* Archive actions retain readable icons in both their normal and hover states. */
+.archive-restore-button {
+    color: #047857;
+    border-color: #047857;
+}
+.archive-restore-button:hover,
+.archive-restore-button:focus-visible {
+    background: #047857;
+    border-color: #047857;
+    color: #fff;
+}
+
 .btn-icon-done {
     color: var(--success);
     border-color: var(--success);
@@ -1299,6 +1311,7 @@ a:hover { color: var(--primary-hover); }
 .btn-outline-secondary:hover {
     background: var(--body-bg);
     border-color: var(--text-muted);
+    color: var(--text-primary);
     transform: translateY(-1.5px);
 }
 

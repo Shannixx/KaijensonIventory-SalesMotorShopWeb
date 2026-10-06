@@ -89,13 +89,15 @@
                         bool isStillWorking = item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusStillWorking;
                         <tr>
                             <td><span class="fw-medium">@item.ServiceJobNumber</span></td>
-                            <td>@item.Service?.ServiceName</td>
+                            <td>@item.ServiceNameSnapshot</td>
                             <td>@item.Mechanic?.MechanicName</td>
                             <td>@item.CustomerName</td>
-                            <td class="text-end">@item.Service?.ServicePrice.ToString("N2", ph)</td>
+                            <td class="text-end">@item.TotalPrice.ToString("N2", ph)</td>
                             <td>
                                 @if (isStillWorking)
                                 { <span class="badge bg-warning text-dark">Still Working</span> }
+                                else if (item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusPending)
+                                { <span class="badge bg-secondary">Pending</span> }
                                 else if (item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished)
                                 { <span class="badge bg-success">Finished</span> }
                             </td>
@@ -117,8 +119,8 @@
                                                 data-mark-done
                                                 data-job-id="@item.ServiceJobId"
                                                 data-job-number="@item.ServiceJobNumber"
-                                                data-service="@item.Service?.ServiceName"
-                                                data-price="@(item.Service?.ServicePrice.ToString(CultureInfo.InvariantCulture) ?? "0")"
+                                                data-service="@item.ServiceNameSnapshot"
+                                                data-price="@item.TotalPrice.ToString(CultureInfo.InvariantCulture)"
                                                 data-received="@item.AmountReceived.ToString(CultureInfo.InvariantCulture)"
                                                 data-return-url="@returnUrl"
                                                 title="Mark Done &amp; Record Payment"
@@ -126,7 +128,7 @@
                                             <i class="bi bi-check-circle"></i>
                                         </button>
                                     }
-                                    else
+                                    else if (item.Status == KaijensonIventory_SalesMotorShopWeb.Models.ServiceJob.StatusFinished)
                                     {
                                         <button type="button" class="btn btn-icon btn-icon-print"
                                                 onclick="openServiceReceiptPreview(@item.ServiceJobId, '@item.ServiceJobNumber')"
