@@ -84,12 +84,6 @@
             <button type="button" class="btn btn-sm" data-range="7">Last 7 Days</button>
             <button type="button" class="btn btn-sm" data-range="30">Last 30 Days</button>
         </div>
-        <hr class="my-3" style="border-color: var(--border-color); opacity: .5;" />
-        <div class="report-export-buttons d-flex flex-wrap gap-2">
-            <a asp-action="ExportCsv" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn kx-export-btn"><i class="bi bi-filetype-csv me-1"></i>Export CSV</a>
-            <a id="pdfSalesBtn" asp-action="ExportSalesPdf" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn kx-export-btn @(activeReport == "Sales" ? "" : "kx-hidden")"><i class="bi bi-filetype-pdf me-1"></i>Export PDF</a>
-            <a id="pdfInventoryBtn" asp-action="ExportInventoryPdf" asp-route-StartDate="@(Model.Filter.StartDate.ToString("yyyy-MM-dd"))" asp-route-EndDate="@(Model.Filter.EndDate.ToString("yyyy-MM-dd"))" asp-route-ProductId="@Model.Filter.ProductId" asp-route-CategoryId="@Model.Filter.CategoryId" asp-route-SerialNumber="@Model.Filter.SerialNumber" class="btn kx-export-btn @(activeReport == "Inventory" ? "" : "kx-hidden")"><i class="bi bi-filetype-pdf me-1"></i>Export PDF</a>
-        </div>
     </div>
 
     <div class="tab-content">
@@ -364,17 +358,8 @@
         const filterAreaEl = document.getElementById('reportsFilterArea');
         const backBtn = document.getElementById('kxBackBtn');
         const activeReportInput = document.getElementById('activeReport');
-        function updatePdfButtons(report) {
-            const salesBtn = document.getElementById('pdfSalesBtn');
-            const inventoryBtn = document.getElementById('pdfInventoryBtn');
-            if (salesBtn && inventoryBtn) {
-                salesBtn.classList.toggle('kx-hidden', report !== 'Sales');
-                inventoryBtn.classList.toggle('kx-hidden', report !== 'Inventory');
-            }
-        }
         function setActiveReport(report) {
             if (activeReportInput) activeReportInput.value = report;
-            updatePdfButtons(report);
         }
         function openSection(targetId) {
             landingEl.classList.add('kx-hidden');

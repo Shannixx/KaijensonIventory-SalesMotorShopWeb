@@ -151,11 +151,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
         // POST: /ServiceJobs/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ServiceJobFormViewModel model)
+        public async Task<IActionResult> Create([Bind("ServiceId,MechanicId,CustomerName,AmountReceived,SubmissionToken")] ServiceJobFormViewModel model)
         {
             var redirect = RedirectIfNotAuthenticated();
             if (redirect != null) return redirect;
 
+            // Create accepts only base-service details, even if a client posts removed fields.
+            model.SelectedAddOnIds = new List<int>();
+            model.Description = null;
             ValidateJobInput(model);
             if (ModelState.IsValid)
             {
@@ -186,14 +189,14 @@ namespace KaijensonIventory_SalesMotorShopWeb.Controllers
                             ServiceId = model.ServiceId,
                             ServiceNameSnapshot = pricing.ServiceName,
                             BasePriceSnapshot = pricing.BasePrice,
-                            TotalPrice = pricing.TotalPrice,
-                            AddOns = pricing.AddOns,
+                            TotalPrice = pricing.BasePrice,
+                            AddOns = new List<ServiceJobAddOn>(),
                             MechanicId = model.MechanicId,
                             CustomerName = model.CustomerName,
-                            Description = model.Description,
+                            Description = null,
                             AmountReceived = model.AmountReceived,
-                            ChangeAmount = Math.Max(0m, model.AmountReceived - pricing.TotalPrice),
-                            PaymentStatus = ComputePaymentStatus(model.AmountReceived, pricing.TotalPrice),
+                            ChangeAmount = Math.Max(0m, model.AmountReceived - pricing.BasePrice),
+                            PaymentStatus = ComputePaymentStatus(model.AmountReceived, pricing.BasePrice),
                             Status = hasWorkingJob ? ServiceJob.StatusPending : ServiceJob.StatusStillWorking,
                             ServiceDate = DateTime.Now,
                             CreatedAt = DateTime.Now,
